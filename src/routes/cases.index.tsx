@@ -40,6 +40,7 @@ import { Reveal, RevealGroup } from "@/components/ds/Reveal";
 import { SplitButton } from "@/components/ds/SplitButton";
 import { StatusChip } from "@/components/ds/StatusChip";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ds/States";
+import { FirstCaseSteps } from "@/components/cases/FirstCaseSteps";
 import { CaseActionMenuItems } from "@/components/cases/CaseActionMenu";
 import { caseActionCopy } from "@/lib/cases/case-action-copy";
 import { useCaseActions, type CaseTarget } from "@/components/cases/useCaseActions";
@@ -626,13 +627,7 @@ function CasesPage() {
                 />
               )
             ) : all.length === 0 ? (
-              <EmptyState title={t("cases.list.emptyTitle")} body={t("cases.list.emptyBody")}>
-                {canCreate && (
-                  <Link to="/opret-case" className="text-list font-medium text-action">
-                    {t("cases.list.createCase")}
-                  </Link>
-                )}
-              </EmptyState>
+              <FirstCaseSteps canCreate={canCreate} />
             ) : (
               <div className="overflow-x-auto">
                 <div

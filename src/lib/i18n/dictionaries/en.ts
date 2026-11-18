@@ -27,6 +27,7 @@ import { caseServer } from "./en/caseServer.ts";
 import { analysisServer } from "./en/analysisServer.ts";
 import { brainServer } from "./en/brainServer.ts";
 import { appServer } from "./en/appServer.ts";
+import { demoData } from "./en/demoData.ts";
 
 /**
  * The English dictionary: the same keys as `da.ts`, translated (AI-assisted, reviewed page by page;
@@ -61,6 +62,7 @@ export const en: Dictionary = {
   analysisServer,
   brainServer,
   appServer,
+  demoData,
   common: {
     save: "Save",
     cancel: "Cancel",

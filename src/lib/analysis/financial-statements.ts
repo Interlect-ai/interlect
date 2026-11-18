@@ -33,9 +33,10 @@ import {
   type RegistryCountry,
   type RegistryStatement,
 } from "./registries/index.ts";
+import { outboundUserAgent } from "../outbound-user-agent.ts";
 
 const SEARCH_ENDPOINT = "http://distribution.virk.dk/offentliggoerelser/_search";
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_DOCUMENT_BYTES = 8_000_000;
 /** Masterplan C1: så mange regnskabsår hentes (research 07: 5-10 år). */

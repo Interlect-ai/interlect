@@ -23,6 +23,7 @@ import type {
 
 import { serverText } from "../../i18n/server-text.ts";
 import type { MessageKey, TranslateVars } from "../../i18n/translate.ts";
+import { outboundUserAgent } from "../../outbound-user-agent.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -33,7 +34,7 @@ const API = "https://get.data.gov.lt/datasets/gov/rc/jar";
 const ENTITY = `${API}/iregistruoti/JuridinisAsmuo`;
 const BALANCE = `${API}/balanso_ataskaitos/BalansoAtaskaita`;
 const INCOME = `${API}/pelno_ataskaitos/PelnoAtaskaita`;
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 15_000;
 const RETRY_DELAY_MS = 750;
 const MAX_RESPONSE_BYTES = 2_000_000;

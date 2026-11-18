@@ -18,6 +18,7 @@ import type {
 
 import { serverText } from "../../i18n/server-text.ts";
 import type { MessageKey, TranslateVars } from "../../i18n/translate.ts";
+import { outboundUserAgent } from "../../outbound-user-agent.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -29,7 +30,7 @@ const REGISTER = "25e80bf3-f107-4ab4-89ef-251b5b9374e9";
 const STATEMENTS = "27fcc5ec-c63b-4bfd-bb08-01f073a52d04";
 const BALANCE = "50ef4f26-f410-4007-b296-22043ca3dc43";
 const INCOME = "d5fd17ef-d32e-40cb-8399-82b780095af0";
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_RESPONSE_BYTES = 2_000_000;
 const SEARCH_SIZE = 10;

@@ -53,6 +53,17 @@ export interface CreditMeter {
   supportEmail: string | null;
   /** The fund's name, for the request. */
   fundName: string;
+  /**
+   * True when the installation has no credit system (INTERLECT_CREDITS=off, a self-hosted
+   * installation) and credits are not enforced: the meter is not shown at all. An installation
+   * that enforces credits always shows it, whatever the variable says.
+   */
+  hidden?: boolean;
+}
+
+/** The meter is hidden only when the installation turned credits off and does not enforce them. */
+export function creditMeterHidden(env: Record<string, string | undefined>, enforced: boolean) {
+  return env["INTERLECT_CREDITS"]?.trim().toLowerCase() === "off" && !enforced;
 }
 
 export const METER_SCOPES = ["analysis", "chat", "brain"] as const;

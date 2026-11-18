@@ -2,10 +2,13 @@
   "extends": "./tsconfig.json",
   "include": [
     "scripts/customers/**/*.ts",
+    "scripts/selfhost/**/*.ts",
     "scripts/registries-check.ts",
     "scripts/lib/registries-check*.ts",
     "scripts/types/*.d.ts",
     "src/lib/health.server.ts"
   ],
-  "compilerOptions": { "types": ["node"] }
+  "compilerOptions": {
+    "types": ["node"]
+  }
 }

@@ -5,13 +5,35 @@ import { defineConfig } from "nitro";
 // browser talks to nothing else; AI calls are made by the server). Inline scripts and styles stay
 // allowed because the framework injects them for hydration; Google Fonts is the maintenance
 // page's font. Every origin here must be one the app really uses.
+// A Supabase that is not on supabase.co (a custom domain, or the local Supabase the self-host
+// end-to-end test runs, .github/workflows/selfhost-e2e.yml) is added from the build's own
+// PAP_SUPABASE_URL/SUPABASE_URL; on supabase.co nothing changes.
+function ownSupabaseOrigins(): string[] {
+  const raw = process.env["PAP_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
+  if (!raw) return [];
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`PAP_SUPABASE_URL/SUPABASE_URL is not a URL: ${raw}`);
+  }
+  if (url.hostname.endsWith(".supabase.co")) return [];
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error(`PAP_SUPABASE_URL/SUPABASE_URL must be http(s): ${raw}`);
+  }
+  const socket = url.protocol === "https:" ? "wss:" : "ws:";
+  return [url.origin, `${socket}//${url.host}`];
+}
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  ["connect-src 'self' https://*.supabase.co wss://*.supabase.co", ...ownSupabaseOrigins()].join(
+    " ",
+  ),
   "worker-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",

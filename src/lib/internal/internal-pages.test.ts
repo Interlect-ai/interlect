@@ -11,6 +11,18 @@ test("customers run production, so the internal pages are closed there (T-639)",
   );
 });
 
+test("a self-hosted installation closes them everywhere with INTERLECT_INTERNAL_PAGES=off", () => {
+  assert.equal(internalPagesEnabled({ INTERLECT_INTERNAL_PAGES: "off" }), false);
+  assert.equal(
+    internalPagesEnabled({ VERCEL_ENV: "preview", INTERLECT_INTERNAL_PAGES: "off" }),
+    false,
+  );
+  assert.equal(
+    internalPagesEnabled({ VERCEL_ENV: "production", INTERLECT_INTERNAL_PAGES: "OFF" }),
+    false,
+  );
+});
+
 test("staging previews, local development and an opened staging production keep them", () => {
   assert.equal(internalPagesEnabled({ VERCEL_ENV: "preview" }), true);
   assert.equal(internalPagesEnabled({}), true);

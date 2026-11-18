@@ -16,6 +16,7 @@ import {
   withCategoryFallbacks,
 } from "./finding-categories";
 import { loadOpenTaskTitles, writeAiTasks } from "@/lib/cases/ai-tasks.server";
+import { writeDeepResultRows } from "./analysis-persist.server";
 import { deepTaskSource } from "@/lib/cases/deep-tasks";
 import {
   founderQuestions,
@@ -37,8 +38,7 @@ import { withSanitizedCardData } from "./card-data";
 import { financeScoreAudit, scoreScreening, SCORING_FORMULA_VERSION } from "./scoring";
 import { applyGateAnswers, teamAnswersForNewRun, type StoredGateAnswer } from "./gate-answers";
 import { loadTeamGateAnswers } from "./rescore.server";
-import { calculateFinance, FINANCE_FORMULA_VERSION } from "./finance";
-import { FINANCE_POINT_SELECT, financeInputsFor, type FinancePointRow } from "./finance-inputs";
+import { FINANCE_FORMULA_VERSION } from "./finance";
 import { checkDeepFinancialInputs } from "./financial-input-check.server";
 import {
   DEEP_EVIDENCE_MAX,
@@ -80,7 +80,6 @@ import {
   failedCallCompletion,
   failedStepChargeUsd,
   auditDeepOutput,
-  average,
   buildDeepCaseInput,
   callDeepGateway,
   completionUsage,
@@ -90,7 +89,6 @@ import {
   loadReusableResearchPlan,
   saveResearchPlanOnStep,
   loadReusableSpecialists,
-  normalizeFinancialDate,
   specialistJsonSchema,
   validateReferences,
   validateSpecialistPacket,
@@ -1046,29 +1044,6 @@ async function runSynthesisPhase(
   }
 }
 
-/** One financial point's identity: the same fact from the same evidence. */
-function financialPointKey(point: Record<string, unknown>): string {
-  return JSON.stringify([
-    point["metric"],
-    Number(point["value"]),
-    point["unit"],
-    point["period_start"] ?? null,
-    point["period_end"] ?? null,
-    point["evidence_id"],
-  ]);
-}
-
-/** The rows `persistDeepAnalysis` writes for one run (financial points are reused, not deleted). */
-async function clearPersistedDeepRows(service: ServiceClient, fundId: string, runId: string) {
-  const results = await Promise.all(
-    ["category_scores", "analysis_findings", "risks", "calculation_results", "recommendations"].map(
-      (table) => service.from(table).delete().eq("fund_id", fundId).eq("run_id", runId),
-    ),
-  );
-  const failed = results.find((result) => result.error);
-  if (failed?.error) throw new Error(serverText("analysisServer.common.deepScoresNotSaved"));
-}
-
 async function persistDeepAnalysis(
   context: DeepWorkerContext,
   output: DeepAnalysisOutput,
@@ -1076,7 +1051,7 @@ async function persistDeepAnalysis(
   qualityAudit: ReturnType<typeof auditDeepOutput>,
   storedTeamAnswers: StoredGateAnswer[],
 ) {
-  const { service, runId, profile, config, run, evidenceIds, caseRow } = context;
+  const { service, runId, profile, config, run, evidenceIds } = context;
   const screeningShape = { ...output, schemaVersion: "interlect-screening-v1" as const };
   // Teamets gate-svar under samme opsætning gælder også for den dybe analyse (harden F2).
   const teamAnswers = teamAnswersForNewRun(storedTeamAnswers, {
@@ -1089,175 +1064,13 @@ async function persistDeepAnalysis(
     context.company.stage,
     context.financeScore,
   );
-  const assessmentByKey = new Map(output.assessments.map((item) => [item.criterionKey, item]));
-
-  // An attempt of this run that died while saving left part of its rows behind; they
-  // are removed first, so a second attempt saves the whole result once (unique keys on scores,
-  // calculations and the recommendation would otherwise reject it).
-  await clearPersistedDeepRows(service, config.fund_id, runId);
-
-  const { error: scoreError } = await service.from("category_scores").insert(
-    result.criteria.map((criterion) => ({
-      fund_id: config.fund_id,
-      run_id: runId,
-      category: criterion.criterionKey,
-      proposed_score: assessmentByKey.get(criterion.criterionKey)?.proposedScore ?? null,
-      validated_score: criterion.score,
-      weight: criterion.weight,
-      confidence: criterion.confidence,
-      rationale:
-        criterion.codeRationale ??
-        assessmentByKey.get(criterion.criterionKey)?.rationale ??
-        serverText("analysisServer.common.noAssessment"),
-    })),
-  );
-  if (scoreError) throw new Error(serverText("analysisServer.common.deepScoresNotSaved"));
-
-  if (output.findings.length) {
-    const { data: insertedFindings, error: findingError } = await service
-      .from("analysis_findings")
-      .insert(
-        output.findings.map((finding) => ({
-          fund_id: config.fund_id,
-          run_id: runId,
-          category: finding.category,
-          finding_type: finding.findingType,
-          statement: finding.statement,
-          confidence: finding.confidence,
-          nature: finding.nature,
-          // A finding made by code (no data found for an area) is stored as such.
-          origin:
-            (finding as { origin?: string }).origin === "deterministic" ? "deterministic" : "model",
-        })),
-      )
-      .select("id");
-    if (findingError) throw findingError;
-    const links = (insertedFindings ?? []).flatMap((row, index) =>
-      (output.findings[index]?.evidenceIds ?? []).map((evidenceId) => ({
-        fund_id: config.fund_id,
-        finding_id: row["id"],
-        evidence_id: evidenceId,
-        supports: true,
-      })),
-    );
-    if (links.length) {
-      const { error } = await service.from("analysis_finding_evidence").insert(links);
-      if (error) throw error;
-    }
-  }
-
-  if (output.risks.length) {
-    const { error } = await service.from("risks").insert(
-      output.risks.map((risk) => ({
-        fund_id: config.fund_id,
-        run_id: runId,
-        category: risk.riskKey,
-        level: risk.level,
-        likelihood: risk.likelihood,
-        impact: risk.impact,
-        statement: risk.rationale,
-        mitigation: risk.mitigation,
-        evidence_ids: risk.evidenceIds,
-      })),
-    );
-    if (error) throw new Error(serverText("analysisServer.common.deepRisksNotSaved"));
-  }
-
-  const specialistPointIds = new Set<string>();
-  if (output.financialInputs.length) {
-    const points = output.financialInputs.map((point) => ({
-      fund_id: caseRow["fund_id"] as string,
-      case_id: run["case_id"] as string,
-      metric: point.metric,
-      value: point.value,
-      unit: point.unit,
-      period_start: normalizeFinancialDate(point.periodStart, "start"),
-      period_end: normalizeFinancialDate(point.periodEnd, "end"),
-      evidence_id: point.evidenceId,
-    }));
-    // The same point from the same evidence (an earlier attempt of this run, or an
-    // earlier run) is reused instead of saved twice; the points have no run of their own.
-    const { data: existing, error: existingError } = await service
-      .from("financial_data_points")
-      .select("id, metric, value, unit, period_start, period_end, evidence_id")
-      .eq("fund_id", caseRow["fund_id"] as string)
-      .eq("case_id", run["case_id"] as string)
-      .in("evidence_id", [...new Set(points.map((point) => point.evidence_id))]);
-    if (existingError) throw existingError;
-    const reused = new Map(
-      (existing ?? []).map((row) => [financialPointKey(row), row as Record<string, unknown>]),
-    );
-    const fresh = points.filter((point) => !reused.has(financialPointKey(point)));
-    const { data: insertedFresh, error: financialError } = fresh.length
-      ? await service
-          .from("financial_data_points")
-          .insert(fresh)
-          .select("id, metric, value, unit, period_start, period_end, evidence_id")
-      : { data: [], error: null };
-    if (financialError) throw financialError;
-    const byKey = new Map(reused);
-    for (const row of insertedFresh ?? []) byKey.set(financialPointKey(row), row);
-    const inserted = [...new Set(points.map(financialPointKey))].flatMap((key) => {
-      const row = byKey.get(key);
-      return row ? [row] : [];
-    });
-    for (const point of inserted) specialistPointIds.add(point["id"] as string);
-  }
-  // The specialist's figures, topped up with the register's for what it did not give.
-  const { data: caseFinanceRows, error: caseFinanceError } = await service
-    .from("financial_data_points")
-    .select(FINANCE_POINT_SELECT)
-    .eq("fund_id", caseRow["fund_id"] as string)
-    .eq("case_id", run["case_id"] as string);
-  if (caseFinanceError) {
-    console.error("[deep] finance inputs", caseFinanceError.message);
-    throw new Error(serverText("analysisServer.common.financeNotSaved"));
-  }
-  const financeInputs = financeInputsFor(
-    (caseFinanceRows ?? []) as unknown as FinancePointRow[],
-    specialistPointIds,
-  );
-  const workerCalculations = financeInputs.length
-    ? calculateFinance(financeInputs, requestLanguage())
-    : [];
-  // Only the register's figures (no specialist input) and nothing computable: save no empty rows.
-  if (specialistPointIds.size > 0 || workerCalculations.some((item) => item.status === "ok")) {
-    const calculations = workerCalculations;
-    const { error } = await service.from("calculation_results").insert(
-      calculations.map((item) => ({
-        fund_id: config.fund_id,
-        run_id: runId,
-        metric: item.metric,
-        status: item.status,
-        value: item.value,
-        unit: item.unit,
-        formula_version: FINANCE_FORMULA_VERSION,
-        input_ids: item.inputIds,
-        missing_inputs: item.missingInputs,
-        warnings: item.warnings,
-      })),
-    );
-    if (error) throw new Error(serverText("analysisServer.common.financeNotSaved"));
-  }
-
-  const rationale = [
-    output.overallAssessment,
-    serverText("analysisServer.deep.contrary", { text: output.contraryCase }),
-  ].join("\n\n");
-  const assessmentConfidence = average(output.assessments.map((item) => item.confidence));
-  const { error: recommendationError } = await service.from("recommendations").insert({
-    fund_id: config.fund_id,
-    run_id: runId,
-    recommendation: result.recommendation,
-    overall_score: result.overallScore,
-    evidence_confidence:
-      assessmentConfidence === null ? null : assessmentConfidence * result.evidenceCoverage,
-    has_failed_gate: result.failedHardGateKeys.length > 0,
-    has_critical_risk: result.highestRisk === "critical",
-    rationale,
+  await writeDeepResultRows(service, {
+    fundId: config.fund_id,
+    caseId: run["case_id"] as string,
+    runId,
+    output,
+    result,
   });
-  if (recommendationError)
-    throw new Error(serverText("analysisServer.common.deepRecommendationNotSaved"));
 
   const steps = await loadSteps(service, runId);
   const stepRows = [...steps.values()];

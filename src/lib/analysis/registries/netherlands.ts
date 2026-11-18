@@ -24,6 +24,7 @@ import type {
 
 import { serverText } from "../../i18n/server-text.ts";
 import type { MessageKey, TranslateVars } from "../../i18n/translate.ts";
+import { outboundUserAgent } from "../../outbound-user-agent.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -34,7 +35,7 @@ const KVK_STATEMENTS = "https://opendata.kvk.nl/api/v1/hvds/jaarrekeningen/kvknu
 const GLEIF = "https://api.gleif.org/api/v1/lei-records";
 /** GLEIF's kode for Kamer van Koophandel som registreringsmyndighed. */
 const KVK_AUTHORITY = "RA000463";
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_RESPONSE_BYTES = 2_000_000;
 const SEARCH_SIZE = 10;

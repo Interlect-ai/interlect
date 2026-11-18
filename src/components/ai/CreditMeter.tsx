@@ -68,6 +68,7 @@ export function CreditMeter({ fundId }: { fundId: string }) {
     );
   }
   const meter = query.data;
+  if (meter.hidden) return null;
   return (
     <section
       aria-labelledby={headingId}

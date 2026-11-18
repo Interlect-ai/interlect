@@ -19,9 +19,11 @@ import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { RequireSession } from "@/components/auth/RequireSession";
 import { AskInterlect } from "@/components/brain/AskInterlect";
+import { DemoDataBanner } from "@/components/demo/DemoDataBanner";
 import { AppRail, RailContent } from "@/components/ds/AppRail";
 import { MobileTopBar } from "@/components/ds/MobileTopBar";
 import { ASK_ALL_CASES, type AskContext } from "@/lib/brain/ask";
+import { useDemoData } from "@/lib/demo/useDemoData";
 import { EASE, REDUCED_FADE } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +60,15 @@ export function AppShell({
   children: ReactNode;
 }) {
   const reduced = useReducedMotion();
+  // Self-host demo data (0900): the banner sits above the page while there is demo data.
+  const demo = useDemoData();
+  const page = redesigned ? (
+    children
+  ) : (
+    <LegacyPage title={title} description={description} meta={meta} actions={actions}>
+      {children}
+    </LegacyPage>
+  );
   return (
     <div className="min-h-screen bg-canvas text-ink-1 md:flex md:h-screen md:overflow-hidden md:p-2.5 print:block print:h-auto print:min-h-0 print:overflow-visible print:bg-transparent print:p-0">
       <AppRail extra={railExtra} />
@@ -78,13 +89,13 @@ export function AppShell({
           transition={reduced ? REDUCED_FADE : { duration: 0.46, delay: 0.1, ease: EASE.out }}
         >
           <RequireSession>
-            {redesigned ? (
-              children
-            ) : (
-              <LegacyPage title={title} description={description} meta={meta} actions={actions}>
-                {children}
-              </LegacyPage>
-            )}
+            {/* The same tree with and without the banner, so the page never remounts. */}
+            <div className={cn("flex flex-col", redesigned && "h-full print:h-auto")}>
+              {demo.visible && demo.fundId && (
+                <DemoDataBanner fundId={demo.fundId} cases={demo.cases} />
+              )}
+              <div className={cn("min-w-0", redesigned && "min-h-0 flex-1")}>{page}</div>
+            </div>
           </RequireSession>
         </motion.div>
       </main>

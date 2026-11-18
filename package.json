@@ -1,6 +1,7 @@
 {
   "name": "interlect",
   "private": true,
+  "license": "Apache-2.0",
   "sideEffects": false,
   "type": "module",
   "engines": {
@@ -10,13 +11,14 @@
     "dev": "vite dev",
     "build": "vite build && node scripts/fix-vercel-function-symlinks.mjs",
     "build:dev": "vite build --mode development",
+    "setup": "node --import ./scripts/lib/register-alias.mjs scripts/selfhost/setup.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "check:chart-deps": "node scripts/check-chart-deps.mjs",
     "check:audit": "node scripts/check-audit.mjs",
     "check:migrations": "node scripts/check-migration-numbers.mjs",
     "format": "prettier --write .",
-    "test": "node --test src/lib/ai/*.test.ts src/lib/analysis/*.test.ts src/lib/analysis/registries/*.test.ts src/lib/funds/*.test.ts src/lib/domain/*.test.ts src/lib/auth/*.test.ts src/lib/cases/*.test.ts src/lib/brain/*.test.ts src/lib/brain/*/*.test.ts src/lib/display/*.test.ts src/lib/errors/*.test.ts src/lib/ui/*.test.ts src/lib/charts/*.test.ts src/lib/overview/*.test.ts src/lib/i18n/*.test.ts src/lib/health-cache.test.ts src/lib/health-runs.test.ts src/lib/security/*.test.ts src/lib/internal/*.test.ts scripts/lib/export-fund.test.ts scripts/lib/db-tls.test.ts scripts/lib/migration-log.test.ts scripts/lib/registries-check.test.ts scripts/lib/audit-exceptions.test.mjs",
+    "test": "node --test src/lib/ai/*.test.ts src/lib/analysis/*.test.ts src/lib/analysis/registries/*.test.ts src/lib/funds/*.test.ts src/lib/domain/*.test.ts src/lib/auth/*.test.ts src/lib/cases/*.test.ts src/lib/brain/*.test.ts src/lib/brain/*/*.test.ts src/lib/display/*.test.ts src/lib/errors/*.test.ts src/lib/ui/*.test.ts src/lib/charts/*.test.ts src/lib/overview/*.test.ts src/lib/i18n/*.test.ts src/lib/health-cache.test.ts src/lib/health-runs.test.ts src/lib/security/*.test.ts src/lib/internal/*.test.ts scripts/lib/export-fund.test.ts scripts/lib/db-tls.test.ts scripts/lib/migration-log.test.ts scripts/lib/registries-check.test.ts scripts/lib/audit-exceptions.test.mjs scripts/selfhost/lib/*.test.ts src/lib/outbound-user-agent.test.ts",
     "db:local": "node scripts/local-db.mjs",
     "test:rls": "node scripts/test-rls.mjs",
     "test:forget-person-db": "node scripts/test-forget-person-db.mjs",
@@ -29,11 +31,13 @@
     "test:fund-language-db": "node scripts/test-fund-language-db.mjs",
     "test:demo-view-db": "node scripts/test-demo-view-db.mjs",
     "test:case-list-db": "node scripts/test-case-list-db.mjs",
+    "test:demo-data-db": "node scripts/test-demo-data-db.mjs",
     "i18n:extract": "node scripts/i18n-extract.mjs",
     "i18n:check": "node scripts/i18n-extract.mjs src/components src/routes src/lib --server --max 0",
     "export:fund": "node scripts/export-fund.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
-    "registries:check": "node --import ./scripts/lib/register-alias.mjs scripts/registries-check.ts"
+    "registries:check": "node --import ./scripts/lib/register-alias.mjs scripts/registries-check.ts",
+    "seed:demo": "node --import ./scripts/lib/register-alias.mjs scripts/selfhost/seed-demo.ts"
   },
   "overrides": {
     "rolldown": "1.2.1",
@@ -145,6 +149,5 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "8.3.5"
-  },
-  "license": "Apache-2.0"
+  }
 }

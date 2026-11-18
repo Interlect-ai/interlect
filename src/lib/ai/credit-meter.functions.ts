@@ -21,6 +21,7 @@ import {
   sumUsage,
   withAllowance,
   type CreditMeter,
+  creditMeterHidden,
 } from "./credit-meter";
 import { serverText } from "@/lib/i18n/server-text";
 
@@ -171,6 +172,7 @@ export const getCreditMeter = createServerFn({ method: "GET" })
         topUpUrl: canTopUp ? safeTopUpUrl(process.env["AI_TOPUP_URL"]) : null,
         supportEmail: canTopUp ? safeEmail(process.env["AI_SUPPORT_EMAIL"]) : null,
         fundName: access.fundName,
+        hidden: creditMeterHidden(process.env, shown.enforced),
       };
     } catch (cause) {
       console.error("[credit-meter]", cause instanceof Error ? cause.message : cause);

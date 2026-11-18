@@ -15,6 +15,7 @@ import { getServiceClient } from "@/lib/supabase/admin.server";
 import { buildScreeningPrompt, type ScreeningCaseInput } from "./prompt";
 import { parseScreeningOutput } from "./contracts";
 import { writeAiTasks } from "@/lib/cases/ai-tasks.server";
+import { screeningStatuses, writeScreeningResultRows } from "./analysis-persist.server";
 import { MAX_SCREENING_NEXT_STEPS, sanitizeNextSteps } from "@/lib/cases/tasks";
 import { financeScoreAudit, scoreScreening, SCORING_FORMULA_VERSION } from "./scoring";
 import { applyGateAnswers, teamAnswersForNewRun } from "./gate-answers";
@@ -32,8 +33,6 @@ import { CONFIG_SELECT, mapProfile, type ConfigData } from "./fund-profile";
 import { readResearchHandOff, screeningClaimDecision } from "./screening-phases";
 import { enqueueScreeningAnalysis } from "./screening-queue.server";
 import {
-  average,
-  buildOverallScoreRationale,
   callGateway,
   ScreeningGatewayError,
   validateConfiguredCoverage,
@@ -471,82 +470,8 @@ async function runScreeningAnalysisInLanguage(
       company.stage,
       financeScore,
     );
-    const assessmentByKey = new Map(output.assessments.map((item) => [item.criterionKey, item]));
-
-    const finalStatus = result.outcome === "awaiting_approval" ? "awaiting_approval" : "complete";
-    const caseStatus =
-      result.outcome === "awaiting_approval"
-        ? "awaiting_approval"
-        : result.outcome === "needs_information"
-          ? "needs_information"
-          : "screening_complete";
-    const rationale = buildOverallScoreRationale(output, result, profile);
-
-    const { error: categoryScoreError } = await service.from("category_scores").insert(
-      result.criteria.map((criterion) => ({
-        fund_id: fundId,
-        run_id: runId,
-        category: criterion.criterionKey,
-        proposed_score: assessmentByKey.get(criterion.criterionKey)?.proposedScore ?? null,
-        validated_score: criterion.score,
-        weight: criterion.weight,
-        confidence: criterion.confidence,
-        rationale:
-          criterion.codeRationale ??
-          assessmentByKey.get(criterion.criterionKey)?.rationale ??
-          serverText("analysisServer.common.noAssessment"),
-      })),
-    );
-    if (categoryScoreError) throw new Error(serverText("analysisServer.screening.scoresNotSaved"));
-    if (output.risks.length) {
-      const { error: riskError } = await service.from("risks").insert(
-        output.risks.map((risk) => ({
-          fund_id: fundId,
-          run_id: runId,
-          category: risk.riskKey,
-          level: risk.level,
-          likelihood: risk.likelihood,
-          impact: risk.impact,
-          statement: risk.rationale,
-          mitigation: risk.mitigation,
-          evidence_ids: risk.evidenceIds,
-        })),
-      );
-      if (riskError) throw new Error(serverText("analysisServer.screening.risksNotSaved"));
-    }
-    const findingRows = [
-      ...output.strengths.map((statement) => ({ findingType: "strength", statement })),
-      ...output.weaknesses.map((statement) => ({ findingType: "weakness", statement })),
-      ...output.openQuestions.map((statement) => ({ findingType: "question", statement })),
-    ].map((finding) => ({
-      fund_id: fundId,
-      run_id: runId,
-      category: "screening_summary",
-      finding_type: finding.findingType,
-      statement: finding.statement,
-      confidence: average(output.assessments.map((item) => item.confidence)),
-      nature: "judgement",
-      origin: "model",
-    }));
-    if (findingRows.length) {
-      const { error: findingError } = await service.from("analysis_findings").insert(findingRows);
-      if (findingError)
-        throw new Error(serverText("analysisServer.screening.explanationsNotSaved"));
-    }
-    const assessmentConfidence = average(output.assessments.map((item) => item.confidence));
-    const { error: recommendationError } = await service.from("recommendations").insert({
-      fund_id: fundId,
-      run_id: runId,
-      recommendation: result.recommendation,
-      overall_score: result.overallScore,
-      evidence_confidence:
-        assessmentConfidence === null ? null : assessmentConfidence * result.evidenceCoverage,
-      has_failed_gate: result.failedHardGateKeys.length > 0,
-      has_critical_risk: result.highestRisk === "critical",
-      rationale,
-    });
-    if (recommendationError)
-      throw new Error(serverText("analysisServer.screening.recommendationNotSaved"));
+    const { runStatus: finalStatus, caseStatus } = screeningStatuses(result);
+    await writeScreeningResultRows(service, { fundId, runId, profile, output, result });
     const { data: finished, error: finishError } = await service
       .from("analysis_runs")
       .update({

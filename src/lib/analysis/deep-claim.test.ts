@@ -126,9 +126,15 @@ test("the deep worker cannot hang or revive a finished run (T-741 a-d)", () => {
   const active = worker.slice(worker.indexOf("async function markRunActive"));
   assert.match(active.slice(0, 900), /\.in\("status", \["queued", "running"\]\)/);
   assert.match(worker, /if \(!\(await markRunActive\(context\)\)\) return "ignored";/);
-  // d: a second attempt clears the run's earlier rows before it saves.
+  // d: a second attempt clears the run's earlier rows before it saves (the rows are written by
+  // writeDeepResultRows in analysis-persist.server.ts, which the worker calls).
   const persist = worker.slice(worker.indexOf("async function persistDeepAnalysis"));
-  assert.ok(persist.indexOf("clearPersistedDeepRows") < persist.indexOf('from("category_scores")'));
+  assert.match(persist.slice(0, 2_000), /await writeDeepResultRows\(service, \{/);
+  const rows = readFileSync(new URL("./analysis-persist.server.ts", import.meta.url), "utf8");
+  const write = rows.slice(rows.indexOf("export async function writeDeepResultRows"));
+  assert.ok(
+    write.indexOf("await clearPersistedDeepRows(") < write.indexOf('from("category_scores")'),
+  );
   // A late delivery never fails a run that already failed or was released (review).
   const fail = worker.slice(worker.indexOf("async function failDeepRun"));
   assert.ok(fail.indexOf("if (!failed) return;") < fail.indexOf("returnFailedDeepCaseToScreening"));

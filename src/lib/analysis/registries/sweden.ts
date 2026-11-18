@@ -24,6 +24,7 @@ import type {
 
 import { serverText } from "../../i18n/server-text.ts";
 import type { MessageKey, TranslateVars } from "../../i18n/translate.ts";
+import { outboundUserAgent } from "../../outbound-user-agent.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -33,7 +34,7 @@ function msg(key: string, vars?: TranslateVars) {
 const API_URL = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1";
 const TOKEN_URL = "https://portal.api.bolagsverket.se/oauth2/token";
 const SCOPE = "vardefulla-datamangder:read vardefulla-datamangder:ping";
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 20_000;
 const MAX_ZIP_BYTES = 8_000_000;
 /** De nyeste årsredovisningar; hver har også året før og en flerårsöversikt. */

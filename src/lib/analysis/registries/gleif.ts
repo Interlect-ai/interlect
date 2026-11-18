@@ -19,6 +19,7 @@ import type { ForeignRegistryCountry, RegistryAdapter, RegistryCompany } from ".
 
 import { serverText } from "../../i18n/server-text.ts";
 import type { MessageKey, TranslateVars } from "../../i18n/translate.ts";
+import { outboundUserAgent } from "../../outbound-user-agent.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -26,7 +27,7 @@ function msg(key: string, vars?: TranslateVars) {
 }
 
 const GLEIF = "https://api.gleif.org/api/v1";
-const USER_AGENT = "interlect.ai/1.0 (+https://interlect.ai)";
+const USER_AGENT = outboundUserAgent();
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_RESPONSE_BYTES = 2_000_000;
 const SEARCH_SIZE = 10;

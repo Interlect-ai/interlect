@@ -1,55 +1,57 @@
 # Interlect
 
-Interlect is an AI analyst for investment teams. A team writes down its investment thesis once;
-Interlect then turns a pitch deck, a website or a short description into a case, researches the
-company in public sources and company registers, screens it against the thesis, and, when a
-person asks for it, runs a deep analysis with a team of specialists. Brain, the team's own
-knowledge layer, remembers what the team has learned across cases.
+An evidence-led AI analyst for venture funds. You describe your fund once (mandate, thesis,
+scoring criteria), and Interlect screens incoming companies against it, runs deep analyses with a
+team of specialists, keeps a case list from first look to decision, and builds the fund's memory
+(the Brain) from everything the team learns.
 
-A few principles run through the code:
+- **Screening and deep analysis** scored against your own criteria, with risks, team, key
+  findings and the evidence behind every claim.
+- **Company registers** in the Nordics and the EU (Denmark, Sweden, Norway, Finland, Estonia,
+  Latvia, Lithuania, Poland, the Netherlands, France, GLEIF), so figures come from filed accounts
+  where they exist. Denmark and Sweden need a key from the register (see `.env.example`).
+- **The Brain**: what the fund has seen and decided, searchable and used in later analyses.
+- **Your data stays yours**: it runs on your own Supabase (EU region) and Vercel accounts. AI calls
+  go through the Vercel AI Gateway with zero data retention and EU inference where offered. All
+  data is scoped per fund with row-level security.
 
-- **AI does the groundwork; people decide.** Interlect never contacts founders or moves a case
-  to a decision on its own.
-- **Scores and financial maths are computed in code, never by a model.** Missing input is shown
-  as "cannot be calculated", never guessed.
-- **Only stored evidence may be cited**, and missing data lowers confidence instead of counting
-  against a company.
-- **Teams never see each other's data**: every table is scoped to its team and protected by
-  row-level security.
+**Stack:** TanStack Start (React, Vite, Nitro), Supabase (Postgres, auth, storage), Vercel
+(functions, queues, cron), Vercel AI Gateway.
 
-## Stack
+## Install on your own accounts
 
-- [TanStack Start](https://tanstack.com/start) (React 19, Vite), deployed on Vercel
-- [Supabase](https://supabase.com) (Postgres 17, Auth, Storage) with row-level security
-- Model calls through the Vercel AI Gateway (`ai` SDK), with zero data retention enforced
-- Background work (screening, deep analysis, Brain) on Vercel Queues
-
-## Getting started
-
-Requirements: Node 24, npm, and Docker for the local test database.
+You need Node.js 24, git, a Supabase account and a Vercel account.
 
 ```bash
+git clone <this repository>
+cd <folder>
 npm ci
-cp .env.example .env.local   # fill in your Supabase project and AI Gateway key
-npm run dev
+npm run setup
 ```
 
-Apply the migrations in `db/migrations/` to your Supabase project in order:
+`npm run setup` asks for a Supabase access token and a Vercel token (with links to where you make
+them), the fund's name, your e-mail, a language and an EU region. It then creates the database,
+runs the migrations, creates your first fund, deploys the app to Vercel, checks that it is
+healthy and gives you a one-time link to create your admin account. At the end it offers ten
+fictional demo cases, so every screen has content from the start; a banner lets you delete them
+again with one click.
+
+Read [docs/selfhost/README.md](docs/selfhost/README.md) for what the setup does step by step,
+how to update later, and **which Vercel plan you need** (the free Hobby plan runs everything,
+but Vercel allows it only for personal, non-commercial use; a fund needs Vercel Pro). Every
+environment variable is listed in [.env.example](.env.example).
+
+## Develop
 
 ```bash
-DATABASE_URL=postgres://... node scripts/run-migrations.mjs
+npm run dev          # local dev server (needs .env.local; npm run setup can write it)
+npm run build        # production build
+npx eslint src       # lint
+npm test             # unit tests
+npm run db:local     # local Postgres for the database tests (test:rls, test:demo-data-db, ...)
+npm run seed:demo    # the ten fictional demo cases (no AI calls)
 ```
 
-## Checks
-
-```bash
-npx tsc --noEmit
-npx eslint src
-npm test
-npm run db:local -- fresh   # a throwaway Postgres in Docker with every migration
-npm run test:rls            # row-level security tests against that database
-```
-
-## Licence
+## License
 
 Apache License 2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
