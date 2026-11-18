@@ -23,8 +23,8 @@ team of specialists, keeps a case list from first look to decision, and builds t
 You need Node.js 24, git, a Supabase account and a Vercel account.
 
 ```bash
-git clone <this repository>
-cd <folder>
+git clone https://github.com/Interlect-ai/interlect.git
+cd interlect
 npm ci
 npm run setup
 ```
