@@ -1,0 +1,26 @@
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+.output
+.vinxi
+.nitro
+.tanstack/**
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editors and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.sw?
+
+# Local Vercel linkage and secrets
+.vercel/
+.env*
+!.env.example

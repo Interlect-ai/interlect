@@ -1,0 +1,249 @@
+{
+  "filters": {
+    "legal_entity_registration_number": 40203050078
+  },
+  "include_total": true,
+  "limit": 12,
+  "records_format": "objects",
+  "resource_id": "27fcc5ec-c63b-4bfd-bb08-01f073a52d04",
+  "sort": "year desc",
+  "total_estimation_threshold": null,
+  "records": [
+    {
+      "_id": 1977614,
+      "id": 2350165,
+      "file_id": 35601858,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2025,
+      "year_started_on": "2025-01-01T00:00:00",
+      "year_ended_on": "2025-12-31T00:00:00",
+      "employees": 560,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2026-07-21T17:00:08"
+    },
+    {
+      "_id": 1977615,
+      "id": 2350166,
+      "file_id": 35601862,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2025,
+      "year_started_on": "2025-01-01T00:00:00",
+      "year_ended_on": "2025-12-31T00:00:00",
+      "employees": 668,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2026-07-21T17:00:09"
+    },
+    {
+      "_id": 1834635,
+      "id": 2084319,
+      "file_id": 34664081,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2024,
+      "year_started_on": "2024-01-01T00:00:00",
+      "year_ended_on": "2024-12-31T00:00:00",
+      "employees": 841,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2025-07-31T19:01:36"
+    },
+    {
+      "_id": 1834628,
+      "id": 2084312,
+      "file_id": 34664065,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2024,
+      "year_started_on": "2024-01-01T00:00:00",
+      "year_ended_on": "2024-12-31T00:00:00",
+      "employees": 682,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2025-07-31T19:01:31"
+    },
+    {
+      "_id": 1692963,
+      "id": 1939124,
+      "file_id": 33715536,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2023,
+      "year_started_on": "2023-01-01T00:00:00",
+      "year_ended_on": "2023-12-31T00:00:00",
+      "employees": 616,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2024-08-13T19:00:29"
+    },
+    {
+      "_id": 1693073,
+      "id": 1939241,
+      "file_id": 33718282,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2023,
+      "year_started_on": "2023-01-01T00:00:00",
+      "year_ended_on": "2023-12-31T00:00:00",
+      "employees": 732,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2024-08-14T19:00:28"
+    },
+    {
+      "_id": 1530207,
+      "id": 1762201,
+      "file_id": 32574061,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2022,
+      "year_started_on": "2022-01-01T00:00:00",
+      "year_ended_on": "2022-12-31T00:00:00",
+      "employees": 749,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2023-06-15T19:07:28"
+    },
+    {
+      "_id": 1530205,
+      "id": 1762199,
+      "file_id": 32574057,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2022,
+      "year_started_on": "2022-01-01T00:00:00",
+      "year_ended_on": "2022-12-31T00:00:00",
+      "employees": 624,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2023-06-15T19:07:23"
+    },
+    {
+      "_id": 1351823,
+      "id": 1359384,
+      "file_id": 31075727,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2021,
+      "year_started_on": "2021-01-01T00:00:00",
+      "year_ended_on": "2021-12-31T00:00:00",
+      "employees": 626,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2022-06-09T18:13:12"
+    },
+    {
+      "_id": 1351825,
+      "id": 1359386,
+      "file_id": 31075731,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2021,
+      "year_started_on": "2021-01-01T00:00:00",
+      "year_ended_on": "2021-12-31T00:00:00",
+      "employees": 757,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2022-06-09T18:13:31"
+    },
+    {
+      "_id": 1214799,
+      "id": 1222073,
+      "file_id": 29306915,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UKGP",
+      "year": 2020,
+      "year_started_on": "2020-01-01T00:00:00",
+      "year_ended_on": "2020-12-31T00:00:00",
+      "employees": 438,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2021-05-21T12:00:53"
+    },
+    {
+      "_id": 1214798,
+      "id": 1222072,
+      "file_id": 29306913,
+      "legal_entity_registration_number": 40203050078,
+      "source_schema": "DokGPv1",
+      "source_type": "UGP",
+      "year": 2020,
+      "year_started_on": "2020-01-01T00:00:00",
+      "year_ended_on": "2020-12-31T00:00:00",
+      "employees": 409,
+      "rounded_to_nearest": "ONES",
+      "currency": "EUR",
+      "created_at": "2021-05-21T12:00:45"
+    }
+  ],
+  "fields": [
+    {
+      "id": "_id",
+      "type": "int"
+    },
+    {
+      "id": "id",
+      "type": "numeric"
+    },
+    {
+      "id": "file_id",
+      "type": "numeric"
+    },
+    {
+      "id": "legal_entity_registration_number",
+      "type": "numeric"
+    },
+    {
+      "id": "source_schema",
+      "type": "text"
+    },
+    {
+      "id": "source_type",
+      "type": "text"
+    },
+    {
+      "id": "year",
+      "type": "numeric"
+    },
+    {
+      "id": "year_started_on",
+      "type": "timestamp"
+    },
+    {
+      "id": "year_ended_on",
+      "type": "timestamp"
+    },
+    {
+      "id": "employees",
+      "type": "numeric"
+    },
+    {
+      "id": "rounded_to_nearest",
+      "type": "text"
+    },
+    {
+      "id": "currency",
+      "type": "text"
+    },
+    {
+      "id": "created_at",
+      "type": "timestamp"
+    }
+  ],
+  "total": 16,
+  "total_was_estimated": false
+}

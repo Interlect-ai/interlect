@@ -1,0 +1,181 @@
+/** English texts the server sends in Fondsopsætning; same keys as `da/fundServer.ts`. */
+export const fundServer = {
+  common: {
+    setupNotLoaded: "The team setup could not be loaded.",
+    versionNotFound: "The version was not found.",
+    draftOnlyEdit: "Only a draft can be changed. Create a draft first.",
+    draftNotFound: "The draft was not found.",
+    gatewayMissing:
+      "The AI service could not be used just now. Try again shortly, or write to Interlect.",
+    interrupted: "The suggestion was cut off and has not been used.",
+    aiNoAnswer: "The AI could not answer. Try again shortly.",
+    accessCheckFailed: "Access could not be checked. Try again shortly.",
+    proposalsNotLoaded: "The suggestions could not be loaded.",
+    proposalNotSaved: "The suggestion could not be saved.",
+    proposalAlreadyHandled: "The suggestion has already been handled.",
+    proposalNotLaid: "The suggestion could not be added to the draft.",
+    draftChanged: "The draft has changed since the suggestion was made. Ask for a new suggestion.",
+    caseNotLoaded: "The case could not be loaded.",
+    caseNotFound: "The case was not found.",
+    caseCompanyNotFound: "The case's company was not found.",
+    caseScreeningNotLoaded: "The case's screening could not be loaded.",
+    caseBasisNotLoaded: "The case's analysis basis could not be loaded.",
+    caseNoBasis: "The case has no analysis basis yet.",
+    trialFailed: "The trial run could not be completed. Try again shortly.",
+    versionNotFoundProfile: "The setup version was not found.",
+    specialistNotInDraft: "The specialist was not found in the draft.",
+    reasonsNotLoaded: "The reasons could not be loaded.",
+    moduleNotFound: "The module does not exist.",
+  },
+  aiSettings: {
+    runsNotLoaded: "Your team's earlier runs could not be loaded.",
+    chooseSetting: "Choose a setting.",
+    confirmCap: "The cap must be confirmed before it is saved.",
+    notEnabled: "AI levels are not enabled in the database yet (migration 0036).",
+    notSaved: "The setting could not be saved.",
+    capRange: "The cap must be between {min} and {max} DKK.",
+  },
+  assist: {
+    notStarted: "The help could not be started. Try again shortly.",
+    creditsNotReserved: "The credits could not be reserved. Try again shortly.",
+    tooLong:
+      "The text is too long for the AI help. Make the description or the specialist shorter.",
+    rateLimited:
+      "Your team has used the AI help {count} times in the last hour. Wait a little before trying again.",
+  },
+  history: {
+    notLoaded: "The history could not be loaded.",
+    teamMember: "A team member",
+  },
+  gateway: {
+    cutOff: "The answer was cut off and has not been used.",
+    overBudget: "The answer exceeded its cost cap and has not been used.",
+  },
+  proposals: {
+    aiFailed: "The AI could not make a suggestion. Try again shortly.",
+    notCounted: "The suggestions could not be counted.",
+    tooMany: "There are already ten suggestions. Add or dismiss some of them first.",
+    notUsable: "The AI's suggestion was not usable. Try wording your request differently.",
+    doesNotFit: "The AI's suggestion did not fit the draft. Try wording your request differently.",
+    noChange: "The suggestion does not change anything in the draft.",
+    notFound: "The suggestion was not found.",
+    alreadyApplied: "The suggestion has already been added to the draft.",
+    notOpen: "The suggestion is no longer open.",
+    unreadable: "The suggestion cannot be read and has not been used.",
+    noLongerFits: "The suggestion no longer fits the draft. Ask for a new suggestion.",
+  },
+  config: {
+    noSetup: "The selected team has no setup yet.",
+    versionsNotLoaded: "The version history could not be loaded.",
+    draftNotCreated: "The draft could not be created. Try again shortly.",
+    draftNotSaved: "The draft could not be saved. Try again shortly.",
+    draftNotPublished: "The draft could not be published. Try again shortly.",
+    versionNotLoaded: "The setup version could not be loaded.",
+    investmentsNotLoaded: "Earlier investments could not be loaded.",
+    investmentExists: "This company is already registered as an earlier investment.",
+    investmentNotSaved: "The investment could not be saved.",
+    investmentNotRemoved: "The investment could not be removed.",
+  },
+  criterion: {
+    needKeywords: "Write a few keywords about what you look for before the AI can help.",
+    aiFailed: "The AI could not expand the criterion. Try again shortly.",
+    overBudget: "The suggestion exceeded its cost cap and has not been used.",
+  },
+  document: {
+    badPath: "The document's private file path is invalid.",
+    notFetched: "The document could not be fetched safely.",
+    tooLarge: "The PDF may be at most 25 MB.",
+    noText: "The PDF contains no readable text.",
+    aiFailed: "The AI could not interpret the document.",
+    cutOff: "The document suggestion was cut off and has not been used.",
+    overBudget: "The document import exceeded its cost cap and has not been used.",
+  },
+  funds: {
+    notLoaded: "Your teams could not be loaded.",
+    adminOnly: "Only an Admin can create a new investment thesis.",
+    fundNotCreated: "The team could not be created.",
+    membershipNotCreated: "The membership could not be created.",
+    roleNotGranted: "The team role could not be assigned.",
+    setupNotCreated: "The team's setup could not be created.",
+    mandateNotCreated: "The team's mandate could not be created.",
+    rulesNotCreated: "The mandate rules could not be created.",
+    scoringNotCreated: "The scoring model could not be created.",
+    nameMismatch: "The team's name does not match. Nothing was deleted.",
+    onlyThesis:
+      "You cannot delete your only investment thesis. Create a new one first, so you are still Admin somewhere.",
+    filesNotChecked: "The team's private files could not be checked.",
+    notDeleted: "The team could not be deleted from the database.",
+  },
+  module: {
+    aiFailed: "The AI could not rewrite the module text.",
+    overBudget: "The edit exceeded its cost cap and has not been used.",
+    notSaved: "The module text could not be saved.",
+    notReset: "The default text could not be restored.",
+  },
+  research: {
+    aiFailed: "The AI could not generate a research strategy.",
+    overBudget: "The generation exceeded its cost cap and has not been used.",
+    notSaved: "The research strategy could not be saved.",
+    notReset: "The default questions could not be restored.",
+  },
+  reasons: {
+    notSaved: "The reason could not be saved.",
+    notAdded: "The reason could not be added.",
+    notChanged: "The reason could not be changed.",
+    tooManySimilar: "There are too many reasons with almost the same text.",
+  },
+  rescreen: {
+    versionNotLoaded: "The active version of the thesis could not be loaded.",
+    casesNotLoaded: "Cases for re-screening could not be loaded.",
+  },
+  screening: {
+    draftOnlyCheck: "Only a draft can be checked. Create a draft first.",
+    questionsNotLoaded: "The screening's research questions could not be loaded.",
+    tooLongForCheck:
+      "The setup is too long for the AI check. Make the instruction or the texts shorter.",
+    cardsInvalid:
+      "Choose only from Finance, Team, Market and Technology, and each card at most once.",
+    notSaved: "The screening could not be saved. Try again shortly.",
+    instructionTooLong: "The screening instruction may be at most {max} characters.",
+  },
+  trial: {
+    draftOnly: "Only a draft can be trial-run. Create a draft first.",
+    noCriteria: "The draft has no criteria to screen against.",
+    notScreened: "The case must be screened before the screening can be tried on it.",
+    otherCase: "The AI result belongs to another case.",
+    tooLarge:
+      "The setup and the case's material are too large for one screening. Make the instruction or the criteria shorter.",
+    rateLimited:
+      "Your team has made {count} trial runs of the screening in the last hour. Wait a little before trying again.",
+  },
+  specialists: {
+    draftUnusable: "The AI gave a draft that could not be used. Try again shortly.",
+    casesNotLoaded: "The cases could not be loaded.",
+    notScreened: "The case must be screened before the specialist can be tried on it.",
+    tooLarge:
+      "The specialist and the case's material are too large for one specialist call. Make the specialist shorter, or try another case.",
+    unfinished: "The specialist did not finish its answer. Try again, or make the mandate shorter.",
+    failedControl:
+      "The specialist's answer did not pass the check (coverage or sources). Try again, or edit the specialist.",
+    changedElsewhere:
+      "The version has just been published or changed by someone else. Reload the page to see the active version.",
+    notEnabled: "The specialist could not be turned on.",
+    oneActive: "At least one specialist must be active in the deep analysis.",
+    notDisabled: "The specialist could not be turned off.",
+    notSaved: "The specialist could not be saved.",
+    notChanged: "The specialist could not be changed.",
+    notDeleted: "The specialist could not be deleted.",
+    missingNameOrMandate: "The specialist is missing a name or mandate.",
+    rateLimited:
+      "Your team has made {count} trial runs in the last hour. Wait a little before trying again.",
+    tooManyCustom:
+      "The setup already has {count} custom specialists. Delete one before you make a new one.",
+  },
+  suggestions: {
+    leadOnly: "Only an Admin or Lead can mark a suggestion as resolved.",
+    notUpdated: "The suggestion could not be updated.",
+  },
+  thesisChat: {
+    askSomething: "Write a question.",
+  },
+} as const;

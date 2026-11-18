@@ -1,0 +1,964 @@
+{
+  "_data": [
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 210015000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 263536000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 178519000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 178519000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 263536000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 295032000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 210015000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 295032000
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 85373568
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 101016129
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 241573966
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 102312709
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 101016129
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 98194546
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 287941013
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 85373568
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 228752988
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 241573966
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 98194546
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 286644433
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 102312709
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 286644433
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 287941013
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 228752988
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 25556256
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 70980718
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 71933931
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 237638562
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 221849854
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 176425392
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 25556256
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 237638562
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00110",
+      "line_name": "ĮSIPAREIGOJIMAI",
+      "reiksme": 221849854
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 71933931
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 176425392
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 197403913
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 197403913
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 31699282
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 31699282
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 70980718
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 104422430
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 2843769
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 3803397
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 3803397
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 104422430
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 2843769
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 62456920
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 62456920
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 29600864
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 74317040
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 103716282
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 3467161
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 74317040
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 3467161
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 29600864
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 103716282
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 24506572
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 8355704
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 63220199
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 8355704
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 47134321
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 24506572
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 63220199
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 47134321
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 16805436
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 6253271
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 8836232
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 6253271
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 16805436
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 18715119
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 8836232
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 18715119
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 665501
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 645273
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": 665501
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 8389771
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 8139380
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 8389771
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 645273
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 8139380
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 7120783
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": -1809812
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 202972
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00467",
+      "line_name": "MOKĖTINOS SUMOS IR KITI ĮSIPAREIGOJIMAI",
+      "reiksme": 7120783
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 202972
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 3872534
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": -1809812
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 3872534
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 799365
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 258069
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00055",
+      "line_name": "MOKĖTINOS SUMOS IR ĮSIPAREIGOJIMAI",
+      "reiksme": 2017012
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": -959578
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00040",
+      "line_name": "NUOSAVAS KAPITALAS",
+      "reiksme": -959578
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00055",
+      "line_name": "MOKĖTINOS SUMOS IR ĮSIPAREIGOJIMAI",
+      "reiksme": 2017012
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00021",
+      "line_name": "TRUMPALAIKIS TURTAS",
+      "reiksme": 799365
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "BSLT00001",
+      "line_name": "ILGALAIKIS TURTAS",
+      "reiksme": 258069
+    }
+  ]
+}

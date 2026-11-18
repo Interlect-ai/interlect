@@ -1,0 +1,10 @@
+Interlect
+Copyright 2026 The Interlect authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes third-party code under its own licence, kept next to that code:
+- src/components/charts/patterns/ (from visx, MIT; see LICENSE-visx-pattern there)
+
+Third-party packages installed through npm are listed in package.json and
+package-lock.json; each is covered by its own licence.

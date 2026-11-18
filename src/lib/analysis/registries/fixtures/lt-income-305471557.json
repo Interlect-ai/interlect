@@ -1,0 +1,304 @@
+{
+  "_data": [
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 10861
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 10318
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 10318
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 10861
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 20060
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-15",
+      "template_id": "FS0522",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 20060
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 400
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 400
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 4683
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 382
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 4683
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-08-28",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 382
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 22264
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 1388
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 22264
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 1388
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 1322
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-07-03",
+      "template_id": "FS0422",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 1322
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 26885
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 5822
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 5531
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 26885
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 5531
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-02-22",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 5822
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 11713
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 11713
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00350",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 11713
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 26898
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 26898
+    },
+    {
+      "laikotarpis_nuo": "2020-02-19",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-07-15",
+      "template_id": "FS0322",
+      "template_name": "Mažųjų bendrijų finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00365",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEš APMOKESTINIMą",
+      "reiksme": 11713
+    }
+  ]
+}

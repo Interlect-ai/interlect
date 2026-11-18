@@ -1,0 +1,230 @@
+{
+  "meta": {
+    "goldenCopy": { "publishDate": "2026-10-07T16:00:00Z" },
+    "pagination": { "currentPage": 1, "perPage": 10, "from": 1, "to": 2, "total": 2, "lastPage": 1 }
+  },
+  "links": {
+    "first": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Scalapay&filter%5Bentity.legalAddress.country%5D=IT&page%5Bnumber%5D=1&page%5Bsize%5D=10",
+    "last": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Scalapay&filter%5Bentity.legalAddress.country%5D=IT&page%5Bnumber%5D=1&page%5Bsize%5D=10"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "81560052FB26594D3F53",
+      "attributes": {
+        "lei": "81560052FB26594D3F53",
+        "entity": {
+          "legalName": { "name": "SCALAPAY IP S.P.A.", "language": "it" },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "it",
+            "addressLines": ["VIA NERVESA, 21"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": null,
+            "country": "IT",
+            "postalCode": "20139"
+          },
+          "headquartersAddress": {
+            "language": "it",
+            "addressLines": ["VIA NERVESA, 21"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": null,
+            "country": "IT",
+            "postalCode": "20139"
+          },
+          "registeredAt": { "id": "RA000407", "other": null },
+          "registeredAs": "06078740484",
+          "jurisdiction": "IT",
+          "category": "GENERAL",
+          "legalForm": { "id": "P418", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2010-07-13T22:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2025-01-22T09:15:23Z",
+          "lastUpdateDate": "2026-04-22T18:14:51Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-04-22T18:14:51Z",
+          "managingLou": "529900F6BNUR3RJ2WH29",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000407", "other": null },
+          "validatedAs": "06078740484",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": null,
+        "gem": null,
+        "spglobal": ["1918236684"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/ultimate-parent-reporting-exception"
+          }
+        },
+        "isins": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53\/isins"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/81560052FB26594D3F53" }
+    },
+    {
+      "type": "lei-records",
+      "id": "984500F08FD54A5C5E28",
+      "attributes": {
+        "lei": "984500F08FD54A5C5E28",
+        "entity": {
+          "legalName": { "name": "SCALAPAY S.R.L.", "language": "it" },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "it",
+            "addressLines": ["VIA NERVESA 21"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": "IT-MI",
+            "country": "IT",
+            "postalCode": "20139"
+          },
+          "headquartersAddress": {
+            "language": "it",
+            "addressLines": ["VIA NERVESA 21"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": "IT-MI",
+            "country": "IT",
+            "postalCode": "20139"
+          },
+          "registeredAt": { "id": "RA000407", "other": null },
+          "registeredAs": "06891080480",
+          "jurisdiction": "IT",
+          "category": "GENERAL",
+          "legalForm": { "id": "OV32", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2019-01-07T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": [
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2025-07-10T00:00:00Z",
+                  "recordedDate": "2025-07-10T20:31:32Z",
+                  "type": "CHANGE_HQ_ADDRESS",
+                  "status": "COMPLETED"
+                }
+              ]
+            },
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2025-07-10T00:00:00Z",
+                  "recordedDate": "2025-07-10T20:31:32Z",
+                  "type": "CHANGE_LEGAL_ADDRESS",
+                  "status": "COMPLETED"
+                }
+              ]
+            }
+          ]
+        },
+        "registration": {
+          "initialRegistrationDate": "2022-07-27T09:03:17Z",
+          "lastUpdateDate": "2026-05-28T17:48:54Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-07-27T09:03:40Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000407", "other": null },
+          "validatedAs": "06891080480",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": null,
+        "gem": null,
+        "spglobal": ["702655489"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500F08FD54A5C5E28" }
+    }
+  ]
+}

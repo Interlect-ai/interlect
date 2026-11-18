@@ -1,0 +1,102 @@
+{
+  "results": [
+    {
+      "siren": "794598813",
+      "nom_complet": "DOCTOLIB",
+      "nom_raison_sociale": "DOCTOLIB",
+      "sigle": null,
+      "etat_administratif": "A",
+      "nature_juridique": "5710",
+      "date_creation": "2013-07-15",
+      "date_fermeture": null,
+      "activite_principale": "62.01Z",
+      "tranche_effectif_salarie": "42",
+      "finances": {
+        "2024": {
+          "ca": 311448000,
+          "resultat_net": -127499000
+        }
+      },
+      "siege": {
+        "adresse": "54 QUAI CHARLES PASQUA 92300 LEVALLOIS-PERRET",
+        "code_postal": "92300",
+        "libelle_commune": "LEVALLOIS-PERRET",
+        "est_siege": true,
+        "etat_administratif": "A"
+      }
+    },
+    {
+      "siren": "833351570",
+      "nom_complet": "LH DOCTOLIB",
+      "nom_raison_sociale": "LH DOCTOLIB",
+      "sigle": null,
+      "etat_administratif": "A",
+      "nature_juridique": "5710",
+      "date_creation": "2017-11-03",
+      "date_fermeture": null,
+      "activite_principale": "64.20Z",
+      "tranche_effectif_salarie": "NN",
+      "finances": {
+        "2025": {
+          "ca": 0,
+          "resultat_net": -9030
+        }
+      },
+      "siege": {
+        "adresse": "66 RUE PIERRE CHARRON 75008 PARIS",
+        "code_postal": "75008",
+        "libelle_commune": "PARIS",
+        "est_siege": true,
+        "etat_administratif": "A"
+      }
+    },
+    {
+      "siren": "899422224",
+      "nom_complet": "COMITE SOCIALE ECONOMIQUE DOCTOLIB",
+      "nom_raison_sociale": "COMITE SOCIALE ECONOMIQUE DOCTOLIB",
+      "sigle": null,
+      "etat_administratif": "A",
+      "nature_juridique": "8310",
+      "date_creation": "2019-07-16",
+      "date_fermeture": null,
+      "activite_principale": "94.20Z",
+      "tranche_effectif_salarie": "02",
+      "finances": null,
+      "siege": {
+        "adresse": "54 QUAI CHARLES PASQUA 92300 LEVALLOIS-PERRET",
+        "code_postal": "92300",
+        "libelle_commune": "LEVALLOIS-PERRET",
+        "est_siege": true,
+        "etat_administratif": "A"
+      }
+    },
+    {
+      "siren": "338253230",
+      "nom_complet": "SODEXO ENTREPRISES",
+      "nom_raison_sociale": "SODEXO ENTREPRISES",
+      "sigle": null,
+      "etat_administratif": "A",
+      "nature_juridique": "5710",
+      "date_creation": "1986-07-01",
+      "date_fermeture": null,
+      "activite_principale": "56.29A",
+      "tranche_effectif_salarie": "52",
+      "finances": {
+        "2025": {
+          "ca": 686623711,
+          "resultat_net": -11013199
+        }
+      },
+      "siege": {
+        "adresse": "6 RUE DE LA REDOUTE 78280 GUYANCOURT",
+        "code_postal": "78280",
+        "libelle_commune": "GUYANCOURT",
+        "est_siege": true,
+        "etat_administratif": "A"
+      }
+    }
+  ],
+  "total_results": 4,
+  "page": 1,
+  "per_page": 5
+}

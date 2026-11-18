@@ -1,0 +1,138 @@
+{
+  "meta": {
+    "goldenCopy": { "publishDate": "2026-10-07T16:00:00Z" },
+    "pagination": { "currentPage": 1, "perPage": 10, "from": 1, "to": 1, "total": 1, "lastPage": 1 }
+  },
+  "links": {
+    "first": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bentity.registeredAs%5D=10927360015&filter%5Bentity.jurisdiction%5D=IT&page%5Bnumber%5D=1&page%5Bsize%5D=10",
+    "last": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bentity.registeredAs%5D=10927360015&filter%5Bentity.jurisdiction%5D=IT&page%5Bnumber%5D=1&page%5Bsize%5D=10"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "9845007360679F1CC223",
+      "attributes": {
+        "lei": "9845007360679F1CC223",
+        "entity": {
+          "legalName": { "name": "MOMENTUM S.P.A.", "language": "it" },
+          "otherNames": [
+            { "name": "SATISPAY S.P.A.", "language": "it", "type": "PREVIOUS_LEGAL_NAME" }
+          ],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "it",
+            "addressLines": ["PIAZZA FIDIA 1"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": "IT-MI",
+            "country": "IT",
+            "postalCode": "20159"
+          },
+          "headquartersAddress": {
+            "language": "it",
+            "addressLines": ["PIAZZA FIDIA 1"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "MILANO",
+            "region": "IT-MI",
+            "country": "IT",
+            "postalCode": "20159"
+          },
+          "registeredAt": { "id": "RA000407", "other": null },
+          "registeredAs": "10927360015",
+          "jurisdiction": "IT",
+          "category": "GENERAL",
+          "legalForm": { "id": "P418", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2013-04-08T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": [
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2026-06-30T00:00:00Z",
+                  "recordedDate": "2026-06-30T12:29:02Z",
+                  "type": "CHANGE_LEGAL_NAME",
+                  "status": "COMPLETED"
+                }
+              ]
+            }
+          ]
+        },
+        "registration": {
+          "initialRegistrationDate": "2024-08-29T08:45:01Z",
+          "lastUpdateDate": "2026-06-30T12:29:02Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-08-29T08:45:03Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000407", "other": null },
+          "validatedAs": "10927360015",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": null,
+        "gem": null,
+        "spglobal": ["275437543"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/ultimate-parent-reporting-exception"
+          }
+        },
+        "direct-children": {
+          "links": {
+            "relationship-records": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/direct-child-relationships",
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/direct-children"
+          }
+        },
+        "ultimate-children": {
+          "links": {
+            "relationship-records": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/ultimate-child-relationships",
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/ultimate-children"
+          }
+        },
+        "isins": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223\/isins"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845007360679F1CC223" }
+    }
+  ]
+}

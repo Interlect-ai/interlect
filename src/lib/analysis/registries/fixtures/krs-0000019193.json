@@ -1,0 +1,421 @@
+{
+  "odpis": {
+    "rodzaj": "Aktualny",
+    "naglowekA": {
+      "rejestr": "RejP",
+      "numerKRS": "0000019193",
+      "dataCzasOdpisu": "07.10.2026 21:59:19",
+      "stanZDnia": "27.08.2026",
+      "dataRejestracjiWKRS": "11.06.2001",
+      "numerOstatniegoWpisu": 215,
+      "dataOstatniegoWpisu": "27.08.2026",
+      "sygnaturaAktSprawyDotyczacejOstatniegoWpisu": "WA.XII NS-REJ.KRS/49730/26/357",
+      "oznaczenieSaduDokonujacegoOstatniegoWpisu": "SĄD REJONOWY DLA M.ST. WARSZAWY W WARSZAWIE, XII WYDZIAŁ GOSPODARCZY KRAJOWEGO REJESTRU SĄDOWEGO",
+      "stanPozycji": 1
+    },
+    "dane": {
+      "dzial1": {
+        "danePodmiotu": {
+          "formaPrawna": "SPÓŁKA AKCYJNA",
+          "identyfikatory": {
+            "regon": "00012680100000",
+            "nip": "5250000251"
+          },
+          "nazwa": "POLSKIE KOLEJE PAŃSTWOWE SPÓŁKA AKCYJNA",
+          "daneOWczesniejszejRejestracji": {
+            "nazwaPoprzedniegoRejestru": "RHB",
+            "numerWPoprzednimRejestrze": "63218",
+            "sadProwadzacyRejestr": "SĄD REJONOWY DLA M. ST. WARSZAWY -SĄD GOSPODARCZY -XVI WYDZIAŁ REJESTROWY"
+          },
+          "czyProwadziDzialalnoscZInnymiPodmiotami": false,
+          "czyPosiadaStatusOPP": false
+        },
+        "siedzibaIAdres": {
+          "siedziba": {
+            "kraj": "POLSKA",
+            "wojewodztwo": "MAZOWIECKIE",
+            "powiat": "WARSZAWA",
+            "gmina": "WARSZAWA",
+            "miejscowosc": "WARSZAWA"
+          },
+          "adres": {
+            "ulica": "ALEJE JEROZOLIMSKIE",
+            "nrDomu": "142A",
+            "miejscowosc": "WARSZAWA",
+            "kodPocztowy": "02-305",
+            "poczta": "WARSZAWA",
+            "kraj": "POLSKA"
+          },
+          "adresStronyInternetowej": "WWW.PKP.PL"
+        },
+        "kapital": {
+          "wysokoscKapitaluZakladowego": {
+            "wartosc": "10150715600,00",
+            "waluta": "PLN"
+          },
+          "lacznaLiczbaAkcjiUdzialow": "101507156",
+          "wartoscJednejAkcji": {
+            "wartosc": "100,00",
+            "waluta": "PLN"
+          },
+          "czescKapitaluWplaconegoPokrytego": {
+            "wartosc": "10150715600,00",
+            "waluta": "PLN"
+          },
+          "wniesioneAporty": {}
+        }
+      },
+      "dzial3": {
+        "wzmiankiOZlozonychDokumentach": {
+          "wzmiankaOZlozeniuRocznegoSprawozdaniaFinansowego": [
+            {
+              "dataZlozenia": "31.07.2001",
+              "zaOkresOdDo": "01.01.2000R.-31.12.2000R."
+            },
+            {
+              "dataZlozenia": "13.08.2002",
+              "zaOkresOdDo": "1.01.2001 - 31.12.2001"
+            },
+            {
+              "dataZlozenia": "30.07.2003",
+              "zaOkresOdDo": "01.01.2002 - 31.12.2002"
+            },
+            {
+              "dataZlozenia": "19.07.2004",
+              "zaOkresOdDo": "01.01.2003 - 31.12.2003"
+            },
+            {
+              "dataZlozenia": "14.07.2005",
+              "zaOkresOdDo": "01.01.2004 - 31.12.2004"
+            },
+            {
+              "dataZlozenia": "17.07.2006",
+              "zaOkresOdDo": "01.01.2005-31.12.2005"
+            },
+            {
+              "dataZlozenia": "31.07.2007",
+              "zaOkresOdDo": "01.01.2006 - 31.12.2006"
+            },
+            {
+              "dataZlozenia": "14.08.2008",
+              "zaOkresOdDo": "01.01.2007 - 31.12.2007"
+            },
+            {
+              "dataZlozenia": "15.07.2009",
+              "zaOkresOdDo": "01.01.2008-31.12.2008"
+            },
+            {
+              "dataZlozenia": "09.07.2010",
+              "zaOkresOdDo": "01.01.2009 - 31.12.2009"
+            },
+            {
+              "dataZlozenia": "16.06.2011",
+              "zaOkresOdDo": "01.01.2010 - 31.12.2010"
+            },
+            {
+              "dataZlozenia": "10.07.2012",
+              "zaOkresOdDo": "01.01.2011-31.12.2011"
+            },
+            {
+              "dataZlozenia": "03.07.2013",
+              "zaOkresOdDo": "01.01.2012 - 31.12.2012"
+            },
+            {
+              "dataZlozenia": "03.07.2014",
+              "zaOkresOdDo": "OD 01.01.2013 DO 31.12.2013"
+            },
+            {
+              "dataZlozenia": "06.05.2015",
+              "zaOkresOdDo": "OD 01.01.2014 DO 31.12.2014"
+            },
+            {
+              "dataZlozenia": "08.07.2016",
+              "zaOkresOdDo": "OD 01.01.2015 DO 31.12.2015"
+            },
+            {
+              "dataZlozenia": "19.07.2017",
+              "zaOkresOdDo": "OD 01.01.2016 DO 31.12.2016"
+            },
+            {
+              "dataZlozenia": "06.08.2018",
+              "zaOkresOdDo": "OD 01.01.2017 DO 31.12.2017"
+            },
+            {
+              "dataZlozenia": "19.07.2019",
+              "zaOkresOdDo": "OD 01.01.2018 DO 31.12.2018"
+            },
+            {
+              "dataZlozenia": "24.08.2020",
+              "zaOkresOdDo": "OD 01.01.2019 DO 31.12.2019"
+            },
+            {
+              "dataZlozenia": "03.08.2021",
+              "zaOkresOdDo": "OD 01.01.2020 DO 31.12.2020"
+            },
+            {
+              "dataZlozenia": "04.08.2022",
+              "zaOkresOdDo": "OD 01.01.2021 DO 31.12.2021"
+            },
+            {
+              "dataZlozenia": "05.07.2023",
+              "zaOkresOdDo": "OD 01.01.2022 DO 31.12.2022"
+            },
+            {
+              "dataZlozenia": "05.08.2024",
+              "zaOkresOdDo": "OD 01.01.2023 DO 31.12.2023"
+            },
+            {
+              "dataZlozenia": "08.07.2025",
+              "zaOkresOdDo": "OD 01.01.2024 DO 31.12.2024"
+            },
+            {
+              "dataZlozenia": "09.07.2026",
+              "zaOkresOdDo": "OD 01.01.2025 DO 31.12.2025"
+            }
+          ],
+          "wzmiankaOZlozeniuOpiniiBieglegoRewidentaSprawozdaniaZBadania": [
+            {
+              "zaOkresOdDo": "01.01.2000R.-31.12.2000R."
+            },
+            {
+              "zaOkresOdDo": "1.01.2001 - 31.12.2001"
+            },
+            {
+              "zaOkresOdDo": "01.01.2002 - 31.12.2002"
+            },
+            {
+              "zaOkresOdDo": "01.01.2003 - 31.12.2003"
+            },
+            {
+              "zaOkresOdDo": "01.01.2004 - 31.12.2004"
+            },
+            {
+              "zaOkresOdDo": "01.01.2005-31.12.2005"
+            },
+            {
+              "zaOkresOdDo": "01.01.2006 - 31.12.2006"
+            },
+            {
+              "zaOkresOdDo": "01.01.2007 - 31.12.2007"
+            },
+            {
+              "zaOkresOdDo": "01.01.2008-31.12.2008"
+            },
+            {
+              "zaOkresOdDo": "01.01.2009 - 31.12.2009"
+            },
+            {
+              "zaOkresOdDo": "01.01.2010 - 31.12.2010"
+            },
+            {
+              "zaOkresOdDo": "01.01.2011-31.12.2011"
+            },
+            {
+              "zaOkresOdDo": "01.01.2012 - 31.12.2012"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2013 DO 31.12.2013"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2014 DO 31.12.2014"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2015 DO 31.12.2015"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2016 DO 31.12.2016"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2017 DO 31.12.2017"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2018 DO 31.12.2018"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2019 DO 31.12.2019"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2020 DO 31.12.2020"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2021 DO 31.12.2021"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2022 DO 31.12.2022"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2023 DO 31.12.2023"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2024 DO 31.12.2024"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2025 DO 31.12.2025"
+            }
+          ],
+          "wzmiankaOZlozeniuUchwalyPostanowieniaOZatwierdzeniuRocznegoSprawozdaniaFinansowego": [
+            {
+              "zaOkresOdDo": "01.01.2000R.-31.12.2000R."
+            },
+            {
+              "zaOkresOdDo": "1.01.2001 - 31.12.2001"
+            },
+            {
+              "zaOkresOdDo": "01.01.2002 - 31.12.2002"
+            },
+            {
+              "zaOkresOdDo": "01.01.2003 - 31.12.2003"
+            },
+            {
+              "zaOkresOdDo": "01.01.2004 - 31.12.2004"
+            },
+            {
+              "zaOkresOdDo": "01.01.2005-31.12.2005"
+            },
+            {
+              "zaOkresOdDo": "01.01.2006 - 31.12.2006"
+            },
+            {
+              "zaOkresOdDo": "01.01.2007 - 31.12.2007"
+            },
+            {
+              "zaOkresOdDo": "01.01.2008 - 31.12.2008"
+            },
+            {
+              "zaOkresOdDo": "01.01.2009 - 31.12.2009"
+            },
+            {
+              "zaOkresOdDo": "01.01.2010 - 31.12.2010"
+            },
+            {
+              "zaOkresOdDo": "01.01.2011-31.12.2011"
+            },
+            {
+              "zaOkresOdDo": "01.01.2012 - 31.12.2012"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2013 DO 31.12.2013"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2014 DO 31.12.2014"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2015 DO 31.12.2015"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2016 DO 31.12.2016"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2017 DO 31.12.2017"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2018 DO 31.12.2018"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2019 DO 31.12.2019"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2020 DO 31.12.2020"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2021 DO 31.12.2021"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2022 DO 31.12.2022"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2023 DO 31.12.2023"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2024 DO 31.12.2024"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2025 DO 31.12.2025"
+            }
+          ],
+          "wzmiankaOZlozeniuSprawozdaniaZDzialalnosci": [
+            {
+              "zaOkresOdDo": "01.01.2000R.-31.12.2000R."
+            },
+            {
+              "zaOkresOdDo": "1.01.2001 - 31.12.2001"
+            },
+            {
+              "zaOkresOdDo": "01.01.2002 - 31.12.2002"
+            },
+            {
+              "zaOkresOdDo": "01.01.2003 - 31.12.2003"
+            },
+            {
+              "zaOkresOdDo": "01.01.2004 - 31.12.2004"
+            },
+            {
+              "zaOkresOdDo": "01.01.2005-31.12.2005"
+            },
+            {
+              "zaOkresOdDo": "0101.2006 - 31.12.2006"
+            },
+            {
+              "zaOkresOdDo": "01.01.2007 - 31.12.2007"
+            },
+            {
+              "zaOkresOdDo": "01.01.2008-31.12.2008"
+            },
+            {
+              "zaOkresOdDo": "01.01.2009 - 31.12.2009"
+            },
+            {
+              "zaOkresOdDo": "01.01.2010 - 31.12.2010"
+            },
+            {
+              "zaOkresOdDo": "01.01.2011-31.12.2011"
+            },
+            {
+              "zaOkresOdDo": "01.01.2012 - 31.12.2012"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2013 DO 31.12.2013"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2014 DO 31.12.2014"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2015 DO 31.12.2015"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2016 DO 31.12.2016"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2017 DO 31.12.2017"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2018 DO 31.12.2018"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2019 DO 31.12.2019"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2020 DO 31.12.2020"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2021 DO 31.12.2021"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2022 DO 31.12.2022"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2023 DO 31.12.2023"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2024 DO 31.12.2024"
+            },
+            {
+              "zaOkresOdDo": "OD 01.01.2025 DO 31.12.2025"
+            }
+          ]
+        }
+      },
+      "dzial6": {}
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Interlect er kun for inviterede brugere; intet skal indekseres (harden F41).
+User-agent: *
+Disallow: /

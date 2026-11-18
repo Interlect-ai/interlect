@@ -1,0 +1,84 @@
+{
+  "totalResults": 1,
+  "companies": [
+    {
+      "businessId": {
+        "value": "2336509-6",
+        "registrationDate": "2010-05-14",
+        "source": "3"
+      },
+      "euId": {
+        "value": "FIFPRO.2336509-6",
+        "source": "1"
+      },
+      "names": [
+        {
+          "name": "Supercell Oy",
+          "type": "1",
+          "registrationDate": "2010-07-16",
+          "version": 1,
+          "source": "1"
+        },
+        {
+          "name": "Supercell Ltd",
+          "type": "2",
+          "registrationDate": "2016-07-25",
+          "version": 1,
+          "source": "1"
+        }
+      ],
+      "mainBusinessLine": {
+        "type": "62200",
+        "descriptions": [
+          {
+            "languageCode": "3",
+            "description": "Computer consultancy and computer facilities management activities"
+          },
+          {
+            "languageCode": "2",
+            "description": "Datakonsultverksamhet och datordrift"
+          },
+          {
+            "languageCode": "1",
+            "description": "Laitteistokonsultointi ja käyttö- ja hallintapalvelut"
+          }
+        ],
+        "typeCodeSet": "TOIMI4",
+        "registrationDate": "2026-01-01",
+        "source": "2"
+      },
+      "website": {
+        "url": "www.supercell.com",
+        "registrationDate": "2019-11-05",
+        "source": "0"
+      },
+      "companyForms": [
+        {
+          "type": "16",
+          "descriptions": [
+            {
+              "languageCode": "2",
+              "description": "Aktiebolag"
+            },
+            {
+              "languageCode": "3",
+              "description": "Limited company"
+            },
+            {
+              "languageCode": "1",
+              "description": "Osakeyhtiö"
+            }
+          ],
+          "registrationDate": "2010-07-16",
+          "version": 1,
+          "source": "1"
+        }
+      ],
+      "companySituations": [],
+      "tradeRegisterStatus": "1",
+      "status": "2",
+      "registrationDate": "2010-07-16",
+      "lastModified": "2026-07-01T12:26:14"
+    }
+  ]
+}

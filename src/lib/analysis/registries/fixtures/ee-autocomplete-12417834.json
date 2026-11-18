@@ -1,0 +1,16 @@
+{
+  "status": "OK",
+  "data": [
+    {
+      "company_id": 9000088952,
+      "reg_code": 12417834,
+      "name": "Bolt Technology O\u00dc",
+      "historical_names": ["Taxify O\u00dc", "MTAKSO O\u00dc"],
+      "status": "R",
+      "legal_address": "Harju maakond, Tallinn, Kesklinna linnaosa, Vana-L\u00f5una tn 15",
+      "zip_code": "10134",
+      "legal_form": "5",
+      "url": "https://ariregister.rik.ee/est/company/12417834/Bolt-Technology-O\u00dc"
+    }
+  ]
+}

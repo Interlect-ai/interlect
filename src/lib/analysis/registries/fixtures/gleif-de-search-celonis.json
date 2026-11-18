@@ -1,0 +1,453 @@
+{
+  "meta": {
+    "goldenCopy": { "publishDate": "2026-10-07T16:00:00Z" },
+    "pagination": { "currentPage": 1, "perPage": 10, "from": 1, "to": 4, "total": 4, "lastPage": 1 }
+  },
+  "links": {
+    "first": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Celonis&filter%5Bentity.legalAddress.country%5D=DE&page%5Bnumber%5D=1&page%5Bsize%5D=10",
+    "last": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Celonis&filter%5Bentity.legalAddress.country%5D=DE&page%5Bnumber%5D=1&page%5Bsize%5D=10"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "984500E9GFF36MBDC706",
+      "attributes": {
+        "lei": "984500E9GFF36MBDC706",
+        "entity": {
+          "legalName": { "name": "Celonis Labs GmbH", "language": "de" },
+          "otherNames": [
+            { "name": "heptus 396. GmbH", "language": "de", "type": "PREVIOUS_LEGAL_NAME" }
+          ],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstr. 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "headquartersAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstr. 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "registeredAt": { "id": "RA000304", "other": null },
+          "registeredAs": "HRB 264465",
+          "jurisdiction": "DE",
+          "category": "GENERAL",
+          "legalForm": { "id": "2HBR", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2021-03-18T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": [
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2026-04-20T00:00:00Z",
+                  "recordedDate": "2026-07-29T11:51:46Z",
+                  "type": "CHANGE_HQ_ADDRESS",
+                  "status": "COMPLETED"
+                }
+              ]
+            },
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2026-04-20T00:00:00Z",
+                  "recordedDate": "2026-07-29T11:51:46Z",
+                  "type": "CHANGE_LEGAL_ADDRESS",
+                  "status": "COMPLETED"
+                }
+              ]
+            },
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2021-05-19T00:00:00Z",
+                  "recordedDate": "2024-07-25T11:59:13Z",
+                  "type": "CHANGE_LEGAL_NAME",
+                  "status": "COMPLETED"
+                }
+              ]
+            }
+          ]
+        },
+        "registration": {
+          "initialRegistrationDate": "2023-08-24T21:29:32Z",
+          "lastUpdateDate": "2026-07-29T11:51:46Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-08-24T21:29:33Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000304", "other": null },
+          "validatedAs": "HRB 264465",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QDE2SYN7MV",
+        "gem": null,
+        "spglobal": ["1853959100"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/984500E9GFF36MBDC706" }
+    },
+    {
+      "type": "lei-records",
+      "id": "9845003D053FCB478181",
+      "attributes": {
+        "lei": "9845003D053FCB478181",
+        "entity": {
+          "legalName": { "name": "Celonis Deutschland GmbH", "language": "de" },
+          "otherNames": [
+            { "name": "heptus 395. GmbH", "language": "de", "type": "PREVIOUS_LEGAL_NAME" }
+          ],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstr. 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "headquartersAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstr. 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "registeredAt": { "id": "RA000304", "other": null },
+          "registeredAs": "HRB 264463",
+          "jurisdiction": "DE",
+          "category": "GENERAL",
+          "legalForm": { "id": "2HBR", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2021-03-18T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2022-12-08T21:15:43Z",
+          "lastUpdateDate": "2026-09-24T10:35:58Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-10-22T08:51:48Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000304", "other": null },
+          "validatedAs": "HRB 264463",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QDE9K4EXAG",
+        "gem": null,
+        "spglobal": ["1887302977"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9845003D053FCB478181" }
+    },
+    {
+      "type": "lei-records",
+      "id": "529900DCE9HLEPY8MW24",
+      "attributes": {
+        "lei": "529900DCE9HLEPY8MW24",
+        "entity": {
+          "legalName": { "name": "Celonis SE", "language": "de" },
+          "otherNames": [
+            { "name": "Blitz 16-602 SE", "language": "de", "type": "PREVIOUS_LEGAL_NAME" }
+          ],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstra\u00dfe 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "headquartersAddress": {
+            "language": "de",
+            "addressLines": ["Theresienstra\u00dfe 6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "M\u00fcnchen",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "80333"
+          },
+          "registeredAt": { "id": "RA000304", "other": null },
+          "registeredAs": "HRB 225439",
+          "jurisdiction": "DE",
+          "category": "GENERAL",
+          "legalForm": { "id": "SGST", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2016-04-29T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2017-04-27T07:30:27Z",
+          "lastUpdateDate": "2026-07-24T10:55:14Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-09-20T14:52:01Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000304", "other": null },
+          "validatedAs": "HRB 225439",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QDEW2GT6ED",
+        "gem": null,
+        "spglobal": ["346990199"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/529900DCE9HLEPY8MW24" }
+    },
+    {
+      "type": "lei-records",
+      "id": "391200985UIAHHTV2510",
+      "attributes": {
+        "lei": "391200985UIAHHTV2510",
+        "entity": {
+          "legalName": { "name": "Symbioworld GmbH", "language": "de" },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "de",
+            "addressLines": ["Einsteinring 41-43"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Aschheim",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "85609"
+          },
+          "headquartersAddress": {
+            "language": "de",
+            "addressLines": ["Einsteinring 41-43"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Aschheim",
+            "region": "DE-BY",
+            "country": "DE",
+            "postalCode": "85609"
+          },
+          "registeredAt": { "id": "RA000304", "other": null },
+          "registeredAs": "HRB 160585",
+          "jurisdiction": "DE",
+          "category": "GENERAL",
+          "legalForm": { "id": "2HBR", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "INACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": {
+            "lei": null,
+            "name": "Celonis SE (Amtsgericht M\u00fcnchen HRB 225439)"
+          },
+          "successorEntities": [{ "name": "Celonis SE (Amtsgericht M\u00fcnchen HRB 225439)" }],
+          "creationDate": "2006-01-14T23:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": [
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "OTHER_OFFICIAL_DOCUMENTS",
+                  "effectiveDate": "2024-09-16T22:00:00Z",
+                  "recordedDate": "2024-11-07T14:02:39Z",
+                  "type": "MERGERS_AND_ACQUISITIONS",
+                  "status": "COMPLETED",
+                  "affectedFields": [
+                    {
+                      "value": "Celonis SE (Amtsgericht M\u00fcnchen HRB 225439)",
+                      "xpath": "\/lei:LEIData\/lei:LEIRecords\/lei:LEIRecord\/lei:Entity\/lei:SuccessorEntity\/lei:SuccessorEntityName"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "registration": {
+          "initialRegistrationDate": "2021-10-15T14:01:09Z",
+          "lastUpdateDate": "2024-12-10T16:10:15Z",
+          "status": "RETIRED",
+          "nextRenewalDate": "2025-10-15T14:01:09Z",
+          "managingLou": "39120001KULK7200U106",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000304", "other": null },
+          "validatedAs": "HRB 160585",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QDECPSWN8T",
+        "gem": null,
+        "spglobal": ["1685513404"],
+        "conformityFlag": "NOT_APPLICABLE"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/391200985UIAHHTV2510" }
+    }
+  ]
+}

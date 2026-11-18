@@ -1,0 +1,509 @@
+{
+  "meta": {
+    "goldenCopy": {
+      "publishDate": "2026-10-07T08:00:00Z"
+    },
+    "pagination": {
+      "currentPage": 1,
+      "perPage": 10,
+      "from": 1,
+      "to": 4,
+      "total": 4,
+      "lastPage": 1
+    }
+  },
+  "links": {
+    "first": "https://api.gleif.org/api/v1/lei-records?filter%5Bfulltext%5D=mollie&filter%5Bentity.legalAddress.country%5D=NL&page%5Bnumber%5D=1&page%5Bsize%5D=10",
+    "last": "https://api.gleif.org/api/v1/lei-records?filter%5Bfulltext%5D=mollie&filter%5Bentity.legalAddress.country%5D=NL&page%5Bnumber%5D=1&page%5Bsize%5D=10"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "6488V3F792O3G6ZVM018",
+      "attributes": {
+        "lei": "6488V3F792O3G6ZVM018",
+        "entity": {
+          "legalName": {
+            "name": "Mollie Business B.V.",
+            "language": "nl"
+          },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": null,
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "headquartersAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": null,
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "registeredAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "registeredAs": "99776006",
+          "jurisdiction": "NL",
+          "category": "GENERAL",
+          "legalForm": {
+            "id": "54M6",
+            "other": null
+          },
+          "associatedEntity": {
+            "lei": null,
+            "name": null
+          },
+          "status": "ACTIVE",
+          "expiration": {
+            "date": null,
+            "reason": null
+          },
+          "successorEntity": {
+            "lei": null,
+            "name": null
+          },
+          "successorEntities": [],
+          "creationDate": "2026-02-10T23:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2026-03-20T07:22:39Z",
+          "lastUpdateDate": "2026-03-20T09:22:42Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-03-19T23:00:00Z",
+          "managingLou": "485100001PLJJ09NZT59",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "validatedAs": "99776006",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": null,
+        "gem": null,
+        "spglobal": ["1991411793"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.gleif.org/api/v1/lei-records/6488V3F792O3G6ZVM018"
+      }
+    },
+    {
+      "type": "lei-records",
+      "id": "984500C86F763B8QFD55",
+      "attributes": {
+        "lei": "984500C86F763B8QFD55",
+        "entity": {
+          "legalName": {
+            "name": "Stichting Mollie Payments",
+            "language": "nl"
+          },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "headquartersAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "registeredAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "registeredAs": "50205773",
+          "jurisdiction": "NL",
+          "category": "GENERAL",
+          "legalForm": {
+            "id": "V44D",
+            "other": null
+          },
+          "associatedEntity": {
+            "lei": null,
+            "name": null
+          },
+          "status": "ACTIVE",
+          "expiration": {
+            "date": null,
+            "reason": null
+          },
+          "successorEntity": {
+            "lei": null,
+            "name": null
+          },
+          "successorEntities": [],
+          "creationDate": "2010-05-20T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2023-08-16T13:11:00Z",
+          "lastUpdateDate": "2026-06-23T07:24:15Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-08-16T13:11:02Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "validatedAs": "50205773",
+          "otherValidationAuthorities": []
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QNL4D6WQ9R",
+        "gem": null,
+        "spglobal": ["1852982607"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.gleif.org/api/v1/lei-records/984500C86F763B8QFD55"
+      }
+    },
+    {
+      "type": "lei-records",
+      "id": "98450064AC9753611E09",
+      "attributes": {
+        "lei": "98450064AC9753611E09",
+        "entity": {
+          "legalName": {
+            "name": "Mollie B.V.",
+            "language": "nl"
+          },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "headquartersAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "registeredAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "registeredAs": "30204462",
+          "jurisdiction": "NL",
+          "category": "GENERAL",
+          "legalForm": {
+            "id": "54M6",
+            "other": null
+          },
+          "associatedEntity": {
+            "lei": null,
+            "name": null
+          },
+          "status": "ACTIVE",
+          "expiration": {
+            "date": null,
+            "reason": null
+          },
+          "successorEntity": {
+            "lei": null,
+            "name": null
+          },
+          "successorEntities": [],
+          "creationDate": "2005-04-21T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2021-10-29T14:34:19Z",
+          "lastUpdateDate": "2026-01-13T14:28:02Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2026-10-29T14:34:19Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "validatedAs": "30204462",
+          "otherValidationAuthorities": []
+        },
+        "bic": ["MLLEBE92XXX", "MLLENL2AXXX"],
+        "mic": null,
+        "ocid": null,
+        "qcc": "QNL2PMTUS0",
+        "gem": null,
+        "spglobal": ["589308959"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "relationship-record": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/direct-parent-relationship",
+            "lei-record": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/direct-parent"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "relationship-record": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/ultimate-parent-relationship",
+            "lei-record": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/ultimate-parent"
+          }
+        },
+        "branches": {
+          "links": {
+            "relationship-records": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/branch-relationships",
+            "related": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09/branches"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.gleif.org/api/v1/lei-records/98450064AC9753611E09"
+      }
+    },
+    {
+      "type": "lei-records",
+      "id": "984500DCXD39S0EBB881",
+      "attributes": {
+        "lei": "984500DCXD39S0EBB881",
+        "entity": {
+          "legalName": {
+            "name": "Mollie Holding B.V.",
+            "language": "nl"
+          },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "headquartersAddress": {
+            "language": "nl",
+            "addressLines": ["Keizersgracht 126"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "Amsterdam",
+            "region": "NL-NH",
+            "country": "NL",
+            "postalCode": "1015 CW"
+          },
+          "registeredAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "registeredAs": "63892405",
+          "jurisdiction": "NL",
+          "category": "GENERAL",
+          "legalForm": {
+            "id": "54M6",
+            "other": null
+          },
+          "associatedEntity": {
+            "lei": null,
+            "name": null
+          },
+          "status": "ACTIVE",
+          "expiration": {
+            "date": null,
+            "reason": null
+          },
+          "successorEntity": {
+            "lei": null,
+            "name": null
+          },
+          "successorEntities": [],
+          "creationDate": "2015-08-10T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2021-08-27T10:55:45Z",
+          "lastUpdateDate": "2026-08-27T11:22:53Z",
+          "status": "LAPSED",
+          "nextRenewalDate": "2026-08-27T10:55:45Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": {
+            "id": "RA000463",
+            "other": null
+          },
+          "validatedAs": "63892405",
+          "otherValidationAuthorities": []
+        },
+        "bic": ["MLLHNL2AXXX"],
+        "mic": null,
+        "ocid": "nl/63892405",
+        "qcc": "QNLV3B1504",
+        "gem": null,
+        "spglobal": ["688802437"],
+        "conformityFlag": "NON_CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/ultimate-parent-reporting-exception"
+          }
+        },
+        "direct-children": {
+          "links": {
+            "relationship-records": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/direct-child-relationships",
+            "related": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/direct-children"
+          }
+        },
+        "ultimate-children": {
+          "links": {
+            "relationship-records": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/ultimate-child-relationships",
+            "related": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881/ultimate-children"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.gleif.org/api/v1/lei-records/984500DCXD39S0EBB881"
+      }
+    }
+  ]
+}

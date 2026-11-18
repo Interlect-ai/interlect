@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 32" width="200" height="32" fill="none">
+  <path d="M7 6 H15 L11 30 H3 Z" fill="#FF5C3A"/>
+  <path d="M19 2 H27 L23 26 H15 Z" fill="#FF5C3A"/>
+  <text x="38" y="24" font-family="Instrument Sans, Helvetica Neue, Arial, sans-serif" font-size="22" font-weight="600" letter-spacing="-0.09" fill="#241C33">Interlect</text>
+</svg>

@@ -1,0 +1,60 @@
+{
+  "_data": [
+    {
+      "_id": "1bd6fe97-7e8e-4ea4-86be-14cbc81374b4",
+      "ja_kodas": 302767152,
+      "ja_pavadinimas": "Vinted, UAB",
+      "reg_data": "2012-04-23",
+      "isreg_data": null,
+      "statusas": {
+        "kodas": 0,
+        "name": "No legal proceedings"
+      },
+      "forma": {
+        "kodas": 310
+      }
+    },
+    {
+      "_id": "723fe5b7-0d0f-411a-8203-0dbb24a541e7",
+      "ja_kodas": 305305400,
+      "ja_pavadinimas": "Vinted Systems, UAB",
+      "reg_data": "2019-10-28",
+      "isreg_data": "2026-04-24",
+      "statusas": {
+        "kodas": 10,
+        "name": "Removed"
+      },
+      "forma": {
+        "kodas": 310
+      }
+    },
+    {
+      "_id": "08c734dd-1a8d-4b59-a255-32dc6fc6da76",
+      "ja_kodas": 305959706,
+      "ja_pavadinimas": "Vinted Go, UAB",
+      "reg_data": "2021-12-20",
+      "isreg_data": null,
+      "statusas": {
+        "kodas": 0,
+        "name": "No legal proceedings"
+      },
+      "forma": {
+        "kodas": 310
+      }
+    },
+    {
+      "_id": "36b40508-41ef-4f52-84a5-6dda4e8ee77d",
+      "ja_kodas": 306056667,
+      "ja_pavadinimas": "Vinted Pay, UAB",
+      "reg_data": "2022-04-04",
+      "isreg_data": null,
+      "statusas": {
+        "kodas": 0,
+        "name": "No legal proceedings"
+      },
+      "forma": {
+        "kodas": 310
+      }
+    }
+  ]
+}

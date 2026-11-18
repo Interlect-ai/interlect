@@ -1,0 +1,724 @@
+{
+  "_data": [
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 65667000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 74786000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 739918000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 65667000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 74786000
+    },
+    {
+      "laikotarpis_nuo": "2024-01-01",
+      "laikotarpis_iki": "2024-12-31",
+      "reg_date": "2025-04-30",
+      "template_id": "FS0718",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 739918000
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 596319040
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 16213809
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 42795233
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 523335441
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 33354917
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 27172251
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 596319040
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 33354917
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 16213809
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": 42795233
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 523335441
+    },
+    {
+      "laikotarpis_nuo": "2023-01-01",
+      "laikotarpis_iki": "2023-12-31",
+      "reg_date": "2024-05-30",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": 27172251
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -28372053
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -23043289
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -23043289
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -45485778
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -28372053
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 345366504
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -42855485
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 371412698
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 345366504
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 371412698
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0618",
+      "template_name": "Atskirosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -45485778
+    },
+    {
+      "laikotarpis_nuo": "2022-01-01",
+      "laikotarpis_iki": "2022-12-31",
+      "reg_date": "2023-06-20",
+      "template_id": "FS0619",
+      "template_name": "Konsoliduotosios finansinės būklės ataskaitos duomenys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -42855485
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -105257096
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -105257096
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 245268640
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -105257096
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 245268640
+    },
+    {
+      "laikotarpis_nuo": "2021-01-01",
+      "laikotarpis_iki": "2021-12-31",
+      "reg_date": "2022-07-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -105257096
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 149893259
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -20880523
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -20880523
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 149893259
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -20880523
+    },
+    {
+      "laikotarpis_nuo": "2020-01-01",
+      "laikotarpis_iki": "2020-12-31",
+      "reg_date": "2021-09-15",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -20880523
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -17953854
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -17953854
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -17953854
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -17953854
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 83920081
+    },
+    {
+      "laikotarpis_nuo": "2019-01-01",
+      "laikotarpis_iki": "2019-12-31",
+      "reg_date": "2020-08-05",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 83920081
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -2829272
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -2829272
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -2829272
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 29566371
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -2829272
+    },
+    {
+      "laikotarpis_nuo": "2018-01-01",
+      "laikotarpis_iki": "2018-12-31",
+      "reg_date": "2019-06-27",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 29566371
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -2224687
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -2224687
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 11847814
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 11847814
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -2224687
+    },
+    {
+      "laikotarpis_nuo": "2017-01-01",
+      "laikotarpis_iki": "2017-12-31",
+      "reg_date": "2018-05-08",
+      "template_id": "FS0130",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -2224687
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 8027388
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -1895993
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -1895993
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -1895993
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00345",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 8027388
+    },
+    {
+      "laikotarpis_nuo": "2016-01-01",
+      "laikotarpis_iki": "2016-12-31",
+      "reg_date": "2017-05-31",
+      "template_id": "FS0030",
+      "template_name": "Vidutinių ir didelių įmonių finansinių ataskaitų rinkinys",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -1895993
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 5790073
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -729666
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00017",
+      "line_name": "PELNAS (NUOSTOLIAI) PRIEŠ APMOKESTINIMĄ",
+      "reiksme": -729666
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -729666
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00001",
+      "line_name": "PARDAVIMO PAJAMOS",
+      "reiksme": 5790073
+    },
+    {
+      "laikotarpis_nuo": "2015-01-01",
+      "laikotarpis_iki": "2015-12-31",
+      "reg_date": "2016-06-21",
+      "template_id": "FS0503",
+      "template_name": "Finansinių ataskaitų rinkinys (pinigų srautų ataskaita sudaroma netiesioginiu būdu)",
+      "line_type_id": "ISLT00019",
+      "line_name": "GRYNASIS PELNAS (NUOSTOLIAI)",
+      "reiksme": -729666
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "filters": {
+    "statement_id": [2350165, 2084312, 1939124]
+  },
+  "include_total": true,
+  "limit": 10,
+  "records_format": "objects",
+  "resource_id": "d5fd17ef-d32e-40cb-8399-82b780095af0",
+  "total_estimation_threshold": null,
+  "records": [
+    {
+      "_id": 1507269,
+      "statement_id": 1939124,
+      "file_id": 33715536,
+      "net_turnover": 83715342,
+      "by_nature_inventory_change": null,
+      "by_nature_long_term_investment_expenses": null,
+      "by_nature_other_operating_revenues": null,
+      "by_nature_material_expenses": null,
+      "by_nature_labour_expenses": null,
+      "by_nature_depreciation_expenses": null,
+      "by_function_cost_of_goods_sold": 58494085,
+      "by_function_gross_profit": 25221257,
+      "by_function_selling_expenses": 8996946,
+      "by_function_administrative_expenses": 9193351,
+      "by_function_other_operating_revenues": 154230,
+      "other_operating_expenses": 994704,
+      "equity_investment_earnings": 0,
+      "other_long_term_investment_earnings": 0,
+      "other_interest_revenues": 509691,
+      "investment_fair_value_adjustments": 0,
+      "interest_expenses": 51849,
+      "extra_revenues": null,
+      "extra_expenses": null,
+      "income_before_income_taxes": 6648328,
+      "provision_for_income_taxes": 161296,
+      "income_after_income_taxes": 6487032,
+      "other_taxes": null,
+      "extra_dividends": 0,
+      "net_income": 6487032
+    },
+    {
+      "_id": 1626965,
+      "statement_id": 2084312,
+      "file_id": 34664065,
+      "net_turnover": 88427692,
+      "by_nature_inventory_change": null,
+      "by_nature_long_term_investment_expenses": null,
+      "by_nature_other_operating_revenues": null,
+      "by_nature_material_expenses": null,
+      "by_nature_labour_expenses": null,
+      "by_nature_depreciation_expenses": null,
+      "by_function_cost_of_goods_sold": 61446401,
+      "by_function_gross_profit": 26981291,
+      "by_function_selling_expenses": 12303446,
+      "by_function_administrative_expenses": 11120524,
+      "by_function_other_operating_revenues": 1576015,
+      "other_operating_expenses": 438227,
+      "equity_investment_earnings": 0,
+      "other_long_term_investment_earnings": 0,
+      "other_interest_revenues": 394094,
+      "investment_fair_value_adjustments": 0,
+      "interest_expenses": 15177,
+      "extra_revenues": null,
+      "extra_expenses": null,
+      "income_before_income_taxes": 5074026,
+      "provision_for_income_taxes": 148798,
+      "income_after_income_taxes": 4925228,
+      "other_taxes": null,
+      "extra_dividends": 0,
+      "net_income": 4925228
+    },
+    {
+      "_id": 1746404,
+      "statement_id": 2350165,
+      "file_id": 35601858,
+      "net_turnover": 85252452,
+      "by_nature_inventory_change": null,
+      "by_nature_long_term_investment_expenses": null,
+      "by_nature_other_operating_revenues": null,
+      "by_nature_material_expenses": null,
+      "by_nature_labour_expenses": null,
+      "by_nature_depreciation_expenses": null,
+      "by_function_cost_of_goods_sold": 63274913,
+      "by_function_gross_profit": 21977539,
+      "by_function_selling_expenses": 6747583,
+      "by_function_administrative_expenses": 11458242,
+      "by_function_other_operating_revenues": 99424,
+      "other_operating_expenses": 2558865,
+      "equity_investment_earnings": 0,
+      "other_long_term_investment_earnings": 0,
+      "other_interest_revenues": 249632,
+      "investment_fair_value_adjustments": 0,
+      "interest_expenses": 10,
+      "extra_revenues": null,
+      "extra_expenses": null,
+      "income_before_income_taxes": 1561895,
+      "provision_for_income_taxes": 144220,
+      "income_after_income_taxes": 1417675,
+      "other_taxes": null,
+      "extra_dividends": 0,
+      "net_income": 1417675
+    }
+  ],
+  "fields": [
+    {
+      "id": "_id",
+      "type": "int"
+    },
+    {
+      "id": "statement_id",
+      "type": "numeric"
+    },
+    {
+      "id": "file_id",
+      "type": "numeric"
+    },
+    {
+      "id": "net_turnover",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_inventory_change",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_long_term_investment_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_other_operating_revenues",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_material_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_labour_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_nature_depreciation_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_function_cost_of_goods_sold",
+      "type": "numeric"
+    },
+    {
+      "id": "by_function_gross_profit",
+      "type": "numeric"
+    },
+    {
+      "id": "by_function_selling_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_function_administrative_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "by_function_other_operating_revenues",
+      "type": "numeric"
+    },
+    {
+      "id": "other_operating_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "equity_investment_earnings",
+      "type": "numeric"
+    },
+    {
+      "id": "other_long_term_investment_earnings",
+      "type": "numeric"
+    },
+    {
+      "id": "other_interest_revenues",
+      "type": "numeric"
+    },
+    {
+      "id": "investment_fair_value_adjustments",
+      "type": "numeric"
+    },
+    {
+      "id": "interest_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "extra_revenues",
+      "type": "numeric"
+    },
+    {
+      "id": "extra_expenses",
+      "type": "numeric"
+    },
+    {
+      "id": "income_before_income_taxes",
+      "type": "numeric"
+    },
+    {
+      "id": "provision_for_income_taxes",
+      "type": "numeric"
+    },
+    {
+      "id": "income_after_income_taxes",
+      "type": "numeric"
+    },
+    {
+      "id": "other_taxes",
+      "type": "numeric"
+    },
+    {
+      "id": "extra_dividends",
+      "type": "numeric"
+    },
+    {
+      "id": "net_income",
+      "type": "numeric"
+    }
+  ],
+  "total": 3,
+  "total_was_estimated": false
+}

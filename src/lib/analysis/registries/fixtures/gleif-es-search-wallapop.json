@@ -1,0 +1,217 @@
+{
+  "meta": {
+    "goldenCopy": { "publishDate": "2026-10-07T16:00:00Z" },
+    "pagination": { "currentPage": 1, "perPage": 10, "from": 1, "to": 2, "total": 2, "lastPage": 1 }
+  },
+  "links": {
+    "first": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Wallapop&filter%5Bentity.legalAddress.country%5D=ES&page%5Bnumber%5D=1&page%5Bsize%5D=10",
+    "last": "https:\/\/api.gleif.org\/api\/v1\/lei-records?filter%5Bfulltext%5D=Wallapop&filter%5Bentity.legalAddress.country%5D=ES&page%5Bnumber%5D=1&page%5Bsize%5D=10"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "9598000ZSECHB5W43F15",
+      "attributes": {
+        "lei": "9598000ZSECHB5W43F15",
+        "entity": {
+          "legalName": { "name": "WALLAPOP SPAIN SL", "language": "es" },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "es",
+            "addressLines": ["AV MERIDIANA Num.89 P.6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "BARCELONA",
+            "region": "ES-B",
+            "country": "ES",
+            "postalCode": "08026"
+          },
+          "headquartersAddress": {
+            "language": "es",
+            "addressLines": ["AV MERIDIANA Num.89 P.6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "BARCELONA",
+            "region": "ES-B",
+            "country": "ES",
+            "postalCode": "08026"
+          },
+          "registeredAt": { "id": "RA000533", "other": null },
+          "registeredAs": "B-445168-8",
+          "jurisdiction": "ES",
+          "category": "GENERAL",
+          "legalForm": { "id": "DP3Q", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "INACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2013-11-13T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": [
+            {
+              "groupType": "STANDALONE",
+              "events": [
+                {
+                  "validationDocuments": "SUPPORTING_DOCUMENTS",
+                  "effectiveDate": "2023-11-27T00:00:00Z",
+                  "recordedDate": "2023-11-27T17:45:01Z",
+                  "type": "DISSOLUTION",
+                  "status": "COMPLETED"
+                }
+              ]
+            }
+          ]
+        },
+        "registration": {
+          "initialRegistrationDate": "2021-06-22T10:15:34Z",
+          "lastUpdateDate": "2023-11-27T17:45:01Z",
+          "status": "RETIRED",
+          "nextRenewalDate": "2023-06-22T14:06:41Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000533", "other": null },
+          "validatedAs": "B-445168-8",
+          "otherValidationAuthorities": [
+            { "validatedAt": { "id": "RA000535" }, "validatedAs": "B66159328" }
+          ]
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QES2TPVHVN",
+        "gem": null,
+        "spglobal": ["1672637445"],
+        "conformityFlag": "NOT_APPLICABLE"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/9598000ZSECHB5W43F15" }
+    },
+    {
+      "type": "lei-records",
+      "id": "959800E91LFDB816LJ52",
+      "attributes": {
+        "lei": "959800E91LFDB816LJ52",
+        "entity": {
+          "legalName": { "name": "WALLAPOP SL", "language": "ca" },
+          "otherNames": [],
+          "transliteratedOtherNames": [],
+          "legalAddress": {
+            "language": "ca",
+            "addressLines": ["AV MERIDIANA Num.89 P.6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "BARCELONA",
+            "region": "ES-B",
+            "country": "ES",
+            "postalCode": "08026"
+          },
+          "headquartersAddress": {
+            "language": "ca",
+            "addressLines": ["AV MERIDIANA Num.89 P.6"],
+            "addressNumber": null,
+            "addressNumberWithinBuilding": null,
+            "mailRouting": null,
+            "city": "BARCELONA",
+            "region": "ES-B",
+            "country": "ES",
+            "postalCode": "08026"
+          },
+          "registeredAt": { "id": "RA000533", "other": null },
+          "registeredAs": "B-438613-8",
+          "jurisdiction": "ES",
+          "category": "GENERAL",
+          "legalForm": { "id": "R6UT", "other": null },
+          "associatedEntity": { "lei": null, "name": null },
+          "status": "ACTIVE",
+          "expiration": { "date": null, "reason": null },
+          "successorEntity": { "lei": null, "name": null },
+          "successorEntities": [],
+          "creationDate": "2013-05-23T00:00:00Z",
+          "subCategory": null,
+          "otherAddresses": [],
+          "eventGroups": []
+        },
+        "registration": {
+          "initialRegistrationDate": "2018-11-12T13:16:16Z",
+          "lastUpdateDate": "2026-05-20T10:48:29Z",
+          "status": "ISSUED",
+          "nextRenewalDate": "2027-06-16T14:02:35Z",
+          "managingLou": "529900T8BM49AURSDO55",
+          "corroborationLevel": "FULLY_CORROBORATED",
+          "validatedAt": { "id": "RA000533", "other": null },
+          "validatedAs": "B-438613-8",
+          "otherValidationAuthorities": [
+            { "validatedAt": { "id": "RA000535" }, "validatedAs": "B66049057" }
+          ]
+        },
+        "bic": null,
+        "mic": null,
+        "ocid": null,
+        "qcc": "QESUSK8XKC",
+        "gem": null,
+        "spglobal": ["252899385"],
+        "conformityFlag": "CONFORMING"
+      },
+      "relationships": {
+        "managing-lou": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52\/managing-lou"
+          }
+        },
+        "lei-issuer": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52\/lei-issuer"
+          }
+        },
+        "field-modifications": {
+          "links": {
+            "related": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52\/field-modifications"
+          }
+        },
+        "direct-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52\/direct-parent-reporting-exception"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "reporting-exception": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52\/ultimate-parent-reporting-exception"
+          }
+        }
+      },
+      "links": { "self": "https:\/\/api.gleif.org\/api\/v1\/lei-records\/959800E91LFDB816LJ52" }
+    }
+  ]
+}
