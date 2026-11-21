@@ -4,6 +4,7 @@
  * stå (0026), så en ældre udrulning på den delte database ikke sletter den.
  */
 import type { SaveFundConfigInput } from "./config.functions";
+import { toStoredSetup } from "./setup-input.ts";
 
 export function saveDraftRpcArgs(data: SaveFundConfigInput) {
   return {
@@ -31,5 +32,8 @@ export function saveDraftRpcArgs(data: SaveFundConfigInput) {
     })),
     _fund_size_eur: data.fundSizeEur,
     _set_fund_size: true,
+    // Only a save of the whole setup per stage sends it (0134); without it the database
+    // replaces only the shared rules and criteria, as every save did.
+    ...(data.setup ? { _setup: toStoredSetup(data.setup, data.stages) } : {}),
   };
 }

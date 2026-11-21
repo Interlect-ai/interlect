@@ -10,6 +10,7 @@
 import type { ScoreCategory } from "@/lib/domain/types";
 import { neutralQuestions, type TopicsBrief } from "./search-topics.ts";
 import type { DeepSpecialist } from "./specialist-prompts.ts";
+import { cleanTeamLine } from "./team-text.ts";
 
 /** At most this many of the fund's questions per research module, so the defaults keep room. */
 export const MAX_SPECIALIST_QUESTIONS_PER_MODULE = 3;
@@ -49,7 +50,8 @@ export function specialistResearchQuestions(
       ? RESEARCH_MODULE_FOR_CATEGORY[specialist.categories[0]]
       : FALLBACK_RESEARCH_MODULE;
     const candidates = [...specialist.evidenceTests, ...(specialist.questions ?? [])]
-      .map((text) => text.replace(/\s+/g, " ").trim())
+      // The same cleaning as the analysis prompts (one line, nothing hidden).
+      .map(cleanTeamLine)
       .filter((text) => text && text.length <= MAX_SPECIALIST_QUESTION_CHARS)
       // A number is a threshold or a target ("ARR over 5 mio."); a digit inside a word ("CO2") is fine.
       .filter((text) => !STANDALONE_NUMBER.test(text));

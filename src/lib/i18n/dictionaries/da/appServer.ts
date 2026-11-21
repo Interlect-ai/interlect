@@ -61,8 +61,11 @@ export const appServer = {
   },
   credits: {
     exhausted: "Fyld op for at køre flere analyser.",
+    monthlyLimit:
+      "Teamets månedsgrænse for analyser er nået. En Admin eller Lead kan hæve den under Analysegrænser.",
     helperExhausted: "Saldoen er brugt. Fyld op for at bruge AI-hjælpen.",
     notReserved: "Kreditterne kunne ikke reserveres. Prøv igen om lidt.",
+    monthNotRead: "Teamets månedsforbrug kunne ikke læses. Prøv igen om lidt.",
     ledgerTooLong: "Kreditbogen er for lang til at kunne summeres.",
     meterNotLoaded: "Kreditterne kunne ikke hentes. Prøv igen om lidt.",
     mailSubject: "[Interlect · Fyld op] {fund}",
@@ -122,6 +125,7 @@ export const appServer = {
     adminEditsSetup: "Kun en administrator kan redigere teamopsætningen.",
     adminOrPartnerEditsSetup: "Kun en administrator eller partner kan redigere teamopsætningen.",
     adminOrLeadEditsSetup: "Kun en Admin eller Lead kan redigere teamopsætningen.",
+    roleCannotPublishSetup: "Din rolle kan ikke udgive teamopsætningen.",
     teamNameMissing: "Teamets navn mangler.",
     caseNotInTeam: "Casen blev ikke fundet i det valgte team.",
     publishedUnchangeable: "En udgivet version af opsætningen kan ikke ændres.",

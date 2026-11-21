@@ -122,3 +122,33 @@ export function suggestBasisGates(
       !(COVERED_BY[suggestion.key] ?? []).some((key) => existing.has(key)),
   );
 }
+
+/** The three shared rules "Jeres tese" weighs as Bindende or Op til vurdering. */
+export type SharedBasisGateKey = "stage_fit" | "geography_fit" | "sector_fit";
+
+const SHARED_TEXT: Record<SharedBasisGateKey, readonly [MessageKey, MessageKey]> = {
+  stage_fit: ["fundEditor.gateText.stageFitLabel", "fundEditor.gateText.stageFitDescription"],
+  geography_fit: [
+    "fundEditor.gateText.geographyFitLabel",
+    "fundEditor.gateText.geographyFitDescription",
+  ],
+  sector_fit: ["fundEditor.gateText.sectorFitLabel", "fundEditor.gateText.sectorFitDescription"],
+};
+
+/**
+ * The shared rule for stages, geography or sectors, worded as the suggestion above (saved in the
+ * page's language), for when a team weighs a list that has no rule yet. Shared = no stage.
+ */
+export function sharedBasisGate(
+  key: SharedBasisGateKey,
+  treatment: "hard" | "review",
+  language: Language = "da",
+): { key: SharedBasisGateKey; label: string; description: string; treatment: "hard" | "review" } {
+  const [label, description] = SHARED_TEXT[key];
+  return {
+    key,
+    label: translate(language, label),
+    description: `${translate(language, description)} ${translate(language, "fundEditor.gateText.unknownNote")}`,
+    treatment,
+  };
+}

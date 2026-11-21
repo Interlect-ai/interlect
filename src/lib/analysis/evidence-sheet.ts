@@ -24,6 +24,7 @@ import type { PricedModel } from "./budgets.ts";
 import type { ScreeningEvidenceInput } from "./prompt.ts";
 import { RESEARCH_PLAN_MODELS, type ResearchPlan } from "./research-plan.ts";
 import type { ResearchFollowUp } from "./research-followup.ts";
+import { promptProfile } from "./team-text.ts";
 
 export const EVIDENCE_SHEET_VERSION = "interlect-evidence-sheet-v2-team";
 
@@ -210,19 +211,21 @@ export function evidenceSheetPrompt(input: EvidenceSheetInput): string {
     hypotheses: (planItems.get(`${kind}:${key}`)?.hypotheses ?? []).map((h) => h.hypothesis),
     researchStatus: followUpItems.get(`${kind}:${key}`)?.status ?? null,
   });
+  // The team's words are cleaned with the same code as in the analysis prompts.
+  const profile = promptProfile(input.profile);
   return JSON.stringify({
     task: "evidence_sheet",
     outputLanguage: input.outputLanguage,
     fund: {
-      thesis: input.profile.thesis,
-      criteria: input.profile.criteria.map((criterion) => ({
+      thesis: profile.thesis,
+      criteria: profile.criteria.map((criterion) => ({
         kind: "criterion",
         key: criterion.key,
         label: criterion.label,
         description: criterion.description,
         ...target("criterion", criterion.key),
       })),
-      gates: input.profile.gates.map((gate) => ({
+      gates: profile.gates.map((gate) => ({
         kind: "gate",
         key: gate.key,
         label: gate.label,

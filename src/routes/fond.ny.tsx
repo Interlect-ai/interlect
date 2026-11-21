@@ -1,25 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequireSession } from "@/components/auth/RequireSession";
-import { ThesisWizard } from "@/components/funds/thesis/ThesisWizard";
-import { pageMeta } from "@/lib/i18n/page-head";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+/**
+ * "Ny investeringstese" had its own eight-step guide. Since a new thesis is set up on the
+ * same Teamopsætning as editing, so old links and bookmarks open it there (`/fond?ny=1`); answers
+ * the old guide left in the browser are carried over by the page (`NewThesisStart`).
+ */
 export const Route = createFileRoute("/fond/ny")({
-  head: () => ({
-    meta: [
-      ...pageMeta("newThesis"),
-      // i18n-keep: link previews (og:) stay Danish; a crawler never knows the fund's language.
-      { property: "og:title", content: "Ny investeringstese — Interlect" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: NewThesisPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/fond", search: { ny: 1 }, replace: true });
+  },
 });
-
-function NewThesisPage() {
-  return (
-    <RequireSession>
-      <ThesisWizard />
-    </RequireSession>
-  );
-}

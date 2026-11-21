@@ -10,7 +10,8 @@ import type { FundProfile } from "@/lib/funds/profiles";
 import { translate } from "../i18n/translate.ts";
 import type { ScreeningOutput } from "./contracts";
 
-export const SCORING_FORMULA_VERSION = "interlect-weighted-stage-adjusted-v3-finance-curves";
+/** V4, no outcome "blocked"; the score itself is computed exactly as in v3. */
+export const SCORING_FORMULA_VERSION = "interlect-weighted-stage-adjusted-v4-never-blocked";
 
 export interface CriterionScoreResult {
   criterionKey: string;
@@ -38,10 +39,20 @@ export interface DeterministicScreeningResult {
   failedHardGateKeys: string[];
   unresolvedGateKeys: string[];
   highestRisk: RiskLevel | null;
+  /**
+   * What the case breaks: a binding mandate rule that is not met, or a critical risk. Shown on the
+   * case; it stops nothing (beslutningsloggen 15. nov 2026: "Vi blokerer generelt ikke cases"). The
+   * name is kept for the stored runs (`validation_result.blockers`).
+   */
   blockers: string[];
-  outcome: "needs_information" | "blocked" | "below_threshold" | "awaiting_approval";
+  /**
+   * Never "blocked" any more. Old runs and cases may still carry it in the database
+   * (0033, 0034); no new screening gets it.
+   */
+  outcome: "needs_information" | "below_threshold" | "awaiting_approval";
   recommendation: PapRecommendation;
-  eligibleForDeepAnalysis: boolean;
+  /** A deep analysis is always possible; a break is shown, never a stop. */
+  eligibleForDeepAnalysis: true;
 }
 
 /**
@@ -169,17 +180,17 @@ export function scoreScreening(
     ...(highestRisk === "critical" ? ["Mindst én kritisk risiko"] : []),
   ];
 
-  // A score is always available, but thin evidence cannot automatically promote a case.
+  // A score is always available, but thin evidence cannot automatically promote a case. An
+  // unknown binding rule makes the case "mangler information" ("Ja"); a broken one
+  // is shown (blockers, failedHardGateKeys) and changes neither the score nor the outcome: the case
+  // always goes on (the locked rule "binding_rule_shown" in fixed-rules.ts).
   const hasInsufficientInformation = evidenceCoverage < 0.6 || unresolvedGateKeys.length > 0;
-  const isBlocked = blockers.length > 0;
   const aboveThreshold = overallScore !== null && overallScore >= profile.analysisThreshold;
   const outcome = hasInsufficientInformation
     ? "needs_information"
-    : isBlocked
-      ? "blocked"
-      : aboveThreshold
-        ? "awaiting_approval"
-        : "below_threshold";
+    : aboveThreshold
+      ? "awaiting_approval"
+      : "below_threshold";
 
   return {
     formulaVersion: SCORING_FORMULA_VERSION,
@@ -195,7 +206,7 @@ export function scoreScreening(
     blockers,
     outcome,
     recommendation: constrainRecommendation(output.proposedRecommendation, outcome),
-    eligibleForDeepAnalysis: outcome === "awaiting_approval",
+    eligibleForDeepAnalysis: true,
   };
 }
 
@@ -218,7 +229,6 @@ function constrainRecommendation(
   outcome: DeterministicScreeningResult["outcome"],
 ): PapRecommendation {
   if (outcome === "needs_information") return "follow";
-  if (outcome === "blocked" && proposed === "go_forward") return "reject";
   if (outcome === "below_threshold" && proposed === "go_forward") return "follow";
   return proposed;
 }

@@ -1,16 +1,30 @@
+/**
+ * Teamopsætning (`/fond`, §2): one page for "Ny", "Redigér" and "Fortsæt kladde".
+ *
+ * - Admin and Lead see the setup as the four places of `SetupShell`, with every field of the old
+ *   editor. With a draft the fields are the draft; without one they show what is published, and
+ *   the first change starts the draft by itself (nothing is ever written to a published version).
+ * - Member and Reader see the same four places with the published version as read-only cards.
+ * - "Ny tese" (`?ny=1`, `/fond/ny` redirects here) asks for a name and a type, creates the draft
+ *   and lands on the same four places; the old guide's half-finished answers are carried over.
+ * - Language, AI level, analysis limits and credits are about the team, not the thesis: they
+ *   live in "Teamindstillinger" (the gear). Versions, the effect of the active version, the
+ *   changes since the last one and the history live in the "Versioner" sheet next to the version
+ *   line (§4.6); suggestions and re-screening under "Gennemse og udgiv", past
+ *   investments under "Jeres tese".
+ */
 import { PendingLabel } from "@/components/ai/AiOrb";
 import { isAdminRole } from "@/lib/auth/is-admin";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { History, Lock, SlidersHorizontal, Trash2 } from "lucide-react";
+import { IconButton } from "@/components/ds/Button";
+import { Sheet } from "@/components/ds/Sheet";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ds/States";
 import { showToast } from "@/components/ds/Toast";
 import { Reveal } from "@/components/ds/Reveal";
-import { motion } from "motion/react";
-import { PRESS } from "@/lib/motion";
-import { FundOverview } from "@/components/funds/FundOverview";
+import { FundOverview, TeamSettingsContent, VersionCards } from "@/components/funds/FundOverview";
 import { FoldSection } from "@/components/funds/FoldSection";
 import { FundSuggestionsPanel } from "@/components/funds/FundSuggestionsPanel";
 import { FundThesisRow } from "@/components/funds/FundThesisRow";
@@ -26,17 +40,24 @@ import { HistoricalInvestmentsPanel } from "@/components/funds/HistoricalInvestm
 import { RescreenPanel } from "@/components/funds/RescreenPanel";
 import { ChangeHistory } from "@/components/funds/ChangeHistory";
 import { ConfigChanges } from "@/components/funds/ConfigChanges";
-import { EditorShell } from "@/components/funds/editor/EditorShell";
-import type { GuideStepKey } from "@/components/funds/editor/guide-steps";
-import { anyProposalApplyKey } from "@/components/funds/editor/proposals";
-import { ThesisComposer } from "@/components/funds/editor/ThesisComposer";
+import { NewThesisStart } from "@/components/funds/setup/NewThesisStart";
+import { ScreeningPlace } from "@/components/funds/setup/ScreeningPlace";
+import { AnalysisMap } from "@/components/funds/setup/AnalysisMap";
+import { AnalysisPlace } from "@/components/funds/setup/AnalysisPlace";
+import { ThesisFrame } from "@/components/funds/setup/ThesisFrame";
+import { SpecialistCards } from "@/components/funds/editor/SpecialistCards";
+import { PlaceHeading, SetupShell, VersionChip } from "@/components/funds/setup/SetupShell";
+import { SetupPlacesNav, placePanelProps } from "@/components/funds/setup/SetupPlacesNav";
 import { deleteFund } from "@/lib/funds/funds.functions";
 import { withBasisKeys } from "@/lib/funds/basis-labels";
 import { gateInLanguage } from "@/lib/funds/gate-labels";
 import { mergeKeptEdits, stepStatus } from "@/lib/funds/editor-rules";
+import type { SetupStage } from "@/lib/analysis/setup-stage";
+import type { SetupPlaceKey } from "@/lib/funds/setup-places";
 import { useActiveFund } from "@/lib/funds/useActiveFund";
 import { useT, useLanguage } from "@/lib/i18n/useT";
 import type { Language } from "@/lib/i18n/language";
+import type { MessageKey } from "@/lib/i18n/translate";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -50,18 +71,40 @@ import { userMessage } from "@/lib/errors/user-message";
 
 type EditorState = SaveFundConfigInput;
 
-export function FundConfigWorkspace() {
+const READ_TITLE: Record<Exclude<SetupPlaceKey, "publish">, MessageKey> = {
+  thesis: "fundSetup.places.thesis.title",
+  screening: "fundSetup.places.screening.title",
+  analysis: "fundSetup.places.analysis.title",
+};
+const READ_LEAD: Record<Exclude<SetupPlaceKey, "publish">, MessageKey> = {
+  thesis: "fundSetup.places.thesis.lead",
+  screening: "fundSetup.places.screening.lead",
+  analysis: "fundSetup.places.analysis.lead",
+};
+
+export function FundConfigWorkspace({
+  place,
+  onPlaceChange,
+  creatingNew,
+  onNew,
+  onNewDone,
+}: {
+  place: SetupPlaceKey;
+  onPlaceChange: (place: SetupPlaceKey) => void;
+  /** `?ny=1`: start a new thesis on this page. */
+  creatingNew: boolean;
+  onNew: () => void;
+  onNewDone: () => void;
+}) {
   const t = useT();
   const language = useLanguage();
   const queryClient = useQueryClient();
   const { fundId, fund, funds, selectFund, refreshFunds } = useActiveFund();
-  const navigate = useNavigate();
   const getConfigs = useServerFn(getFundConfigs);
   const createDraft = useServerFn(createFundConfigDraft);
   const saveDraft = useServerFn(saveFundConfigDraft);
   const publishDraft = useServerFn(publishFundConfigDraft);
   const removeFund = useServerFn(deleteFund);
-  const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditorState | null>(null);
   // The draft as last saved (JSON), to tell the editor whether anything is unsaved.
   const [savedSnapshot, setSavedSnapshot] = useState("");
@@ -70,39 +113,48 @@ export function FundConfigWorkspace() {
   const [saveFailed, setSaveFailed] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  // E6b: "Redigér" på et kort i læsevisningen åbner guiden på samme trin.
-  const [editStep, setEditStep] = useState<GuideStepKey | null>(null);
-  const [pendingImport, setPendingImport] = useState<File | null>(null);
-  // The draft is being fetched fresh before the editor opens.
-  const [opening, setOpening] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [startingDraft, setStartingDraft] = useState(false);
+  // The stage on show in the read-only "Sådan screener vi" (Member and Reader).
+  const [readStage, setReadStage] = useState<SetupStage | null>(null);
   const formRef = useRef<EditorState | null>(null);
   formRef.current = form;
   const savedRef = useRef(savedSnapshot);
   savedRef.current = savedSnapshot;
-  // The draft changed on the server (a proposal was laid in) but could not be loaded: the editor
-  // is locked and nothing is saved from the old copy until it is loaded.
+  // The draft changed on the server (a proposal was laid in) but could not be loaded: the fields
+  // are locked and nothing is saved from the old copy until it is loaded.
   const [reloadFailed, setReloadFailed] = useState(false);
-  // Unsaved edits the editor had to let go of when another fund was chosen and they could not be
-  // saved, by draft id. They come back when that draft is opened again in this session.
+  // Unsaved edits that had to be let go of when another fund was chosen and could not be saved,
+  // by draft id. They come back when that draft is opened again in this session.
   const keptRef = useRef(new Map<string, { form: EditorState; base: EditorState }>());
   const fundIdRef = useRef(fundId);
-  // A result that arrives after the editor closed (a document import, a "Fortryd") is dropped.
-  const editingRef = useRef(editing);
-  editingRef.current = editing;
+  // Starting the draft (the first change): one request, shared by everyone who asks meanwhile.
+  const startingRef = useRef<{ fundId: string; run: Promise<string | null> } | null>(null);
 
   const configQuery = useQuery({
     queryKey: ["fund-config", fundId],
     queryFn: () => getConfigs({ data: { fundId: fundId! } }),
     enabled: Boolean(fundId),
   });
-  // A proposal being laid in from the composer changes the draft on the server.
-  const applyingProposal = useIsMutating({ mutationKey: anyProposalApplyKey }) > 0;
 
-  /** Loads a draft into the editor and remembers that it is saved as it is. */
+  const data = configQuery.data;
+  const active = data?.active ?? null;
+  const draft = data?.draft ?? null;
+  const previous = data?.previous ?? null;
+  const editSource = draft ?? active;
+  const canEditConfig = Boolean(fund && (active?.canEdit ?? draft?.canEdit ?? false));
+  const hasDraft = Boolean(draft && form?.configId === draft.id);
+  // Only an Admin can create a new thesis (the server checks it too, harden S5-3/G15).
+  const canCreateFund = funds.some((candidate) => isAdminRole(candidate.roles));
+
+  /** Loads a version into the editor and remembers that it is saved as it is. */
   const seed = (config: EditableFundConfig) => {
     const state = toEditorState(config, language);
     const kept = keptRef.current.get(config.id);
-    setForm(kept ? mergeKeptEdits(state, kept.form, kept.base) : state);
+    const next = kept ? mergeKeptEdits(state, kept.form, kept.base) : state;
+    formRef.current = next;
+    setForm(next);
     setSavedSnapshot(JSON.stringify(state));
     setSaveFailed(false);
     setReloadFailed(false);
@@ -111,17 +163,20 @@ export function FundConfigWorkspace() {
       setMessage(t("fundSetup.workspace.restored"));
     }
   };
+  const seedRef = useRef(seed);
+  seedRef.current = seed;
 
   useEffect(() => {
-    // Another fund was chosen (here, in the menu or in another tab) while a draft had unsaved
-    // changes: save them to that draft before the editor closes. When that cannot be done, keep
-    // them in memory and say so; they come back when the draft is opened again.
+    // Another fund was chosen while its draft had unsaved changes: save them to that draft first.
+    // When that cannot be done, keep them in memory and say so; they come back when the draft is
+    // opened again.
     const previousFundId = fundIdRef.current;
     fundIdRef.current = fundId;
     const unsaved = formRef.current;
-    if (editingRef.current && unsaved && JSON.stringify(unsaved) !== savedRef.current) {
+    const wasDraft = Boolean(unsaved && savedRef.current && unsaved.configId);
+    if (wasDraft && unsaved && JSON.stringify(unsaved) !== savedRef.current) {
       const name = unsaved.fundName.trim() || t("fundSetup.workspace.previousThesis");
-      const base = (savedRef.current ? JSON.parse(savedRef.current) : {}) as EditorState;
+      const base = JSON.parse(savedRef.current) as EditorState;
       const keep = (reason: string) => {
         keptRef.current.set(unsaved.configId, { form: unsaved, base });
         showToast({
@@ -130,49 +185,55 @@ export function FundConfigWorkspace() {
           duration: 10000,
         });
       };
-      if (!stepStatus(unsaved, new Set()).canSave) {
-        keep(t("fundSetup.workspace.notSavedError", { name }));
-      } else {
-        saveDraft({ data: unsaved })
-          .then(() => {
-            if (previousFundId) {
-              void queryClient.invalidateQueries({ queryKey: ["fund-config", previousFundId] });
-            }
-          })
-          .catch((cause: unknown) => {
-            console.error("[fund-config] save on fund switch", cause);
-            const reason = userMessage(cause, "", language);
-            keep(
-              reason
-                ? t("fundSetup.workspace.saveFailedWithMessage", { name, message: reason })
-                : t("fundSetup.workspace.saveFailedPlain", { name }),
-            );
-          });
+      // Only a draft is ever saved; the published version's fields are never written.
+      const cachedDraft = previousFundId
+        ? queryClient.getQueryData<{ draft: EditableFundConfig | null }>([
+            "fund-config",
+            previousFundId,
+          ])?.draft
+        : null;
+      if (cachedDraft?.id === unsaved.configId) {
+        if (!stepStatus(unsaved, new Set()).canSave) {
+          keep(t("fundSetup.workspace.notSavedError", { name }));
+        } else {
+          saveDraft({ data: unsaved })
+            .then(() => {
+              if (previousFundId) {
+                void queryClient.invalidateQueries({ queryKey: ["fund-config", previousFundId] });
+              }
+            })
+            .catch((cause: unknown) => {
+              console.error("[fund-config] save on fund switch", cause);
+              const reason = userMessage(cause, "", language);
+              keep(
+                reason
+                  ? t("fundSetup.workspace.saveFailedWithMessage", { name, message: reason })
+                  : t("fundSetup.workspace.saveFailedPlain", { name }),
+              );
+            });
+        }
       }
     }
-    setReloadFailed(false);
-    setEditing(false);
+    // A draft being started for the fund we left belongs to that fund, not this one.
+    startingRef.current = null;
+    setStartingDraft(false);
+    formRef.current = null;
     setForm(null);
-    setEditStep(null);
-    setPendingImport(null);
+    setSavedSnapshot("");
+    setReloadFailed(false);
     setMessage(null);
     setError(null);
     // saveDraft is a stable server function; only a new fund should run this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fundId]);
 
-  const pendingEditConfig = configQuery.data
-    ? (configQuery.data.draft ?? configQuery.data.active)
-    : null;
-  // `seed` is a new function each render; the effect reads the latest through a ref.
-  const seedRef = useRef(seed);
-  seedRef.current = seed;
-
+  // The editor follows the version it should show: the draft, else the published version.
+  const publishing = useRef(false);
   useEffect(() => {
-    if (editing && !form && pendingEditConfig) {
-      seedRef.current(pendingEditConfig);
-    }
-  }, [editing, form, pendingEditConfig]);
+    if (!canEditConfig || !editSource || startingRef.current || publishing.current) return;
+    if (formRef.current?.configId === editSource.id) return;
+    seedRef.current(editSource);
+  }, [canEditConfig, editSource, startingDraft, form]);
 
   /** The fund's versions straight from the server, never a cached copy. */
   const fetchConfigs = (id: string) =>
@@ -182,31 +243,70 @@ export function FundConfigWorkspace() {
       staleTime: 0,
     });
 
-  const draftMutation = useMutation({
-    mutationFn: (activeConfigId: string) => createDraft({ data: { activeConfigId } }),
-    onSuccess: async () => {
-      // A failed fetch must not open the editor on the cached active version.
-      await queryClient
-        .refetchQueries({ queryKey: ["fund-config", fundId] }, { throwOnError: true })
-        .catch((cause: unknown) => {
-          console.error("[fund-config] fetch of the new draft", cause);
-          throw new Error(t("fundSetup.workspace.openFailed"));
-        });
-      // Clear any old form first, so the editor is seeded with the new draft.
-      setForm(null);
-      setEditing(true);
-    },
-    onError: (cause: Error) => {
-      setPendingImport(null);
-      setMessage(null);
-      setError(userMessage(cause, t("system.actionFailed"), language));
-    },
-  });
+  /**
+   * The first change starts the draft: a copy of the published version, made once. The change the
+   * person made meanwhile is laid onto it (only the fields they changed, so a draft someone else
+   * started at the same moment keeps theirs). Resolves to the draft's id, or null.
+   */
+  const startDraft = (): Promise<string | null> => {
+    const known = queryClient.getQueryData<{ draft: EditableFundConfig | null }>([
+      "fund-config",
+      fundId,
+    ])?.draft;
+    if (known && formRef.current?.configId === known.id) return Promise.resolve(known.id);
+    if (startingRef.current?.fundId === fundId) return startingRef.current.run;
+    if (!fundId || !active) return Promise.resolve(null);
+    const forFund = fundId;
+    const publishedForm = toEditorState(active, language);
+    setStartingDraft(true);
+    setError(null);
+    const run = (async () => {
+      try {
+        try {
+          await createDraft({ data: { activeConfigId: active.id } });
+        } catch (cause) {
+          // Someone else may have started one a moment ago; use theirs if it is there.
+          console.warn("[fund-config] start draft", cause);
+        }
+        const fresh = await fetchConfigs(forFund);
+        if (fundIdRef.current !== forFund) return null;
+        if (!fresh.draft) {
+          setError(t("fundSetup.places.startFailed"));
+          return null;
+        }
+        const serverState = toEditorState(fresh.draft, language);
+        const current = formRef.current;
+        const next = current
+          ? { ...mergeKeptEdits(serverState, current, publishedForm), configId: fresh.draft.id }
+          : serverState;
+        formRef.current = next;
+        setForm(next);
+        savedRef.current = JSON.stringify(serverState);
+        setSavedSnapshot(savedRef.current);
+        setSaveFailed(false);
+        return fresh.draft.id;
+      } catch (cause) {
+        console.error("[fund-config] start draft", cause);
+        setError(t("fundSetup.places.startFailed"));
+        return null;
+      } finally {
+        if (startingRef.current?.fundId === forFund) {
+          startingRef.current = null;
+          setStartingDraft(false);
+        }
+      }
+    })();
+    startingRef.current = { fundId: forFund, run };
+    return run;
+  };
 
   const saveMutation = useMutation({
     mutationFn: (input: EditorState) => saveDraft({ data: input }),
     onSuccess: async (_result, input) => {
-      setSavedSnapshot(JSON.stringify(input));
+      if (formRef.current?.configId === input.configId) {
+        savedRef.current = JSON.stringify(input);
+        setSavedSnapshot(savedRef.current);
+      }
       setSaveFailed(false);
       setError(null);
       await queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] });
@@ -218,10 +318,16 @@ export function FundConfigWorkspace() {
     },
   });
 
-  /** Saves what the editor shows now; true when it is saved. */
+  /** Saves what the editor shows now (only ever a draft); true when it is saved. */
   const saveNow = async (): Promise<boolean> => {
     const input = formRef.current;
     if (!input || reloadFailed) return false;
+    const currentDraft = queryClient.getQueryData<{ draft: EditableFundConfig | null }>([
+      "fund-config",
+      fundId,
+    ])?.draft;
+    if (!currentDraft || currentDraft.id !== input.configId) return false;
+    if (JSON.stringify(input) === savedRef.current) return true;
     try {
       await saveMutation.mutateAsync(input);
       return true;
@@ -239,11 +345,8 @@ export function FundConfigWorkspace() {
         seed(fresh.draft);
         return true;
       }
-      // The draft is gone (published or discarded by someone else): close and say so.
-      setReloadFailed(false);
-      setEditing(false);
-      setForm(null);
-      setEditStep(null);
+      // The draft is gone (published or discarded by someone else): show what is published.
+      if (fresh.active) seed(fresh.active);
       setMessage(null);
       setError(t("fundSetup.workspace.draftGone"));
       return true;
@@ -256,15 +359,21 @@ export function FundConfigWorkspace() {
 
   const publishMutation = useMutation({
     mutationFn: async (input: EditorState) => {
+      // No re-seed from the cached draft while it is being published (it is gone afterwards).
+      publishing.current = true;
       await saveDraft({ data: input });
       await publishDraft({ data: { configId: input.configId } });
     },
+    onSettled: () => {
+      publishing.current = false;
+    },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] });
-      await queryClient.invalidateQueries({ queryKey: ["fund-config-versions", fundId] });
-      setEditing(false);
+      await queryClient.refetchQueries({ queryKey: ["fund-config", fundId] });
+      publishing.current = false;
+      formRef.current = null;
       setForm(null);
-      setEditStep(null);
+      await queryClient.invalidateQueries({ queryKey: ["fund-config-versions", fundId] });
+      await refreshFunds().catch(() => undefined);
       setMessage(t("fundSetup.workspace.published"));
       setError(null);
     },
@@ -310,89 +419,147 @@ export function FundConfigWorkspace() {
     },
   });
 
-  // Kun en Admin kan oprette en ny investeringstese (serveren tjekker det også, harden S5-3/G15).
-  const canCreateFund = funds.some((candidate) => isAdminRole(candidate.roles));
+  const publishedForm = useMemo(
+    () => (active ? toEditorState(active, language) : null),
+    [active, language],
+  );
 
-  const data = configQuery.data;
-  const active = data?.active ?? null;
-  const draft = data?.draft ?? null;
-  const previous = data?.previous ?? null;
+  const thesisName = active?.fundName ?? draft?.fundName ?? fund?.name;
+  const canDelete = Boolean(fund && (active?.canDelete ?? draft?.canDelete ?? false));
 
-  // "Fortsæt kladde" and "Redigér" wait while a proposal is laid in or the draft is fetched:
-  // opened on the copy from before, the editor would publish it over the proposal.
-  const editLocked = opening || applyingProposal || draftMutation.isPending;
+  /** The row with the thesis's name, the version chip, the save indicator and the team gear. */
+  const headerRow = (chip: ReactNode, saveIndicator: ReactNode) => (
+    <Reveal delay={0.1} className="flex flex-wrap items-center gap-3">
+      <h2 className="m-0 text-title font-semibold tracking-title">
+        {thesisName ?? t("fundSetup.workspace.thesisName")}
+      </h2>
+      {chip}
+      {fundId && active && (
+        // Versions and history in one sheet, opened next to the version line.
+        <button
+          type="button"
+          onClick={() => setVersionsOpen(true)}
+          aria-haspopup="dialog"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-0 bg-transparent px-2 py-1 font-[inherit] text-list font-medium text-ink-2 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-1"
+        >
+          <History className="size-3.5" aria-hidden />
+          {t("fundSetup.versions.open")}
+        </button>
+      )}
+      <div className="flex-1" />
+      {saveIndicator}
+      {fundId && (
+        <IconButton
+          icon={SlidersHorizontal}
+          size={36}
+          aria-label={t("fundSetup.places.settingsOpen")}
+          title={t("fundSetup.places.settingsOpen")}
+          onClick={() => setSettingsOpen(true)}
+        />
+      )}
+      {canDelete && (
+        // Prototype `nameRow`: a round white button with the bin in red, next to the settings.
+        <IconButton
+          icon={Trash2}
+          size={36}
+          onClick={() => {
+            setDeleteConfirmation("");
+            setConfirmingDelete(true);
+          }}
+          className="text-critical hover:bg-critical-wash hover:text-critical"
+          aria-label={t("fundSetup.workspace.deleteAria", { name: fund?.name ?? "" })}
+          title={t("fundSetup.workspace.deleteTitle")}
+        />
+      )}
+    </Reveal>
+  );
 
-  const beginEditing = (step: GuideStepKey | null = null) => {
-    if (!fundId || opening || draftMutation.isPending) return;
-    setError(null);
-    setEditStep(step);
-    setOpening(true);
-    // The draft is fetched fresh, never taken from the cache, which may be from before a proposal.
-    void fetchConfigs(fundId)
-      .then((fresh) => {
-        // Another fund was chosen meanwhile: this fund's draft is not opened over it, and the
-        // document picked for it is not imported into the other one.
-        if (fundIdRef.current !== fundId) {
-          setPendingImport(null);
-          return;
-        }
-        if (fresh.draft) {
-          seed(fresh.draft);
-          setEditing(true);
-        } else if (fresh.active) {
-          draftMutation.mutate(fresh.active.id);
-        } else {
-          setPendingImport(null);
-        }
-      })
-      .catch((cause: unknown) => {
-        console.error("[fund-config] fetch before editing", cause);
-        setPendingImport(null);
-        if (fundIdRef.current !== fundId) return;
-        setMessage(null);
-        setError(t("fundSetup.workspace.openFailed"));
-      })
-      .finally(() => setOpening(false));
-  };
+  const notices = (
+    <>
+      {error && (
+        <p role="alert" className="m-0 rounded-md bg-critical-wash p-3 text-list text-critical">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="m-0 rounded-md bg-positive-wash p-3 text-list text-positive">
+          {message}
+        </p>
+      )}
+    </>
+  );
 
-  /**
-   * A proposal was laid in from the composer. The editor, if it opened meanwhile (on the copy from
-   * before), loads the new draft; otherwise the cache is fetched again, and a failed fetch is
-   * reported to the composer instead of swallowed, so "Gennemse kladde" is not offered.
-   */
-  const onComposerDraftChanged = async () => {
-    if (!fundId) return;
-    if (fundIdRef.current !== fundId) {
-      void queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] });
-      return;
-    }
-    if (editingRef.current) {
-      await reloadDraft();
-      return;
-    }
-    await queryClient.refetchQueries({ queryKey: ["fund-config", fundId] }, { throwOnError: true });
-  };
-
-  /** A draft for the composer: the existing one, or a new one made from the active version. */
-  const ensureDraft = async (): Promise<string> => {
-    if (draft) return draft.id;
-    if (!active) throw new Error(t("fundSetup.workspace.noPublishedVersion"));
-    const created = await createDraft({ data: { activeConfigId: active.id } });
-    await queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] });
-    return created.draftId;
-  };
-
-  const displayed = editing && form ? form : null;
-  const canEditConfig = Boolean(fund && (active?.canEdit ?? draft?.canEdit ?? false));
-  const editSource = draft ?? active;
+  /** What else lives in "Gennemse og udgiv": the team's suggestions and re-screening. */
+  const publishExtras =
+    fundId && active ? (
+      <>
+        <FoldSection
+          title={t("fundSetup.workspace.foldSuggestions")}
+          hint={t("fundSetup.workspace.foldSuggestionsHint")}
+        >
+          <FundSuggestionsPanel fundId={fundId} />
+        </FoldSection>
+        <FoldSection
+          title={t("fundSetup.workspace.foldRescreen")}
+          hint={t("fundSetup.workspace.foldRescreenHint")}
+        >
+          <RescreenPanel fundId={fundId} />
+        </FoldSection>
+      </>
+    ) : null;
+  /** The "Versioner" sheet: the effect of the active version, the versions, changes and history. */
+  const versionsContent =
+    fundId && active ? (
+      <>
+        <VersionCards fundId={fundId} threshold={active.analysisThreshold} />
+        {previous && (
+          <FoldSection title={t("fundSetup.changes.heading", { version: previous.version })}>
+            <ConfigChanges active={active} previous={previous} />
+          </FoldSection>
+        )}
+        {canEditConfig && (
+          <FoldSection
+            title={t("fundSetup.workspace.foldHistory")}
+            hint={t("fundSetup.workspace.foldHistoryHint")}
+          >
+            <ChangeHistory fundId={fundId} />
+          </FoldSection>
+        )}
+      </>
+    ) : null;
+  const thesisExtras =
+    fundId && active ? (
+      <FoldSection title={t("fundSetup.workspace.foldHistorical")}>
+        <HistoricalInvestmentsPanel fundId={fundId} canEdit={active.canEdit} />
+      </FoldSection>
+    ) : null;
 
   let body: ReactNode;
-  if (configQuery.isLoading) {
+  if (creatingNew && canCreateFund) {
+    body = (
+      <div className="flex flex-col gap-[22px]">
+        <div {...placePanelProps("thesis")}>
+          <NewThesisStart
+            onCancel={onNewDone}
+            onCreated={(newFundId, restored) => {
+              void refreshFunds()
+                .catch(() => undefined)
+                .then(() => {
+                  selectFund(newFundId);
+                  onNewDone();
+                  if (restored) setMessage(t("fundSetup.newThesis.restored"));
+                });
+            }}
+          />
+        </div>
+      </div>
+    );
+  } else if (creatingNew) {
+    body = <EmptyState title={t("fundSetup.newThesis.adminOnly")} body="" />;
+  } else if (configQuery.isLoading) {
     body = <LoadingState title={t("fundSetup.workspace.loading")} />;
   } else if (!data) {
-    // Only a first load that failed: a failed fetch later keeps the page (and an open editor) on
-    // the data it has, so its error and the editor's stale notice can be shown.
-    // A failed load is an error with a retry, never example data in its place.
+    // Only a first load that failed shows an error with a retry, never example data.
     body = configQuery.isError ? (
       <ErrorState onRetry={() => void configQuery.refetch()} />
     ) : (
@@ -401,179 +568,199 @@ export function FundConfigWorkspace() {
         body={t("fundSetup.workspace.emptyBody")}
       />
     );
+  } else if (canEditConfig && fundId && editSource && form) {
+    body = (
+      <SetupShell
+        fundId={fundId}
+        value={form}
+        onChange={(next) =>
+          setForm((current) => {
+            const kept = current?.configId === next.configId ? next : current;
+            formRef.current = kept;
+            return kept;
+          })
+        }
+        draftVersion={draft?.version ?? (active ? active.version + 1 : 1)}
+        hasDraft={hasDraft}
+        startingDraft={startingDraft}
+        onStartDraft={startDraft}
+        active={active}
+        publishedForm={publishedForm}
+        moduleOverrides={editSource.moduleOverrides}
+        stageModuleOverrides={editSource.stageModuleOverrides}
+        researchModuleOverrides={editSource.researchModuleOverrides}
+        screeningSetup={editSource}
+        place={place}
+        onPlaceChange={onPlaceChange}
+        savedSnapshot={savedSnapshot}
+        saving={saveMutation.isPending}
+        saveFailed={saveFailed}
+        publishing={publishMutation.isPending}
+        onSave={saveNow}
+        onPublish={() => {
+          const input = formRef.current;
+          if (input && hasDraft) publishMutation.mutate(input);
+        }}
+        canAi={canEditConfig}
+        onReload={reloadDraft}
+        stale={reloadFailed}
+        saveError={error}
+        renderHeader={({ chip, saveIndicator }) => (
+          <>
+            {headerRow(chip, saveIndicator)}
+            {notices}
+          </>
+        )}
+        extras={{ thesis: thesisExtras, publish: publishExtras }}
+      />
+    );
+  } else if (active && fundId) {
+    // Member and Reader: the same four places, the published version as read-only cards.
+    body = (
+      <div className="flex flex-col gap-[22px]">
+        {headerRow(
+          <>
+            <VersionChip publishedVersion={active.version} draftVersion={null} hasDraft={false} />
+            <span className="inline-flex items-center gap-1.5 text-list text-ink-3">
+              <Lock className="size-3.5" aria-hidden />
+              {t("fundSetup.places.readOnlyNote")}
+            </span>
+          </>,
+          null,
+        )}
+        {notices}
+        <SetupPlacesNav value={place} onChange={onPlaceChange} />
+        <div {...placePanelProps(place)} className="flex flex-col gap-9">
+          {place === "publish" ? (
+            <>
+              <PlaceHeading
+                title={t("fundSetup.places.publish.readOnlyTitle")}
+                lead={t("fundSetup.places.publish.readOnlyLead")}
+              />
+              <div className="flex flex-col gap-3">{publishExtras}</div>
+            </>
+          ) : (
+            <>
+              {place === "thesis" ? (
+                // Prototype head("Jeres tese"), no line under it.
+                <PlaceHeading title={t("fundSetup.places.thesis.label")} />
+              ) : (place === "screening" || place === "analysis") && publishedForm ? null : (
+                <PlaceHeading
+                  title={t(READ_TITLE[place])}
+                  lead={t(READ_LEAD[place], { threshold: active.analysisThreshold })}
+                />
+              )}
+              {/* The same visual blocks as Admin and Lead, only without editing. */}
+              {publishedForm && place === "thesis" && (
+                <ThesisFrame value={publishedForm} onChange={() => undefined} readOnly />
+              )}
+              {publishedForm && place === "screening" && (
+                <>
+                  <ScreeningPlace
+                    fundId={fundId}
+                    value={publishedForm}
+                    onChange={() => undefined}
+                    stage={readStage}
+                    onStageChange={setReadStage}
+                    onGoThesis={() => onPlaceChange("thesis")}
+                    heading={(title) => <PlaceHeading title={title} />}
+                    readOnly
+                  />
+                  <span id="setup-step-weights" />
+                  <span id="setup-step-mandate" />
+                  <span id="setup-step-screening" />
+                  <FundOverview
+                    key={place}
+                    fundId={fundId}
+                    active={active}
+                    areas={["weights", "mandate", "screening"]}
+                    onEdit={undefined}
+                  />
+                </>
+              )}
+              {place === "analysis" && publishedForm && (
+                // The same page as Admin and Lead, without the means to change it.
+                <AnalysisPlace
+                  fundId={fundId}
+                  value={publishedForm}
+                  stage={readStage}
+                  onStageChange={setReadStage}
+                  onGoThesis={() => onPlaceChange("thesis")}
+                  heading={(title) => <PlaceHeading title={title} />}
+                  moduleOverrides={active.moduleOverrides}
+                  stageModuleOverrides={active.stageModuleOverrides}
+                  readOnly
+                />
+              )}
+              {place === "analysis" && !publishedForm && (
+                <AnalysisMap fundId={fundId} configId={active.id} />
+              )}
+              {place === "analysis" && !publishedForm && (
+                <SpecialistCards
+                  fundId={fundId}
+                  configId={active.id}
+                  moduleOverrides={active.moduleOverrides}
+                />
+              )}
+              {place === "thesis" && thesisExtras}
+            </>
+          )}
+        </div>
+      </div>
+    );
   } else {
     body = (
-      <>
-        {!displayed && canEditConfig && fundId && editSource && (
-          <ThesisComposer
-            draftId={draft?.id ?? null}
-            draftVersion={draft?.version ?? null}
-            criteria={editSource.criteria.map((criterion) => ({
-              key: criterion.key,
-              label: criterion.label,
-            }))}
-            ensureDraft={ensureDraft}
-            onFiles={(files) => {
-              // "+" picks the document itself; the Start step imports it.
-              const file = files[0];
-              if (!file || !fundId || opening || draftMutation.isPending) return;
-              setPendingImport(file);
-              beginEditing("start");
-            }}
-            onReview={() => beginEditing("publish")}
-            onDraftChanged={onComposerDraftChanged}
-          />
-        )}
-        <Reveal delay={0.1} className="flex flex-wrap items-center gap-3">
-          <h2 className="m-0 text-title font-semibold tracking-title">
-            {active?.fundName ?? fund?.name ?? t("fundSetup.workspace.thesisName")}
-          </h2>
-          <span className="text-list text-ink-3 tabular-nums">
-            {active
-              ? t("fundSetup.workspace.activeVersion", { version: active.version })
-              : t("fundSetup.workspace.noVersion")}
-          </span>
-          {draft && (
-            <span className="flex items-center gap-1.5 text-list text-ink-3 tabular-nums">
-              <span aria-hidden className="size-[7px] rounded-full bg-warning" />
-              {t("fundSetup.workspace.draftVersion", { version: draft.version })}
-            </span>
-          )}
-          <div className="flex-1" />
-          {fund && (active?.canDelete ?? draft?.canDelete ?? false) && !editing && (
-            <button
-              type="button"
-              onClick={() => {
-                setDeleteConfirmation("");
-                setConfirmingDelete(true);
-              }}
-              className="grid size-10 cursor-pointer place-items-center rounded-full border-0 bg-transparent text-critical transition-colors hover:bg-critical-wash"
-              aria-label={t("fundSetup.workspace.deleteAria", { name: fund.name })}
-              title={t("fundSetup.workspace.deleteTitle")}
-            >
-              <Trash2 className="size-4" aria-hidden />
-            </button>
-          )}
-          {canEditConfig && !editing && (
-            <motion.button
-              type="button"
-              onClick={() => beginEditing()}
-              disabled={editLocked}
-              whileTap={PRESS.whileTap}
-              transition={PRESS.transition}
-              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-pill border-0 bg-inverse px-4 font-[inherit] text-[14px] font-medium whitespace-nowrap text-ink-inverse disabled:opacity-60"
-            >
-              <Pencil className="size-4" aria-hidden />
-              {draft ? t("fundSetup.workspace.continueDraft") : t("fundSetup.workspace.editSetup")}
-            </motion.button>
-          )}
-        </Reveal>
-
-        {error && (
-          <p role="alert" className="m-0 rounded-md bg-critical-wash p-3 text-list text-critical">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p role="status" className="m-0 rounded-md bg-positive-wash p-3 text-list text-positive">
-            {message}
-          </p>
-        )}
-
-        {displayed && fundId && editSource ? (
-          <EditorShell
-            fundId={fundId}
-            value={displayed}
-            onChange={(next) =>
-              setForm((previous) =>
-                editingRef.current && previous?.configId === next.configId ? next : previous,
-              )
-            }
-            draftVersion={draft?.version ?? editSource.version}
-            active={active}
-            moduleOverrides={editSource.moduleOverrides}
-            researchModuleOverrides={editSource.researchModuleOverrides}
-            screeningSetup={editSource}
-            initialStep={editStep}
-            initialImport={pendingImport}
-            onInitialImportTaken={() => setPendingImport(null)}
-            savedSnapshot={savedSnapshot}
-            saving={saveMutation.isPending}
-            saveFailed={saveFailed}
-            publishing={publishMutation.isPending}
-            onSave={saveNow}
-            onPublish={() => publishMutation.mutate(displayed)}
-            canAi={canEditConfig}
-            onReload={reloadDraft}
-            stale={reloadFailed}
-            saveError={error}
-            onClose={() => {
-              setReloadFailed(false);
-              setEditing(false);
-              setForm(null);
-              setEditStep(null);
-              setPendingImport(null);
-              setError(null);
-              void queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] });
-            }}
-          />
-        ) : active && fundId ? (
-          <>
-            <FundOverview
-              fundId={fundId}
-              active={active}
-              onEdit={canEditConfig && !editLocked ? beginEditing : undefined}
-            />
-            <div className="flex flex-col gap-3">
-              {previous && (
-                <FoldSection title={t("fundSetup.changes.heading", { version: previous.version })}>
-                  <ConfigChanges active={active} previous={previous} />
-                </FoldSection>
-              )}
-              <FoldSection
-                title={t("fundSetup.workspace.foldSuggestions")}
-                hint={t("fundSetup.workspace.foldSuggestionsHint")}
-              >
-                <FundSuggestionsPanel fundId={fundId} />
-              </FoldSection>
-              <FoldSection
-                title={t("fundSetup.workspace.foldRescreen")}
-                hint={t("fundSetup.workspace.foldRescreenHint")}
-              >
-                <RescreenPanel fundId={fundId} />
-              </FoldSection>
-              <FoldSection title={t("fundSetup.workspace.foldHistorical")}>
-                <HistoricalInvestmentsPanel fundId={fundId} canEdit={active.canEdit} />
-              </FoldSection>
-              {canEditConfig && (
-                <FoldSection
-                  title={t("fundSetup.workspace.foldHistory")}
-                  hint={t("fundSetup.workspace.foldHistoryHint")}
-                >
-                  <ChangeHistory fundId={fundId} />
-                </FoldSection>
-              )}
-            </div>
-          </>
-        ) : (
-          <EmptyState
-            title={t("fundSetup.workspace.draftStateTitle")}
-            body={t("fundSetup.workspace.draftStateBody")}
-          />
-        )}
-      </>
+      <EmptyState
+        title={t("fundSetup.workspace.draftStateTitle")}
+        body={t("fundSetup.workspace.draftStateBody")}
+      />
     );
   }
 
   return (
-    <div className="flex flex-col gap-[26px]">
+    <div className="flex flex-col gap-[22px]">
       <FundThesisRow
         funds={funds}
-        activeId={fundId}
-        onSelect={selectFund}
-        onCreate={canCreateFund ? () => void navigate({ to: "/fond/ny" }) : undefined}
+        activeId={creatingNew ? null : fundId}
+        onSelect={(id) => {
+          selectFund(id);
+          if (creatingNew) onNewDone();
+        }}
+        onCreate={canCreateFund ? onNew : undefined}
       />
       {body}
+
+      {fundId && (
+        <Sheet
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title={t("fundSetup.places.settingsTitle")}
+          description={t("fundSetup.places.settingsDescription")}
+        >
+          <TeamSettingsContent fundId={fundId} />
+        </Sheet>
+      )}
+      {versionsContent && (
+        <Sheet
+          open={versionsOpen}
+          onOpenChange={setVersionsOpen}
+          title={t("fundSetup.versions.title")}
+          description={t(
+            canEditConfig
+              ? "fundSetup.versions.description"
+              : "fundSetup.versions.descriptionReadOnly",
+          )}
+          className="w-[min(520px,calc(100vw-24px))]"
+        >
+          {/* "Gendan" makes a draft: not while one is being started or the editor is out of date. */}
+          <fieldset
+            disabled={startingDraft || reloadFailed}
+            className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0"
+          >
+            {versionsContent}
+          </fieldset>
+        </Sheet>
+      )}
 
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent className="sm:max-w-md">
@@ -627,36 +814,8 @@ export function FundConfigWorkspace() {
   );
 }
 
-export function Disclosure({
-  title,
-  description,
-  defaultOpen,
-  children,
-}: {
-  title: string;
-  description: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <details className="panel group px-[19px]" open={defaultOpen}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 marker:content-none">
-        <span className="min-w-0">
-          <span className="block text-body font-semibold text-ink">{title}</span>
-          <span className="mt-0.5 block text-list text-ink-3">{description}</span>
-        </span>
-        <ChevronDown
-          className="size-4 shrink-0 text-ink-4 transition-transform group-open:rotate-180"
-          aria-hidden
-        />
-      </summary>
-      <div className="border-t border-hairline py-3">{children}</div>
-    </details>
-  );
-}
-
 /**
- * The editor's copy of a draft; old stage and geography names come in as keys, and the
+ * The editor's copy of a version; old stage and geography names come in as keys, and the
  * mandate's own rules in the team's language.
  */
 function toEditorState(config: EditableFundConfig, language: Language): EditorState {
@@ -679,5 +838,8 @@ function toEditorState(config: EditableFundConfig, language: Language): EditorSt
     dealbreakers: config.dealbreakers,
     gates: config.gates.map((gate) => gateInLanguage(gate, language)),
     criteria: config.criteria,
+    // A version with anything per stage is saved whole, with its setup (else the
+    // server refuses rows with a stage); "Hvem er I, og hvordan tænker I?" lives in it.
+    ...(config.perStage ? { setup: config.setup } : {}),
   });
 }

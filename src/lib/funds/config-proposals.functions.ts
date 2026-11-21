@@ -11,6 +11,7 @@ import {
   applyConfigOps,
   configOpSchema,
   draftFingerprint,
+  sharedRowsOnly,
   mainDraftChanged,
   opsFromResponse,
   screeningChanged,
@@ -111,7 +112,11 @@ function toView(
     createdByMe: row.created_by === userId,
     limitViolations: applied ? applied.limitViolations : [],
     fieldChanges: applied
-      ? describeFieldChanges(shown(current), shown(applied.draft), language)
+      ? describeFieldChanges(
+          shown(sharedRowsOnly(current)),
+          shown(sharedRowsOnly(applied.draft)),
+          language,
+        )
       : [],
   };
 }

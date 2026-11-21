@@ -19,22 +19,24 @@ import {
 import { fetchAllRows } from "./paginate";
 import type { CaseRow, OpenTaskRow, RecalcRow, RunRow } from "./snapshot";
 
+/** The team's cases, limited to `thesisIds` when given (the theses the page shows). */
 export async function loadCaseRows(
   supabase: SupabaseClient,
   fundId: string,
   language: Language = DEFAULT_LANGUAGE,
+  thesisIds?: readonly string[],
 ): Promise<CaseRow[]> {
-  const rows = await fetchAllRows<Row>((from, to) =>
-    supabase
+  const rows = await fetchAllRows<Row>((from, to) => {
+    let query = supabase
       .from("cases")
       .select(
-        "id, phase, status, created_at, last_action_at, companies(name, stage, hq_country, sector_key, sector_taxonomy(label_da))",
+        "id, thesis_id, phase, status, created_at, last_action_at, companies(name, stage, hq_country, sector_key, sector_taxonomy(label_da))",
         { count: "exact" },
       )
-      .eq("fund_id", fundId)
-      .order("id")
-      .range(from, to),
-  );
+      .eq("fund_id", fundId);
+    if (thesisIds) query = query.in("thesis_id", [...thesisIds]);
+    return query.order("id").range(from, to);
+  });
   return rows.map((row) => mapCaseRow(row, language));
 }
 
@@ -46,9 +48,12 @@ export async function loadCaseRows(
 export async function loadRuns(
   supabase: SupabaseClient,
   fundId: string,
-  configVersionId: string,
+  configVersionId: string | readonly string[],
   sinceIso: string,
 ): Promise<{ configRuns: RunRow[]; recent: Row[] }> {
+  // One active version per shown thesis; ids are uuids from the database.
+  const configIds = typeof configVersionId === "string" ? [configVersionId] : [...configVersionId];
+  const active = new Set(configIds);
   const rows = await fetchAllRows<Row>((from, to) =>
     supabase
       .from("analysis_runs")
@@ -58,12 +63,12 @@ export async function loadRuns(
       )
       .eq("fund_id", fundId)
       .in("kind", ["screening", "deep"])
-      .or(`config_version_id.eq.${configVersionId},created_at.gte.${sinceIso}`)
+      .or(`config_version_id.in.(${configIds.join(",")}),created_at.gte.${sinceIso}`)
       .order("id")
       .range(from, to),
   );
   return {
-    configRuns: rows.filter((row) => row["config_version_id"] === configVersionId).map(mapRunRow),
+    configRuns: rows.filter((row) => active.has(row["config_version_id"] as string)).map(mapRunRow),
     recent: rows.filter((row) => (row["created_at"] as string) >= sinceIso),
   };
 }
@@ -72,8 +77,9 @@ export async function loadRuns(
 export async function loadOlderVersionScreenedCaseIds(
   supabase: SupabaseClient,
   fundId: string,
-  configVersionId: string,
+  configVersionId: string | readonly string[],
 ): Promise<Set<string>> {
+  const configIds = typeof configVersionId === "string" ? [configVersionId] : [...configVersionId];
   const rows = await fetchAllRows<Row>((from, to) =>
     supabase
       .from("analysis_runs")
@@ -81,7 +87,7 @@ export async function loadOlderVersionScreenedCaseIds(
       .eq("fund_id", fundId)
       .eq("kind", "screening")
       .in("status", ["complete", "awaiting_approval"])
-      .neq("config_version_id", configVersionId)
+      .not("config_version_id", "in", `(${configIds.join(",")})`)
       .order("id")
       .range(from, to),
   );

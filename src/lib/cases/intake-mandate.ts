@@ -21,6 +21,9 @@ export interface PreviewGateInput {
 export interface MandateSnapshot {
   fundId: string;
   fundName: string;
+  /** The thesis the snapshot is read from: the chosen one, else the team's default. */
+  thesisId?: string;
+  thesisName?: string;
   /** The active mandate's lists: keys ("series_a", "DK", "nordics") or the team's own text. */
   stages: string[];
   geographies: string[];

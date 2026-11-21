@@ -1,8 +1,8 @@
 /**
  * Chart presets: one preset per chart use in the design, so pages
  * never carry loose numbers. Colours are token names, never hex. Values come from
- * "Graf-system (bklit) v1.0" and "Grafer" (wins where they differ: rings rotate in at most 12°, the
- * hovered segment grows 4 px in 160 ms and the rest dims to 55 %).
+ * "Bilag D. Graf-system (bklit)" and "Grafer" (wins where they differ: rings rotate in at most 12°,
+ * the hovered segment grows 4 px in 160 ms and the rest dims to 55 %).
  *
  * `studioUrl` is filled in when a preset is tuned in bklit Studio. `available`
  * says whether the bklit component is vendored in src/components/charts yet; the others

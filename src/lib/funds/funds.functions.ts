@@ -12,6 +12,7 @@ import {
 import { fundDraftRows } from "@/lib/funds/fund-draft";
 import { serverText } from "@/lib/i18n/server-text";
 import { isStoragePathIn } from "@/lib/security/storage-path";
+import { pickDefaultThesis, thesisRowFrom, type ThesisRow } from "@/lib/funds/theses";
 
 /**
  * Fondsidentitet kommer fra `funds` og `fund_config_versions` — aldrig fra en
@@ -34,6 +35,11 @@ export interface MemberFund {
   roles: string[];
   /** The fund's language: the interface and everything AI writes. */
   language: Language;
+  /**
+   * The default thesis: the card shows the team and under it this thesis's name and
+   * version (spec flere-teser-i-et-team §4.8). Null when the team has no thesis yet.
+   */
+  defaultThesis: { id: string; name: string } | null;
 }
 
 // "demo" er Brains demo-fond med syntetiske data på staging (scripts/brain-seed-demo.ts).
@@ -54,12 +60,32 @@ export const listMemberFunds = createServerFn({ method: "GET" })
     const fundIds = rows.map((row) => row["fund_id"] as string);
     if (fundIds.length === 0) return [];
 
-    const { data: configs } = await context.supabase
-      .from("fund_config_versions")
-      .select("fund_id, status, version, fund_mandates(thesis, stages)")
-      .in("fund_id", fundIds)
-      .in("status", ["active", "draft"])
-      .order("version", { ascending: false });
+    const [{ data: configs }, { data: thesisRows, error: thesesError }] = await Promise.all([
+      context.supabase
+        .from("fund_config_versions")
+        .select("fund_id, thesis_id, status, version, fund_mandates(thesis, stages)")
+        .in("fund_id", fundIds)
+        .in("status", ["active", "draft"])
+        .order("version", { ascending: false }),
+      context.supabase
+        .from("fund_theses")
+        .select("id, fund_id, name, status, is_default, created_at")
+        .in("fund_id", fundIds),
+    ]);
+    if (thesesError) {
+      console.error("[listMemberFunds] theses", thesesError.message);
+      throw new Error(serverText("fundServer.funds.notLoaded"));
+    }
+    // The card reads the team's default thesis, not "the team's active version".
+    const defaultByFund = new Map<string, ThesisRow>();
+    for (const fundId of fundIds) {
+      const chosen = pickDefaultThesis(
+        (thesisRows ?? [])
+          .filter((row) => row["fund_id"] === fundId)
+          .map((row) => thesisRowFrom(row as Record<string, unknown>)),
+      );
+      if (chosen) defaultByFund.set(fundId, chosen);
+    }
 
     const byFund = new Map<
       string,
@@ -67,6 +93,7 @@ export const listMemberFunds = createServerFn({ method: "GET" })
     >();
     for (const config of configs ?? []) {
       const fundId = config["fund_id"] as string;
+      if (config["thesis_id"] !== defaultByFund.get(fundId)?.id) continue;
       const status = config["status"] as "active" | "draft";
       const existing = byFund.get(fundId);
       if (existing?.status === "active") continue;
@@ -105,10 +132,15 @@ export const listMemberFunds = createServerFn({ method: "GET" })
           stages: config?.stages ?? [],
           roles: (Array.isArray(rawRoles) ? rawRoles : []).map((entry) => entry.role),
           language: parseLanguage(fund?.language),
+          defaultThesis: defaultThesisOf(defaultByFund.get(row["fund_id"] as string)),
         } satisfies MemberFund;
       })
       .sort((a, b) => Number(a.isDemo) - Number(b.isDemo) || a.name.localeCompare(b.name, "da"));
   });
+
+function defaultThesisOf(thesis: ThesisRow | undefined): MemberFund["defaultThesis"] {
+  return thesis ? { id: thesis.id, name: thesis.name } : null;
+}
 
 function firstSentence(text: string): string {
   const trimmed = text.trim();

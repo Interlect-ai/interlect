@@ -21,6 +21,7 @@ import {
   type CaseTaskKind,
 } from "./tasks";
 import { serverText } from "@/lib/i18n/server-text";
+import { caseThesis } from "@/lib/funds/thesis-scope.server";
 import { withDemoView } from "@/lib/display/display-names.server";
 
 /**
@@ -300,17 +301,24 @@ const editableFields = {
   dueOn: z.string().date().nullable(),
 };
 
-/** The active configuration's gate and criterion keys a task may be linked to. */
+/**
+ * The gate and criterion keys a task may be linked to: those of the active version of the case's
+ * own thesis.
+ */
 async function assertLinkExists(
   service: ReturnType<typeof getServiceClient>,
   fundId: string,
+  caseId: string,
   linkedKind: "gate" | "criterion",
   linkedKey: string,
 ) {
+  const thesis = await caseThesis(service, fundId, caseId);
+  if (!thesis) throw new Error(serverText("caseServer.tasks.linkNotInSetup"));
   const { data: config, error } = await service
     .from("fund_config_versions")
     .select("mandate_gates(gate_key), assessment_criteria(criterion_key)")
     .eq("fund_id", fundId)
+    .eq("thesis_id", thesis.id)
     .eq("status", "active")
     .maybeSingle();
   if (error) {
@@ -362,7 +370,7 @@ export const createCaseTask = createServerFn({ method: "POST" })
     await requireFundCapability(context.supabase, context.userId, data.fundId, "manage_tasks");
     const service = getServiceClient();
     if (data.linkedKind && data.linkedKey) {
-      await assertLinkExists(service, data.fundId, data.linkedKind, data.linkedKey);
+      await assertLinkExists(service, data.fundId, data.caseId, data.linkedKind, data.linkedKey);
     }
     const { data: row, error } = await service
       .from("case_tasks")

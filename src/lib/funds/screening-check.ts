@@ -4,6 +4,7 @@ import { DEFAULT_LANGUAGE, type Language } from "../i18n/language.ts";
 import { translate, type MessageKey } from "../i18n/translate.ts";
 import { pointsOverlap } from "./specialist-assist.ts";
 import type { ScreeningCardId } from "./screening-setup.ts";
+import { cleanTeamData } from "../analysis/team-text.ts";
 
 /**
  * The quality check of the fund's whole screening: criteria and weights, gates, risk
@@ -100,7 +101,12 @@ export function codeScreeningIssues(
 
   for (const limit of limits) {
     add({
-      area: limit.code === "duplicate_gate" ? "gates" : "criteria",
+      area:
+        limit.code === "duplicate_gate"
+          ? "gates"
+          : limit.code === "team_text_budget"
+            ? "instruction"
+            : "criteria",
       target: limit.key ?? null,
       kind: limit.code.startsWith("duplicate_") ? "duplicate" : "limit",
       message: limit.message,
@@ -321,7 +327,8 @@ area er criteria, gates, risk, instruction eller research. target er kriteriets 
     user: JSON.stringify({
       task: "check_screening",
       // The extra cards are no longer a choice, so the check is not shown them.
-      setup: { ...setup, cards: undefined },
+      // The team's words cleaned with the same code as in the analysis prompts.
+      setup: cleanTeamData({ ...setup, cards: undefined }),
     }),
   };
 }

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import { getServiceClient } from "@/lib/supabase/admin.server";
 import { requireFundCapability } from "@/lib/auth/access.server";
+import { requireCaseThesis } from "@/lib/funds/thesis-scope.server";
 import {
   returnFailedDeepCaseToScreening,
   staleCaseMessage,
@@ -69,6 +70,7 @@ import {
   screeningJsonSchema,
   type ConfigData,
 } from "./screening.functions";
+import { CONFIG_SELECT } from "./fund-profile";
 import { AiDataPolicyError, aiGatewayOptions } from "../ai/gateway-options";
 import { postChatCompletion } from "@/lib/ai/model-call";
 import { deepRunReleasable } from "@/lib/cases/run-stall";
@@ -79,8 +81,8 @@ import { redactorForFund } from "@/lib/ai/redact-dictionary.server";
 import { buildMemoryQueryText, retrieveFundMemory, type FundMemoryStatus } from "./memory";
 import { specialistResearchQuestions } from "./specialist-research";
 import { readStoredResearchPlan, type ResearchPlan } from "./research-plan";
+import { loadReusableResearchTracks, saveResearchTracksOnStep } from "./research-tracks.server";
 import {
-  EVIDENCE_SHEET_BUDGET_USD,
   EVIDENCE_SHEET_MODELS,
   EVIDENCE_SHEET_STEP,
   EVIDENCE_SHEET_TIMEOUT_MS,
@@ -107,7 +109,7 @@ import {
   validateSpecialistPacket,
 } from "./deep-checks";
 export { auditDeepOutput, normalizeFinancialDate, validateReferences, validateSpecialistPacket };
-import { loadSpecialistSet } from "./specialist-set.server";
+import { loadRunSetupStage, loadSpecialistSet } from "./specialist-set.server";
 import { specialistOutputSchema, type SpecialistOutput } from "./specialist.contracts";
 import { cardDataJsonSchema, withSanitizedCardData } from "./card-data";
 import type { EvidenceStatus } from "@/lib/domain/types";
@@ -124,12 +126,13 @@ import {
   type PublicResearchOutput,
   type PublicResearchResult,
 } from "./public-research";
+import { publicResearchAnswer } from "./research-answer";
 import type { ResearchLogEntry } from "./public-research";
 import {
   extractGatewayCostUsd,
   failedCallChargeUsd,
   ResearchFailedError,
-  sumCompleteCosts,
+  runTotalsFromSteps,
 } from "./gateway-response";
 import {
   assertActualSpendWithinBudget,
@@ -138,9 +141,11 @@ import {
   estimateRequestMaximumUsd,
   type PricedModel,
 } from "./budgets";
-import { DEEP_CALL_TIMEOUT_MS, planColumns } from "./model-tiers";
-import { loadRunPlan } from "./run-plan.server";
-import { releaseAnalysisCredits, reserveAnalysisCredits } from "../ai/credits.server";
+import { DEEP_CALL_TIMEOUT_MS, planColumns, planReserve } from "./model-tiers";
+import { LIMIT_CHOICES, planFromStoredRun, researchCovers } from "./model-tiers";
+import { planNewRun, reservePlannedRun, type StoppedRun } from "./run-plan.server";
+import { deepRunShares } from "./run-continuation";
+import { releaseAnalysisCredits } from "../ai/credits.server";
 import { withFundLanguage } from "@/lib/i18n/language-scope.server";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
 import { gatewayToken, missingGatewayToken } from "@/lib/ai/gateway-token";
@@ -258,6 +263,8 @@ async function releaseIfStalled(
   return true;
 }
 
+const limitChoiceSchema = z.enum(LIMIT_CHOICES);
+
 export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
@@ -267,19 +274,21 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
         fundId: fundIdSchema,
         /** The phase and status the page showed (harden G4). */
         expected: expectedCaseStateSchema.optional(),
+        /** The answer when the team asks first and the full analysis does not fit. */
+        atLimit: limitChoiceSchema.optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    // The active version of the case's own thesis; an archived thesis runs nothing new.
+    const thesis = await requireCaseThesis(context.supabase, data.fundId, data.caseId, {
+      forNewAnalysis: true,
+    });
     const { data: configRow, error: configError } = await context.supabase
       .from("fund_config_versions")
-      .select(
-        `id, fund_id, profile_key, version, funds(name, language),
-        fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction),
-        mandate_gates(gate_key, label, description, treatment, sort_order),
-        assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor)`,
-      )
+      .select(CONFIG_SELECT)
       .eq("fund_id", data.fundId)
+      .eq("thesis_id", thesis.id)
       .eq("status", "active")
       .single();
     if (configError || !configRow)
@@ -291,13 +300,6 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
       config.fund_id,
       "approve_deep_analysis",
     );
-
-    // The fund's own set of specialists of the active version, with its module text.
-    const { set: specialists } = await loadSpecialistSet(context.supabase, config.id);
-    // The publish rule in 0076 keeps one specialist active; never pay for research without one.
-    if (specialists.length === 0) {
-      throw new Error(serverText("analysisServer.common.noSpecialists"));
-    }
 
     const { data: screeningRun } = await context.supabase
       .from("analysis_runs")
@@ -315,15 +317,37 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
     if (!screeningRun) {
       throw new Error(serverText("analysisServer.deep.needsScreening"));
     }
+    // The deep analysis uses the setup of the stage its screening used (kept on the
+    // screening run), so criteria, gates and specialists match it; the worker and the run's plan
+    // read it the same way. `validation_result` is not readable with the member's own key (0115),
+    // so it is read with the service role. A version with nothing per stage reads as before.
+    const profile = mapProfile(config, {
+      runChoice: await loadRunSetupStage(
+        getServiceClient(),
+        data.fundId,
+        screeningRun["id"] as string,
+      ),
+    });
+    // The fund's own set of specialists of the active version, with its module text.
+    const { set: specialists } = await loadSpecialistSet(
+      context.supabase,
+      config.id,
+      profile.teamSetup?.stage?.stage ?? null,
+    );
+    // The publish rule in 0076 keeps one specialist active; never pay for research without one.
+    if (specialists.length === 0) {
+      throw new Error(serverText("analysisServer.common.noSpecialists"));
+    }
 
-    // Tier, model and cap are resolved once here and kept on the run.
-    const plan = await loadRunPlan(getServiceClient(), data.fundId, "deep", specialists.length);
-
+    // Only Admin and Lead may go past the team's limit, also one time (spec B.1 punkt 3).
+    if (data.atLimit === "raise_once") {
+      await requireFundCapability(context.supabase, context.userId, data.fundId, "configure_fund");
+    }
     // Versions and model are not readable with the member's own key.
     const { data: priorDeepRuns, error: priorDeepRunsError } = await getServiceClient()
       .from("analysis_runs")
       .select(
-        "id, status, created_at, config_version_id, workflow_version, prompt_template_version, model_name",
+        "id, status, created_at, config_version_id, workflow_version, prompt_template_version, model_name, ai_tier, cost_cap_dkk, usd_to_dkk, stop_reason",
       )
       .eq("fund_id", data.fundId)
       .eq("case_id", data.caseId)
@@ -334,20 +358,6 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
     if (priorDeepRunsError) {
       throw new Error(serverText("analysisServer.deep.earlierNotChecked"));
     }
-    const blockingDeep = (priorDeepRuns ?? []).find((candidate) => {
-      const status = candidate["status"] as string;
-      if (status === "queued" || status === "running") return true;
-      if (status !== "complete") return false;
-      return (
-        candidate["config_version_id"] === config.id &&
-        candidate["workflow_version"] === DEEP_WORKFLOW_VERSION &&
-        candidate["prompt_template_version"] === DEEP_PROMPT_VERSION &&
-        candidate["model_name"] === plan.model
-      );
-    });
-    if (blockingDeep && !(await releaseIfStalled(data.fundId, data.caseId, blockingDeep))) {
-      throw new Error(serverText("analysisServer.deep.alreadySent"));
-    }
     // Every finished run (also a complete one) starts a new generation of the key below: a new
     // run on another level after a complete one must not collide with it (found live).
     const latestTerminalDeep = (priorDeepRuns ?? []).find((candidate) =>
@@ -357,6 +367,54 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
     const latestFailedDeep = (priorDeepRuns ?? []).find(
       (candidate) => candidate["status"] === "failed",
     );
+    // A run that stopped at its price limit on the same setup is continued; only
+    // what it did not finish is reserved against the month. The worker takes over the same steps
+    // (its prior run has the same setup, workflow and model; `planNewRun` checks the model).
+    const stoppedDeep =
+      latestFailedDeep &&
+      latestFailedDeep["stop_reason"] === "price_limit" &&
+      latestFailedDeep["config_version_id"] === config.id &&
+      latestFailedDeep["workflow_version"] === DEEP_WORKFLOW_VERSION &&
+      latestFailedDeep["prompt_template_version"] === DEEP_PROMPT_VERSION
+        ? latestFailedDeep
+        : null;
+    const specialistIds = specialists.map((module) => module.id);
+    const stopped: StoppedRun | undefined = stoppedDeep
+      ? {
+          model: stoppedDeep["model_name"] as string,
+          specialistIds,
+          // Loaded on demand: a server module, never part of the browser's bundle of this file.
+          progress: await (
+            await import("./run-continuation.server")
+          ).loadStoppedRunProgress(getServiceClient(), stoppedDeep["id"] as string, {
+            specialistIds,
+            model: stoppedDeep["model_name"] as string,
+          }),
+        }
+      : undefined;
+    // Tier, model and cap are resolved once here and kept on the run.
+    const planned = await planNewRun(getServiceClient(), {
+      fundId: data.fundId,
+      kind: "deep",
+      specialistCount: specialists.length,
+      choice: data.atLimit,
+      stopped,
+    });
+    if (!planned) return { runId: null, status: "limit_choice_needed" as const };
+    const blockingDeep = (priorDeepRuns ?? []).find((candidate) => {
+      const status = candidate["status"] as string;
+      if (status === "queued" || status === "running") return true;
+      if (status !== "complete") return false;
+      return (
+        candidate["config_version_id"] === config.id &&
+        candidate["workflow_version"] === DEEP_WORKFLOW_VERSION &&
+        candidate["prompt_template_version"] === DEEP_PROMPT_VERSION &&
+        candidate["model_name"] === planned.model
+      );
+    });
+    if (blockingDeep && !(await releaseIfStalled(data.fundId, data.caseId, blockingDeep))) {
+      throw new Error(serverText("analysisServer.deep.alreadySent"));
+    }
 
     const { data: caseRow, error: caseError } = await context.supabase
       .from("cases")
@@ -387,7 +445,6 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
     if (evidenceError || !initialEvidenceRows?.length)
       throw new Error("Den grundige analyse mangler evidens.");
 
-    const profile = mapProfile(config);
     const rawCompany = caseRow["companies"] as unknown;
     const company = (Array.isArray(rawCompany) ? rawCompany[0] : rawCompany) as {
       name: string;
@@ -416,33 +473,53 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
     // er med i nøglen. To samtidige klik rammer derfor den samme unikke nøgle, mens næste
     // reelle kørsel får en ny.
     const retryGeneration = latestTerminalDeep?.["id"] ?? "initial";
-    const idempotencyKey = `deep:${data.caseId}:${config.id}:${screeningRun["id"] as string}:${DEEP_PROMPT_VERSION}:${plan.model}:${retryGeneration}`;
+    const idempotencyKey = `deep:${data.caseId}:${config.id}:${screeningRun["id"] as string}:${DEEP_PROMPT_VERSION}:${planned.model}:${retryGeneration}`;
     // The research carries the fund's own specialists' questions, so it is reused only from
     // a failed run on the same configuration and prompt version (as the worker does).
     const sameSetupFailedRunId =
       latestFailedDeep &&
       latestFailedDeep["config_version_id"] === config.id &&
-      latestFailedDeep["prompt_template_version"] === DEEP_PROMPT_VERSION
+      latestFailedDeep["prompt_template_version"] === DEEP_PROMPT_VERSION &&
+      // A smaller run's research is not reused for a run that would search more. A run
+      // that stopped at its limit continues on what it finished.
+      (latestFailedDeep["stop_reason"] === "price_limit" ||
+        researchCovers(
+          planFromStoredRun("deep", latestFailedDeep, specialists.length).scope,
+          planned.scope,
+        ))
         ? (latestFailedDeep["id"] as string)
         : null;
     const reusablePublicResearch = sameSetupFailedRunId
-      ? await loadReusablePublicResearch(service, sameSetupFailedRunId)
+      ? await loadReusablePublicResearch(service, sameSetupFailedRunId, stopped !== undefined)
       : null;
     // A plan the failed run saved before its research failed is reused unpaid.
     const reusableResearchPlan =
       sameSetupFailedRunId && !reusablePublicResearch
         ? await loadReusableResearchPlan(service, sameSetupFailedRunId)
         : null;
+    const reusableResearchTracks =
+      sameSetupFailedRunId && !reusablePublicResearch
+        ? await loadReusableResearchTracks(service, sameSetupFailedRunId, true)
+        : [];
     // Loftet reserveres, før kørslen oprettes; ved tom saldo starter ingen analyse.
     const reservedRunId = crypto.randomUUID();
-    const creditLedgerId = await reserveAnalysisCredits(service, {
+    // The plan the month had room for (smaller when another run took the room first; the
+    // same level and model, so the key above and the reuse still hold: a smaller run searches less).
+    const { plan, ledgerId: creditLedgerId } = await reservePlannedRun(service, planned, {
       fundId: config.fund_id,
+      kind: "deep",
+      specialistCount: specialists.length,
+      choice: data.atLimit,
+      stopped,
       runId: reservedRunId,
-      capUsd: plan.budget.usd,
       userId: context.userId,
-      model: plan.model,
-      kind: "deep_analysis",
     });
+    // What each part may use; a continuation's finished parts get nothing (as the worker).
+    const shares = deepRunShares(
+      plan,
+      specialistIds,
+      stopped?.model === plan.model ? stopped.progress : null,
+    );
     const { data: run, error: runError } = await service
       .from("analysis_runs")
       .insert({
@@ -459,7 +536,9 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
         model_provider: "vercel-ai-gateway",
         model_name: plan.model,
         ...planColumns(plan),
-        estimated_cost: plan.budget.usd,
+        // What was reserved: the plan's dollars, or a continuation's missing parts. The
+        // worker and the settlement (0131) read it as the most the run may cost.
+        estimated_cost: planReserve(plan).usd,
         idempotency_key: idempotencyKey,
         input_evidence_ids: evidenceIds,
         requested_by: context.userId,
@@ -667,7 +746,9 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
             website: company.website,
             stage: company.stage,
             // The evidence sheet's share is set aside from the research budget.
-            researchBudgetUsd: plan.budget.researchUsd - EVIDENCE_SHEET_BUDGET_USD.deep,
+            // A continuation's finished research gets nothing (the sheet's share is apart).
+            researchBudgetUsd: shares.researchUsd,
+            scope: plan.scope,
             researchModuleOverrides,
             fundResearchBrief: buildFundResearchBrief(profile),
             specialistQuestions: specialistResearchQuestions(
@@ -675,6 +756,8 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
               buildFundResearchBrief(profile),
               profile.screeningInstruction,
             ),
+            // The setup always comes along: the check of the fund's questions needs it, also when
+            // the planner left the paid plan out (`scope.researchPlan`).
             researchPlan: {
               tier: plan.tier,
               setup: {
@@ -685,6 +768,12 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
               reuse: reusableResearchPlan,
               onPlan: (researchPlan) =>
                 saveResearchPlanOnStep(service, runId, "public_research", researchPlan),
+            },
+            // The tracks the failed run finished before it stopped are not paid again.
+            researchTracks: {
+              reuse: reusableResearchTracks,
+              onTracks: (tracks) =>
+                saveResearchTracksOnStep(service, runId, "public_research", tracks),
             },
             researchDeadlineAt: researchDeadlineAt("deep", Date.now()),
             identityHints,
@@ -709,6 +798,8 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
             output_tokens: publicResearch.outputTokens,
             total_tokens: publicResearch.totalTokens,
             actual_cost: publicResearch.actualCostUsd,
+            // Every step keeps its charge, so the run's sum is its steps' sum.
+            charged_cost: publicResearch.budgetChargeUsd,
             output_json: {
               ...publicResearch.packet,
               persistedSources: publicResearch.sourceCount,
@@ -758,7 +849,9 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
             researchPlan: publicResearch?.researchPlan ?? null,
             researchFollowUp: publicResearch?.researchFollowUp ?? null,
           },
-          priorFailedRunId: null,
+          // As the worker, the failed run's sheet is reused (its share is 0 then).
+          priorFailedRunId: sameSetupFailedRunId,
+          availableUsd: shares.evidenceSheetUsd,
           timeLeftMs: evidenceSheetStartedAt + EVIDENCE_SHEET_TIMEOUT_MS.deep - Date.now(),
         });
         evidenceRows = evidenceSheetResult.evidenceRows;
@@ -844,6 +937,7 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                 allowedEvidenceIds: new Set(evidenceIds),
                 model: plan.model,
                 specialists,
+                strict: stopped !== undefined,
               })
             : new Map<string, SpecialistOutput>();
         const specialistResults = await Promise.all(
@@ -859,6 +953,7 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                   output_tokens: 0,
                   total_tokens: 0,
                   actual_cost: 0,
+                  charged_cost: 0,
                   output_json: reusablePacket,
                   error_message: null,
                   completed_at: new Date().toISOString(),
@@ -886,7 +981,7 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                 `pap_specialist_${module.id}`,
                 specialistJsonSchema(profile, module, evidenceIds),
                 outputTokenCap("specialist", plan.tier, plan.model),
-                plan.budget.specialistsUsd / specialists.length,
+                shares.specialistUsd(module.id),
                 DEEP_CALL_TIMEOUT_MS[plan.tier].specialist,
                 "low",
                 plan.model,
@@ -914,6 +1009,10 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                   output_tokens: completion.outputTokens,
                   total_tokens: completion.totalTokens,
                   actual_cost: completion.actualCostUsd,
+                  charged_cost: budgetCharge(
+                    completion.actualCostUsd,
+                    completion.estimatedMaximumUsd,
+                  ),
                   output_json: packet,
                   completed_at: new Date().toISOString(),
                 })
@@ -962,33 +1061,10 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
         );
         assertActualSpendWithinBudget(
           chargedSpecialistUsd,
-          plan.budget.specialistsUsd,
+          shares.specialistsUsd,
           "Specialistanalyserne",
           requestLanguage(),
         );
-        let totalTokens =
-          (publicResearch.totalTokens ?? 0) +
-          completedSpecialistResults.reduce(
-            (sum, result) => sum + (result.completion?.totalTokens ?? 0),
-            0,
-          );
-        let inputTokens =
-          (publicResearch.inputTokens ?? 0) +
-          completedSpecialistResults.reduce(
-            (sum, result) => sum + (result.completion?.inputTokens ?? 0),
-            0,
-          );
-        let outputTokens =
-          (publicResearch.outputTokens ?? 0) +
-          completedSpecialistResults.reduce(
-            (sum, result) => sum + (result.completion?.outputTokens ?? 0),
-            0,
-          );
-        let totalCostUsd = sumCompleteCosts([
-          publicResearch.actualCostUsd,
-          ...completedSpecialistResults.map((result) => result.completion?.actualCostUsd ?? null),
-        ]);
-
         activeStepKey = "investment_committee_synthesis";
         await service
           .from("analysis_run_steps")
@@ -1020,24 +1096,20 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
           "pap_deep_v1",
           deepJsonSchema(profile, evidenceIds),
           outputTokenCap("synthesis", plan.tier, plan.model),
-          plan.budget.synthesisUsd,
+          shares.synthesisUsd,
           DEEP_CALL_TIMEOUT_MS[plan.tier].synthesis,
           synthesisReasoningEffort(plan.model),
           plan.model,
           await redactorForFund(data.fundId, "deep_analysis", service),
         );
         synthesisCompletion = completion;
-        totalTokens += completion.totalTokens ?? 0;
-        inputTokens += completion.inputTokens ?? 0;
-        outputTokens += completion.outputTokens ?? 0;
-        totalCostUsd = sumCompleteCosts([totalCostUsd, completion.actualCostUsd]);
         const chargedSynthesisUsd = budgetCharge(
           completion.actualCostUsd,
           completion.estimatedMaximumUsd,
         );
         assertActualSpendWithinBudget(
           chargedSynthesisUsd,
-          plan.budget.synthesisUsd,
+          shares.synthesisUsd,
           "Komitésyntesen",
           requestLanguage(),
         );
@@ -1045,7 +1117,7 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
           publicResearch.budgetChargeUsd + chargedSpecialistUsd + chargedSynthesisUsd;
         assertActualSpendWithinBudget(
           chargedDeepUsd,
-          plan.budget.usd,
+          shares.totalUsd,
           "Den dybe analyse",
           requestLanguage(),
         );
@@ -1104,6 +1176,7 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
             output_tokens: completion.outputTokens,
             total_tokens: completion.totalTokens,
             actual_cost: completion.actualCostUsd,
+            charged_cost: chargedSynthesisUsd,
             output_json: output,
             completed_at: new Date().toISOString(),
           })
@@ -1266,13 +1339,28 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
         });
         if (recommendationError)
           throw new Error(serverText("analysisServer.common.deepRecommendationNotSaved"));
+        // The run's price, charge and tokens are its steps' sums (also the evidence sheet).
+        const { data: finishedSteps, error: finishedStepsError } = await service
+          .from("analysis_run_steps")
+          .select("actual_cost, charged_cost, input_tokens, output_tokens, total_tokens")
+          .eq("run_id", runId);
+        if (finishedStepsError || !finishedSteps) {
+          throw new Error(serverText("analysisServer.deep.stepsNotLoaded"));
+        }
+        const totals = runTotalsFromSteps(finishedSteps);
+        assertActualSpendWithinBudget(
+          totals.knownUsd,
+          shares.totalUsd,
+          "Den dybe analyse",
+          requestLanguage(),
+        );
         await service
           .from("analysis_runs")
           .update({
             status: "complete",
             raw_response: {
               schemaVersion: "interlect-deep-orchestrated-v1",
-              publicResearch: publicResearch.packet,
+              publicResearch: publicResearchAnswer(publicResearch.packet),
               specialists: specialistPackets,
               specialistSet: specialistSetSummary(specialists),
               synthesis: output,
@@ -1286,6 +1374,8 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
               teamGateAnswers: teamAnswers,
               financeScore: financeScoreAudit(financeScore, result),
               blockers: result.blockers,
+              // The stage whose setup the deep analysis used (its screening's).
+              setupStage: profile.teamSetup?.stage ?? null,
               qualityAudit,
               costCurrency: "USD",
               aiTier: plan.tier,
@@ -1297,8 +1387,8 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                 specialistsUsd: plan.budget.specialistsUsd,
                 synthesisUsd: plan.budget.synthesisUsd,
                 customCap: plan.customCap,
-                chargedUsd: chargedDeepUsd,
-                actualUsd: totalCostUsd,
+                chargedUsd: totals.chargedUsd,
+                actualUsd: totals.actualUsd,
               },
               reusedSpecialists: completedSpecialistResults
                 .filter((item) => item.reusedFromRunId !== null)
@@ -1307,10 +1397,10 @@ export const approveAndRunDeepAnalysis = createServerFn({ method: "POST" })
                   runId: item.reusedFromRunId,
                 })),
             },
-            token_usage: totalTokens,
-            input_tokens: inputTokens,
-            output_tokens: outputTokens,
-            actual_cost: totalCostUsd,
+            token_usage: totals.totalTokens,
+            input_tokens: totals.inputTokens,
+            output_tokens: totals.outputTokens,
+            actual_cost: totals.actualUsd,
             completed_at: new Date().toISOString(),
           })
           .eq("id", runId);
@@ -1679,6 +1769,11 @@ export function completionUsage(completion: DeepGatewayCompletion | null) {
 export async function loadReusablePublicResearch(
   service: ReturnType<typeof getServiceClient>,
   failedRunId: string,
+  /**
+   * A continuation after a stop at the price limit reserved nothing for this research, so a
+   * failed read is an error (the run fails as one), never "not reusable" (a false stop at the limit).
+   */
+  strict = false,
 ): Promise<{ runId: string; result: PublicResearchResult } | null> {
   const { data: step, error } = await service
     .from("analysis_run_steps")
@@ -1686,6 +1781,7 @@ export async function loadReusablePublicResearch(
     .eq("run_id", failedRunId)
     .eq("step_key", "public_research")
     .maybeSingle();
+  if (error && strict) throw new Error(serverText("analysisServer.deep.stepsNotLoaded"));
   if (error || !step || step["status"] !== "complete") return null;
   if (
     step["model_name"] !== PUBLIC_RESEARCH_MODEL ||
@@ -1779,6 +1875,7 @@ export async function loadReusableSpecialists({
   allowedEvidenceIds,
   model,
   specialists,
+  strict = false,
 }: {
   service: ReturnType<typeof getServiceClient>;
   failedRunId: string;
@@ -1789,6 +1886,8 @@ export async function loadReusableSpecialists({
   model: string;
   /** The run's specialist set; the failed run has the same config version. */
   specialists: readonly DeepSpecialist[];
+  /** A continuation reserved nothing for these steps; a failed read is an error. */
+  strict?: boolean;
 }): Promise<Map<string, SpecialistOutput>> {
   const { data: steps, error } = await service
     .from("analysis_run_steps")
@@ -1798,6 +1897,7 @@ export async function loadReusableSpecialists({
       "step_key",
       specialists.map((module) => module.id),
     );
+  if (error && strict) throw new Error(serverText("analysisServer.deep.stepsNotLoaded"));
   if (error || !steps?.length) return new Map();
 
   const moduleById = new Map<string, DeepSpecialist>(

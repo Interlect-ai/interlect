@@ -169,6 +169,11 @@ export interface EditableDraft {
   geographies: string[];
   sectors: string[];
   riskPosture: string;
+  /**
+   * "Hvem er I, og hvordan tænker I?" (`setup.about`). Filled, it replaces the risk lens,
+   * so the risk text is then not required (the server's rule).
+   */
+  setup?: { about?: string | undefined } | undefined;
   fundSizeEur: number | null;
   ticketMinEur: number | null;
   ticketMaxEur: number | null;
@@ -194,12 +199,20 @@ export interface StepStatus {
   keyConflicts: string[];
 }
 
-/** The labels of the items whose key another item also has (in the order they appear). */
-export function duplicateKeyLabels(items: ReadonlyArray<{ key: string; label: string }>): string[] {
+/**
+ * The labels of the items whose key another item of the same stage also has (in the order they
+ * appear). The key is only unique within a stage: two stages may both have
+ * "founder_market_fit".
+ */
+export function duplicateKeyLabels(
+  items: ReadonlyArray<{ key: string; label: string; stage?: string | null | undefined }>,
+): string[] {
+  const slot = (item: { key: string; stage?: string | null | undefined }) =>
+    `${item.stage ?? ""}\u0000${item.key}`;
   const count = new Map<string, number>();
-  for (const item of items) count.set(item.key, (count.get(item.key) ?? 0) + 1);
+  for (const item of items) count.set(slot(item), (count.get(slot(item)) ?? 0) + 1);
   return items
-    .filter((item) => (count.get(item.key) ?? 0) > 1)
+    .filter((item) => (count.get(slot(item)) ?? 0) > 1)
     .map((item) => item.label.trim() || item.key);
 }
 
@@ -251,6 +264,7 @@ export function stepStatus(
         ]
       : []),
   ];
+  const hasAbout = Boolean(draft.setup?.about?.trim());
   const done: Record<GuideStepKey, boolean> = {
     start: visited.has("basis"),
     basis: Boolean(
@@ -260,7 +274,7 @@ export function stepStatus(
       draft.sectors.length &&
       !ticketTooLarge,
     ),
-    thesis: Boolean(draft.thesis.trim() && draft.riskPosture.trim()),
+    thesis: Boolean(draft.thesis.trim() && (draft.riskPosture.trim() || hasAbout)),
     weights: weightsOk && criteriaTexts && criterionClashes.length === 0,
     mandate: gatesValid && gateClashes.length === 0,
     screening: visited.has("screening"),
@@ -274,7 +288,7 @@ export function stepStatus(
   if (!draft.stages.length) missing.push(say("fundEditor.rules.missingStages"));
   if (!draft.geographies.length) missing.push(say("fundEditor.rules.missingGeographies"));
   if (!draft.sectors.length) missing.push(say("fundEditor.rules.missingSectors"));
-  if (!draft.riskPosture.trim()) missing.push(say("fundEditor.rules.missingRisk"));
+  if (!draft.riskPosture.trim() && !hasAbout) missing.push(say("fundEditor.rules.missingRisk"));
   if (!gatesValid) missing.push(say("fundEditor.rules.missingGate"));
   if (!criteriaTexts) missing.push(say("fundEditor.rules.missingCriterionTexts"));
   for (const violation of limitViolations) missing.push(violation.message);

@@ -47,8 +47,11 @@ export const MAX_UNKNOWNS_PER_CRITERION_DEEP = 1;
 /** Highest number of a specialist's questions / unknowns turned into tasks. */
 export const MAX_SPECIALIST_QUESTIONS = 2;
 export const MAX_SPECIALIST_UNKNOWNS = 1;
-/** The screening's curated list: few, concrete tasks; gates and research add their own. */
-export const MAX_SCREENING_NEXT_STEPS = 8;
+/**
+ * The screening's curated list: few, concrete tasks; gates and research add their own.
+ * (TS-12, the product owner 3 Nov): "it should be max. 4" after the first screening.
+ */
+export const MAX_SCREENING_NEXT_STEPS = 4;
 
 /**
  * A task has a short title and the question in its description.
@@ -84,6 +87,11 @@ export interface AiTaskDraft {
   matchText: string;
   /** Days from the run to the task's deadline (TASK_DUE_DAYS). */
   dueInDays: number;
+  /**
+   * The economy task, whose list of missing figures changes from run to run under the same
+   * key: an untouched one from an earlier run of the same kind gets the new text (`refresh`).
+   */
+  refreshable?: boolean;
 }
 
 export interface AiTaskSource {
@@ -139,6 +147,12 @@ export interface AiTaskSource {
     question: string;
     note: string;
   }>;
+  /**
+   * The one task about the economy figures the screening could not find (economy-check.ts,
+   * `economyTask`), when the team chose "Lav en opgave på casen". It is one task for every missing
+   * figure, so the screening's four tasks stay four (the screening drops its least important step).
+   */
+  economyTask?: { title: string; question: string; why: string } | null;
   /** Highest number of tasks (default MAX_AI_TASKS_PER_RUN). */
   maxTasks?: number;
   /** Highest number of unknowns per criterion (default MAX_UNKNOWNS_PER_CRITERION). */
@@ -666,6 +680,21 @@ export function buildAiTaskDrafts(source: AiTaskSource): AiTaskDraft[] {
       matchText: clarify,
     });
   }
+  // Every missing economy figure as one task, right after the requirements. Keyed on its
+  // title, so a new screening refreshes the same task's list (planAiTaskWrites) instead of adding
+  // another.
+  if (source.economyTask) {
+    push(2.5, {
+      kind: "document",
+      title: shortTaskTitle(source.economyTask.title).title,
+      description: clip(source.economyTask.question, TASK_QUESTION.max),
+      why: clip(source.economyTask.why, 600),
+      linkedKind: null,
+      linkedKey: null,
+      matchText: source.economyTask.title,
+      refreshable: true,
+    });
+  }
   // A critical risk is covered when a curated step shares two words with its title (one, when the
   // title has only one significant word).
   const covered = (label: string) =>
@@ -983,6 +1012,11 @@ export interface AiTaskPlan {
   restore: Array<{ id: string; draft: AiTaskDraft }>;
   /** Untouched AI tasks the run no longer raises: retired (soft delete, undo by restore). */
   retire: string[];
+  /**
+   * An untouched AI task of an earlier run of the same kind, with the same key as a
+   * refreshable draft (the economy task) but other text: its text is replaced with the draft's.
+   */
+  refresh: Array<{ id: string; draft: AiTaskDraft }>;
 }
 
 /**
@@ -1027,7 +1061,7 @@ export function planAiTaskWrites(input: {
   cap: number;
   existing: readonly ExistingTaskRow[];
 }): AiTaskPlan {
-  const plan: AiTaskPlan = { insert: [], restore: [], retire: [] };
+  const plan: AiTaskPlan = { insert: [], restore: [], retire: [], refresh: [] };
   const restored = new Set<string>();
   for (const draft of input.raised) {
     if (plan.insert.length + plan.restore.length >= input.cap) break;
@@ -1067,6 +1101,22 @@ export function planAiTaskWrites(input: {
     if (matches.length === 0) {
       plan.insert.push(draft);
       continue;
+    }
+    // The economy task from an earlier run, still untouched, gets the new list.
+    if (draft.refreshable) {
+      const stale = matches.find(
+        (row) =>
+          row.deletedAt === null &&
+          row.dedupeKey === draft.dedupeKey &&
+          row.sourceRunId !== input.runId &&
+          row.sourceRunKind === input.runKind &&
+          isUntouchedAiTask(row) &&
+          (row.description ?? null) !== (draft.description ?? null),
+      );
+      if (stale) {
+        plan.refresh.push({ id: stale.id, draft });
+        continue;
+      }
     }
     // A live task, or one a person deleted or answered, already covers the gap.
     if (matches.some((row) => row.deletedAt === null || !isSystemRetired(row))) continue;

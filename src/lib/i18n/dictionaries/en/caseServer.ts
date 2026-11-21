@@ -131,6 +131,10 @@ export const caseServer = {
       "The task was removed from the list in the meantime (a newer analysis no longer raises it). Your answer was not saved. Reload and try again.",
     answerChanged: "The answer was changed by someone else in the meantime. Reload and try again.",
     answeredByOther: "The task was answered by someone else in the meantime.",
+    economyTitle: "Get the financial figures",
+    economyQuestion: "Get the financial figures: {list}.",
+    economyWhy:
+      "Interlect could not find these figures in the case's material or in the registries. The case continues as normal.",
     clarify: "Clarify: {text}",
     gateQuestion:
       "Does the case meet the requirement «{label}»? Settle it with evidence or with the company.",

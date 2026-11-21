@@ -1,7 +1,8 @@
 /**
- * The thesis row (prototype Fondsopsaetning v2, "Opsætning"): one card per investment thesis the
- * user is a member of (fund = thesis), the selected one in a 1.5 px ink ring, and
- * "Ny investeringstese" last (Admin only; the server checks it too).
+ * The thesis row (prototype Teamopsaetning v3, `thesisCards`): one white 272 px card per
+ * investment thesis the user is a member of (fund = thesis) with a thin line, the selected
+ * one in a 2 px ink ring, and "Ny investeringstese" last as the same card (Admin only; the server
+ * checks it too).
  */
 import { motion } from "motion/react";
 import { Plus } from "lucide-react";
@@ -35,7 +36,7 @@ export function FundThesisRow({
       <div
         role="group"
         aria-label={t("fundSetup.thesisRow.groupLabel")}
-        className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5 p-0.5"
+        className="flex flex-wrap gap-3 p-0.5"
       >
         {funds.map((candidate) => {
           const selected = candidate.id === activeId;
@@ -49,20 +50,21 @@ export function FundThesisRow({
               onClick={() => onSelect(candidate.id)}
               whileTap={PRESS.whileTap}
               transition={PRESS.transition}
-              className="flex min-w-0 cursor-pointer flex-col items-start gap-1.5 rounded-lg border-0 px-[18px] py-4 text-left font-[inherit] transition-[background,box-shadow] duration-[240ms]"
+              className="flex min-h-[92px] w-full min-w-0 cursor-pointer flex-col items-start gap-1.5 rounded-lg border-0 bg-surface px-[18px] py-[15px] text-left font-[inherit] transition-[box-shadow,transform] duration-[250ms] hover:-translate-y-px sm:w-[272px] motion-reduce:hover:translate-y-0"
               style={{
-                background: selected ? "var(--bg-surface)" : "var(--bg-canvas)",
-                boxShadow: selected ? "inset 0 0 0 1.5px var(--ink-1)" : "none",
+                boxShadow: selected
+                  ? "inset 0 0 0 2px var(--ink-1)"
+                  : "inset 0 0 0 1px var(--line-strong)",
               }}
             >
               <span className="flex w-full items-center gap-2">
-                <span className="min-w-0 truncate text-[15px] font-semibold text-ink-1">
+                <span className="min-w-0 truncate text-[14px] font-semibold text-ink-1">
                   {candidate.name}
                 </span>
-                <span className="ml-auto flex shrink-0 items-center gap-[5px] text-micro text-ink-3">
+                <span className="ml-auto flex shrink-0 items-center gap-1.5 text-meta text-ink-3">
                   <span
                     aria-hidden
-                    className="size-1.5 rounded-full"
+                    className="size-[7px] rounded-full"
                     style={{ background: status.dot }}
                   />
                   {candidate.isDemo
@@ -70,7 +72,7 @@ export function FundThesisRow({
                     : statusLabel}
                 </span>
               </span>
-              <span className="line-clamp-2 text-meta leading-[1.45] text-ink-3">
+              <span className="line-clamp-2 text-meta leading-[1.5] text-ink-3">
                 {candidate.shortThesis || t("fundSetup.thesisRow.thesisMissing")}
               </span>
             </motion.button>
@@ -80,7 +82,7 @@ export function FundThesisRow({
           <button
             type="button"
             onClick={onCreate}
-            className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-0 bg-transparent font-[inherit] text-list font-medium text-ink-2 shadow-[inset_0_0_0_1.5px_var(--line-strong)] transition-[box-shadow,color,background] duration-200 hover:bg-action-wash hover:text-action hover:shadow-[inset_0_0_0_1.5px_var(--action)]"
+            className="flex min-h-[92px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-0 bg-surface px-[18px] py-[15px] font-[inherit] text-list text-ink-1 shadow-[inset_0_0_0_1px_var(--line-strong)] transition-[transform] duration-[250ms] hover:-translate-y-px sm:w-[272px] motion-reduce:hover:translate-y-0"
           >
             <Plus aria-hidden className="size-[18px]" />
             {t("fundSetup.thesisRow.create")}

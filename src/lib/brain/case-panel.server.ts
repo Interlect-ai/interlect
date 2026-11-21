@@ -28,7 +28,7 @@ export async function buildCasePanel(
 ): Promise<BrainCasePanel> {
   const { data: caseRow, error: caseError } = await service
     .from("cases")
-    .select("id, company_id, companies(name)")
+    .select("id, company_id, thesis_id, companies(name)")
     .eq("fund_id", fundId)
     .eq("id", caseId)
     .maybeSingle();
@@ -40,7 +40,9 @@ export async function buildCasePanel(
 
   const [labels, prior, similar, contradictions] = await Promise.all([
     reasonLabels(service, fundId),
-    companyId ? priorCases(service, fundId, caseId, companyId) : Promise.resolve([]),
+    companyId
+      ? priorCases(service, fundId, caseId, companyId, caseRow["thesis_id"] as string | null)
+      : Promise.resolve([]),
     similarCases(service, fundId, caseId),
     caseContradictions(service, fundId, caseId),
   ]);
@@ -84,22 +86,48 @@ async function priorCases(
   fundId: string,
   caseId: string,
   companyId: string,
+  thesisId: string | null,
 ): Promise<Array<Omit<PanelPriorCase, "decision">>> {
   const { data, error } = await service
     .from("cases")
-    .select("id, phase, status, created_at")
+    .select("id, phase, status, created_at, thesis_id")
     .eq("fund_id", fundId)
     .eq("company_id", companyId)
     .neq("id", caseId)
     .order("created_at", { ascending: false })
     .limit(PANEL_PRIOR_LIMIT);
   if (error) throw new Error(`panel prior cases: ${error.message}`);
-  return (data ?? []).map((row) => ({
-    caseId: row["id"] as string,
-    createdOn: String(row["created_at"]).slice(0, 10),
-    phase: row["phase"] as string,
-    status: row["status"] as string,
-  }));
+  const rows = data ?? [];
+  // A case of the same company under another thesis is named by that thesis.
+  const otherThesisIds = [
+    ...new Set(
+      rows
+        .map((row) => row["thesis_id"] as string | null)
+        .filter((id): id is string => !!id && id !== thesisId),
+    ),
+  ];
+  const thesisNames = new Map<string, string>();
+  if (otherThesisIds.length) {
+    const { data: theses, error: thesesError } = await service
+      .from("fund_theses")
+      .select("id, name")
+      .eq("fund_id", fundId)
+      .in("id", otherThesisIds);
+    if (thesesError) throw new Error(`panel prior theses: ${thesesError.message}`);
+    for (const thesis of theses ?? []) {
+      thesisNames.set(thesis["id"] as string, thesis["name"] as string);
+    }
+  }
+  return rows.map((row) => {
+    const other = thesisNames.get(row["thesis_id"] as string);
+    return {
+      caseId: row["id"] as string,
+      createdOn: String(row["created_at"]).slice(0, 10),
+      phase: row["phase"] as string,
+      status: row["status"] as string,
+      ...(other ? { otherThesis: other } : {}),
+    };
+  });
 }
 
 async function similarCases(service: SupabaseClient, fundId: string, caseId: string) {

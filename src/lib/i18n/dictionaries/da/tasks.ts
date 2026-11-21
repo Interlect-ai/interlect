@@ -65,7 +65,8 @@ export const tasks = {
     title: "Skal afklares",
     newTask: "Ny opgave",
     showTop: "Vis de vigtigste",
-    showAll: "Vis alle {count}",
+    showMore: "Vis {count} flere",
+    showMoreOne: "Vis 1 mere",
     solved: "{count} løst",
   },
   /** TaskComposer. */

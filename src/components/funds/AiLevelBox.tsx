@@ -63,6 +63,8 @@ export function AiLevelBox({ fundId }: { fundId: string }) {
     }) => save({ data: { fundId, ...change } }),
     onSuccess: async () => {
       void queryClient.invalidateQueries({ queryKey: ["fund-change-history", fundId] });
+      // The level decides the standard limit in Analysegrænser.
+      void queryClient.invalidateQueries({ queryKey: ["fund-analysis-limits", fundId] });
       await queryClient.invalidateQueries({ queryKey: aiSettingsKey(fundId) });
       showToast({ message: t("fundSetup.aiLevel.appliesToast") });
     },
@@ -199,7 +201,7 @@ function TierRow({
       {data.capWarning && (
         <p className="m-0 text-meta text-critical">{t("fundSetup.aiLevel.capBelowCost")}</p>
       )}
-      {canEdit && data.confirmedCapDkk !== null && (
+      {canEdit && data.hasOwnCap && (
         <div>
           <Button variant="quiet" size="md" disabled={busy} onClick={onStandardCap}>
             {t("fundSetup.aiLevel.useStandard")}

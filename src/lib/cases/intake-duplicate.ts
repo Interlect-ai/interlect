@@ -1,5 +1,5 @@
 /**
- * Duplicate check for Opret case, in one fund. The RPC `create_manual_case_for_fund` is
+ * Duplicate check for Opret case, in one fund (one thesis). The RPC `create_manual_case_for_fund` is
  * idempotent (it returns the existing case without a message) and only knows the website's
  * domain, else the name; the UI needs a friendly message, so the check is made first, with the
  * same two rules PLUS the CVR number when a human chose a registered company (a company
@@ -16,6 +16,11 @@ export interface DuplicateInput {
   domain: string | null;
   /** The CVR a human chose, or null. */
   cvrNumber: string | null;
+  /**
+   * The thesis the new case would belong to: the same company under another thesis is a
+   * separate case (beslutningslog 28. sep), so only a case under this thesis is a duplicate.
+   */
+  thesisId?: string;
 }
 
 export interface DuplicateHit {
@@ -52,12 +57,13 @@ export async function lookupExistingCase(
     if (error) throw new Error(translate(language, "intake.duplicateCheck.failed"));
     const company = companies?.[0];
     if (!company) continue;
-    const { data: found, error: caseError } = await client
+    let caseQuery = client
       .from("cases")
       .select("id")
       .eq("fund_id", input.fundId)
-      .eq("company_id", company["id"] as string)
-      .limit(1);
+      .eq("company_id", company["id"] as string);
+    if (input.thesisId) caseQuery = caseQuery.eq("thesis_id", input.thesisId);
+    const { data: found, error: caseError } = await caseQuery.limit(1);
     if (caseError) throw new Error(translate(language, "intake.duplicateCheck.failed"));
     const existing = found?.[0];
     if (existing) {

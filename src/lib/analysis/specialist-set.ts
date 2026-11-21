@@ -32,10 +32,12 @@ export const SCORE_CATEGORIES: readonly ScoreCategory[] = specialistCatalog.flat
 );
 
 export const FUND_SPECIALIST_COLUMNS =
-  "specialist_key, kind, enabled, sort_order, name, purpose, mandate, evidence_tests, risk_areas, research_questions, output_focus, categories";
+  "stage, specialist_key, kind, enabled, sort_order, name, purpose, mandate, evidence_tests, risk_areas, research_questions, output_focus, categories";
 
 /** A `fund_specialists` row as read with FUND_SPECIALIST_COLUMNS. */
 export interface FundSpecialistRow {
+  /** The stage the row belongs to; null = shared (every row of an old version). */
+  stage?: string | null;
   specialist_key: string;
   kind: "standard" | "custom";
   enabled: boolean;

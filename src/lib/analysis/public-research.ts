@@ -67,7 +67,7 @@ import {
 } from "./deck-ocr";
 import type { FounderCheckResult } from "./founder-check";
 import { chargedOnFailure, extractGatewayCostUsd, sumCompleteCosts } from "./gateway-response";
-import { AiDataPolicyError, aiGatewayOptions, shouldEnforceZdr } from "../ai/gateway-options";
+import { AiDataPolicyError, aiGatewayOptions } from "../ai/gateway-options";
 import { generateText, maskedModel } from "../ai/model-call";
 import { redactorForFund } from "../ai/redact-dictionary.server";
 import {
@@ -87,13 +87,17 @@ import {
   suggestedMatch,
   type StoredIdentity,
 } from "./identity-anchor";
+import { TRACK_MAX_OUTPUT_TOKENS, type RunScope } from "./run-planner";
+import { finishedTracks, runResearchTracks, type StoredResearchTrack } from "./research-tracks";
 import {
   AI_BUDGETS,
   assertActualSpendWithinBudget,
   assertWithinBudget,
   BudgetExceededError,
+  BudgetLimitError,
   budgetCharge,
   estimateRequestMaximumUsd,
+  stopReasonOf,
 } from "./budgets";
 
 import { requestLanguage, serverText } from "../i18n/server-text.ts";
@@ -102,6 +106,7 @@ import { DEFAULT_LANGUAGE, type Language } from "../i18n/language.ts";
 import type { MessageKey, TranslateVars } from "../i18n/translate.ts";
 import { gatewayToken, missingGatewayToken } from "@/lib/ai/gateway-token";
 import { cardSearchModules, type CardSearchTopic } from "./card-research.ts";
+import { cleanTeamLine, promptProfile } from "./team-text.ts";
 
 /** Messages to the person, in the page's language or the fund's in a worker. */
 function msg(key: string, vars?: TranslateVars) {
@@ -608,7 +613,9 @@ export interface FundResearchBrief {
 /** Fondens research-brief, som den sendes til Perplexity. Én kilde for
  * screening, dyb analyse, køen og /fond/metode, så siden altid viser præcis
  * det, kørslerne sender. */
-export function buildFundResearchBrief(profile: FundProfile): FundResearchBrief {
+export function buildFundResearchBrief(setupProfile: FundProfile): FundResearchBrief {
+  // The team's words are cleaned with the same code as in the analysis prompts.
+  const profile = promptProfile(setupProfile);
   return {
     thesis: profile.thesis,
     stages: profile.stages,
@@ -702,7 +709,7 @@ export interface PublicResearchResult {
   researchPlanStatus?: { status: ResearchPlanOutcome["status"]; reason: string | null } | null;
   /**
    * What the ZDR step did with the questions written from the fund's setup before the
-   * first searches (never the questions); null without ZDR or without a brief.
+   * first searches (never the questions); null without a brief or without search questions.
    */
   questionNeutralizer?: {
     status: NeutralizerOutcome["status"];
@@ -760,6 +767,11 @@ async function researchPublicCompany(
     identityHints?: CaseIdentityHints;
     /** The run plan's research budget in USD; the pre-R-9b constant when not given. */
     researchBudgetUsd?: number;
+    /** What the planner kept inside the run's limit; every track runs when not given. */
+    scope?: Pick<
+      RunScope,
+      "tracks" | "minSuccessfulTracks" | "researchPlan" | "searchQuestions" | "deckOcr"
+    >;
     /**
      * Deep analysis only: module id → the fund's own specialists' questions, already through
      * the neutral filter (`specialistResearchQuestions`). Added after the module's own questions.
@@ -778,6 +790,15 @@ async function researchPublicCompany(
       onPlan?: (plan: ResearchPlan) => Promise<void>;
     };
     /**
+     * Tracks an earlier try of the same case and setup finished are taken over unpaid, and
+     * the tracks this try finishes are handed over at once (before a stop at the limit), so the
+     * next try pays only for the tracks that are missing.
+     */
+    researchTracks?: {
+      reuse?: readonly StoredResearchTrack[] | null;
+      onTracks?: (tracks: StoredResearchTrack[]) => Promise<void>;
+    };
+    /**
      * When the research must be done (epoch ms), so the run's later steps fit in the
      * function's time limit. Follow-up rounds only start with time left; without it they are
      * limited by their own timeouts only.
@@ -792,15 +813,19 @@ async function researchPublicCompany(
   /** What the research has charged against its budget so far, read on a failure. */
   spent: { usd: number },
 ): Promise<PublicResearchResult> {
-  const baseModules: readonly ResearchModule[] =
+  const allModules: readonly ResearchModule[] =
     input.mode === "screening" ? screeningResearchModules : researchModules;
+  const baseModules = input.scope
+    ? allModules.filter((module) => input.scope?.tracks.includes(module.id))
+    : allModules;
+  const searchQuestions = input.scope?.searchQuestions !== false;
   const effectiveMode = input.mode === "screening" ? "screening" : "deep";
-  // While ZDR is on, Perplexity gets neutral topics from a ZDR step, and the fund's
-  // own questions only when they do not copy the confidential text. Never stops a run.
-  const zdr = shouldEnforceZdr();
+  // Perplexity gets neutral topics from a ZDR step, and the fund's own
+  // questions only when they do not copy the confidential text, whatever the ZDR flag says
+  // (fail-closed). Never stops a run.
   // Started now and awaited below, so it runs alongside deck reading and identification.
   const topicsPromise: Promise<SearchTopicsOutcome | null> =
-    zdr && input.fundResearchBrief && !input.withoutSearchTopics
+    input.fundResearchBrief && !input.withoutSearchTopics && searchQuestions
       ? generateSearchTopics({
           brief: input.fundResearchBrief,
           availableUsd: SEARCH_TOPICS_BUDGET_USD,
@@ -808,20 +833,20 @@ async function researchPublicCompany(
           service: input.service,
         })
       : Promise.resolve(null);
-  // Under ZDR the fund's own questions that pass the code filter, per module, so the ZDR
+  // The fund's own questions that pass the code filter, per module, so the ZDR
   // step below can read them before any is searched.
   const ownQuestions: NeutralCandidate[] = [];
   const withFundQuestions: readonly ResearchModule[] = baseModules.map((module) => {
     const override = input.researchModuleOverrides?.get(`${effectiveMode}:${module.id}`);
-    if (!override || !zdr) return effectiveResearchModule(module, override);
+    if (!override) return effectiveResearchModule(module, override);
     // The fund's own questions were written from its thesis: without a brief to check them
     // against they cannot be vetted, so the default questions run instead.
     const questions = input.fundResearchBrief
-      ? neutralQuestions(override.questions, input.fundResearchBrief)
+      ? neutralQuestions(override.questions.map(cleanTeamLine), input.fundResearchBrief)
       : [];
     if (questions.length < override.questions.length) {
       console.warn(
-        `[research] ZDR: ${override.questions.length - questions.length} of ${override.questions.length} custom questions left out of ${module.id} (they copy the confidential text)`,
+        `[research] neutral search: ${override.questions.length - questions.length} of ${override.questions.length} custom questions left out of ${module.id} (they copy the confidential text)`,
       );
     }
     for (const question of questions) ownQuestions.push({ module: module.id, question });
@@ -843,7 +868,7 @@ async function researchPublicCompany(
   // They never stop the research.
   const storedIdentityPromise = loadStoredIdentity(input.service, input.fundId, input.caseId);
   const planPromise: Promise<ResearchPlanOutcome | null> =
-    input.researchPlan && input.fundResearchBrief
+    input.researchPlan && input.fundResearchBrief && input.scope?.researchPlan !== false
       ? generateResearchPlan({
           service: input.service,
           fundId: input.fundId,
@@ -863,7 +888,7 @@ async function researchPublicCompany(
           researchBudgetUsd,
         })
       : Promise.resolve(null);
-  // Under ZDR a ZDR step keeps, rewrites or drops every question written from the fund's
+  // A ZDR step keeps, rewrites or drops every question written from the fund's
   // setup (its own questions, its own specialists' tests, the plan's questions) before any of
   // them is searched. It starts as soon as the plan is ready, alongside the identification.
   const fundBrief = input.fundResearchBrief;
@@ -877,7 +902,7 @@ async function researchPublicCompany(
     outcome: NeutralizerOutcome;
     planCandidates: NeutralCandidate[];
   } | null> =
-    zdr && fundBrief
+    fundBrief && searchQuestions
       ? planPromise.then(async (outcome) => {
           const plan = outcome?.plan ?? null;
           const planCandidates = Object.entries(plan?.questions ?? {}).flatMap(
@@ -905,7 +930,7 @@ async function researchPublicCompany(
   // B7: sider i decket, der kun er billeder, læses først, så identifikationen og
   // screeningen har tekst at arbejde med. Kun i screeningen; den dybe analyse genbruger.
   const deckOcr: DeckOcrOutcome | null =
-    input.mode === "screening"
+    input.mode === "screening" && input.scope?.deckOcr !== false
       ? await ocrThinDeckPages({
           service: input.service,
           fundId: input.fundId,
@@ -955,25 +980,24 @@ async function researchPublicCompany(
     // A skipped or failed step means the fund's own, specialist and plan questions are not
     // searched (the tracks run their default questions): a warning, not a quiet info line.
     (status === "ok" ? console.info : console.warn)(
-      `[research] ZDR: fund-derived questions ${status}${reason ? ` (${reason})` : ""}: ${kept} kept, ${rewritten} rewritten, ${dropped} not sent`,
+      `[research] neutral search: fund-derived questions ${status}${reason ? ` (${reason})` : ""}: ${kept} kept, ${rewritten} rewritten, ${dropped} not sent`,
     );
   }
-  const modules: readonly ResearchModule[] = zdr
-    ? neutralResearchModules({
-        baseModules,
-        ownQuestions,
-        specialistCandidates,
-        planCandidates: anchor ? (neutral?.planCandidates ?? []) : [],
-        neutral: neutral?.outcome.questions ?? [],
-      })
-    : researchPlan && anchor
-      ? fixedModules.map((module) => {
-          const own = (researchPlan.questions[module.id] ?? []).filter(
-            (question) => !module.questions.includes(question),
-          );
-          return own.length ? { ...module, questions: [...module.questions, ...own] } : module;
-        })
-      : fixedModules;
+  // The searches only ever get the default questions and what the ZDR step let through.
+  // The card question is not the fund's text: it stays on a track the fund rewrote, as in
+  // effectiveResearchModule, so the cards still get their data.
+  const modules: readonly ResearchModule[] = neutralResearchModules({
+    baseModules,
+    ownQuestions,
+    specialistCandidates,
+    planCandidates: anchor ? (neutral?.planCandidates ?? []) : [],
+    neutral: neutral?.outcome.questions ?? [],
+  }).map((module) => {
+    const cardQuestion = cardDataResearchQuestion(module.id);
+    return cardQuestion && !module.questions.includes(cardQuestion)
+      ? { ...module, questions: [...module.questions, cardQuestion] }
+      : module;
+  });
   const extractionChargeUsd =
     extractionOutcome.chargeUsd +
     (deckOcr?.chargeUsd ?? 0) +
@@ -991,9 +1015,29 @@ async function researchPublicCompany(
     searchTopics: topicsOutcome?.status === "ok" ? topicsOutcome.topics : null,
   };
   const perModuleBudgetUsd = (researchBudgetUsd - extractionChargeUsd) / modules.length;
-  const attempts = await Promise.allSettled(
-    modules.map((module) => callResearchGateway(researchInput, module, perModuleBudgetUsd)),
+  const trackMode = input.mode === "screening" ? "screening" : "deep";
+  const attempts = await runResearchTracks(
+    modules,
+    trackMode,
+    input.researchTracks?.reuse,
+    (module) => callResearchGateway(researchInput, module, perModuleBudgetUsd),
   );
+  // Kept before the check below, so a stop at the limit does not lose the paid tracks.
+  // Only answers that hold (schema and grounded sources, as `absorb` checks them) are kept.
+  const finished = finishedTracks(modules, trackMode, attempts, (module, completion) => {
+    try {
+      const parsed = researchOutputSchema.parse(JSON.parse(completion.content));
+      groundPacket(parsed, completion.groundedUrls, module.id);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (finished.length > 0 && input.researchTracks?.onTracks) {
+    await input.researchTracks.onTracks(finished).catch((cause: unknown) => {
+      console.error("[research] finished tracks could not be saved on the run", cause);
+    });
+  }
   const completedModules = attempts.flatMap((attempt, index) =>
     attempt.status === "fulfilled" ? [{ completion: attempt.value, module: modules[index]! }] : [],
   );
@@ -1013,16 +1057,28 @@ async function researchPublicCompany(
         sum + budgetCharge(completion.actualCostUsd, completion.estimatedMaximumUsd),
       0,
     );
-  const minimumSuccessfulModules = input.mode === "screening" ? 4 : 6;
+  const minimumSuccessfulModules =
+    input.scope?.minSuccessfulTracks ?? (input.mode === "screening" ? 4 : 6);
   if (completedModules.length < minimumSuccessfulModules) {
-    const reasons = attempts
-      .filter((attempt): attempt is PromiseRejectedResult => attempt.status === "rejected")
-      .map((attempt) =>
-        attempt.reason instanceof Error ? attempt.reason.message : msg("unknownError"),
-      );
-    throw new Error(
-      `${msg("tracksSucceeded", { done: completedModules.length, total: modules.length })} ${reasons.slice(0, 2).join(" ")}`,
+    const rejected = attempts.filter(
+      (attempt): attempt is PromiseRejectedResult => attempt.status === "rejected",
     );
+    const reasons = rejected.map((attempt) =>
+      attempt.reason instanceof Error ? attempt.reason.message : msg("unknownError"),
+    );
+    // Only the server's own sentence is stored on the run (every role can read it); the
+    // causes, which can carry the provider's own text, go to the server log.
+    console.error("[research] too few tracks succeeded", reasons.slice(0, 2));
+    const message = rejected.some(
+      (attempt) => attempt.reason instanceof ResearchCallError && attempt.reason.serviceLimited,
+    )
+      ? msg("serviceLimited")
+      : msg("tracksSucceeded", { done: completedModules.length, total: modules.length });
+    // Every missing track stopped at the limit: the run stopped there, nothing went wrong.
+    if (rejected.every((attempt) => stopReasonOf(attempt.reason) !== null)) {
+      throw new BudgetLimitError(message);
+    }
+    throw new Error(message);
   }
   const completions = completedModules.map(({ completion }) => completion);
   const researchLabel =
@@ -1129,9 +1185,9 @@ async function researchPublicCompany(
   };
   for (const { completion, module } of completedModules) absorb(completion, module, 0);
   if (packets.length < minimumSuccessfulModules) {
-    throw new Error(
-      `${msg("tracksValidated", { done: packets.length, total: modules.length })} ${packetErrors.slice(0, 2).join(" ")}`,
-    );
+    // The causes go to the server log, only the server's own sentence on the run.
+    console.error("[research] too few tracks validated", packetErrors.slice(0, 2));
+    throw new Error(msg("tracksValidated", { done: packets.length, total: modules.length }));
   }
 
   // Targeted searches for the card topics the first round left without figures (deep
@@ -1235,45 +1291,45 @@ async function researchPublicCompany(
       }
       let roundQuestions = outcome.reflection.questions;
       let roundDropped = outcome.reflection.dropped;
-      if (zdr) {
-        // The follow-up questions pass the same ZDR step before they are searched; it
-        // leaves the searches and the next reflection their time and budget.
-        const stepMs =
-          timeLeft() - REFLECTION_MIN_MS[effectiveMode] - FOLLOWUP_MIN_SEARCH_MS[effectiveMode];
-        if (stepMs < NEUTRALIZER_MIN_MS) {
-          stopReason = "time";
-          break;
-        }
-        const candidates: NeutralCandidate[] = Object.entries(roundQuestions).flatMap(
-          ([module, questions]) => questions.map((question) => ({ module, question })),
+      // The follow-up questions always pass the same ZDR step before they are
+      // searched; it leaves the searches and the next reflection their time and budget.
+      const stepMs =
+        timeLeft() - REFLECTION_MIN_MS[effectiveMode] - FOLLOWUP_MIN_SEARCH_MS[effectiveMode];
+      if (stepMs < NEUTRALIZER_MIN_MS) {
+        stopReason = "time";
+        break;
+      }
+      const candidates: NeutralCandidate[] = Object.entries(roundQuestions).flatMap(
+        ([module, questions]) => questions.map((question) => ({ module, question })),
+      );
+      const neutralRound = await neutralizeSearchQuestions({
+        service: input.service,
+        fundId: input.fundId,
+        companyName: input.companyName,
+        brief: input.fundResearchBrief,
+        confidential: confidentialFundTexts(input.researchPlan.setup, researchPlan),
+        candidates,
+        availableUsd: Math.min(
+          NEUTRALIZER_BUDGET_USD,
+          researchBudgetUsd - spent.usd - REFLECTION_BUDGET_USD[effectiveMode],
+        ),
+        timeoutMs: Math.min(NEUTRALIZER_TIMEOUT_MS, stepMs),
+      });
+      spent.usd += neutralRound.chargeUsd;
+      if (neutralRound.status === "ok") reflectionCosts.push(neutralRound.actualCostUsd);
+      else if (neutralRound.chargeUsd > 0) reflectionCosts.push(null);
+      if (neutralRound.status !== "ok") {
+        console.warn(
+          `[research-followup] neutral search: round ${round} stopped (${neutralRound.reason})`,
         );
-        const neutralRound = await neutralizeSearchQuestions({
-          service: input.service,
-          fundId: input.fundId,
-          companyName: input.companyName,
-          brief: input.fundResearchBrief,
-          confidential: confidentialFundTexts(input.researchPlan.setup, researchPlan),
-          candidates,
-          availableUsd: Math.min(
-            NEUTRALIZER_BUDGET_USD,
-            researchBudgetUsd - spent.usd - REFLECTION_BUDGET_USD[effectiveMode],
-          ),
-          timeoutMs: Math.min(NEUTRALIZER_TIMEOUT_MS, stepMs),
-        });
-        spent.usd += neutralRound.chargeUsd;
-        if (neutralRound.status === "ok") reflectionCosts.push(neutralRound.actualCostUsd);
-        else if (neutralRound.chargeUsd > 0) reflectionCosts.push(null);
-        if (neutralRound.status !== "ok") {
-          console.warn(`[research-followup] ZDR: round ${round} stopped (${neutralRound.reason})`);
-          stopReason = neutralRound.status === "skipped" ? "budget" : "failed";
-          break;
-        }
-        roundQuestions = neutralQuestionsByModule(candidates, neutralRound.questions, asked);
-        roundDropped += neutralRound.dropped;
-        if (Object.keys(roundQuestions).length === 0) {
-          stopReason = "no_questions";
-          break;
-        }
+        stopReason = neutralRound.status === "skipped" ? "budget" : "failed";
+        break;
+      }
+      roundQuestions = neutralQuestionsByModule(candidates, neutralRound.questions, asked);
+      roundDropped += neutralRound.dropped;
+      if (Object.keys(roundQuestions).length === 0) {
+        stopReason = "no_questions";
+        break;
       }
       // The searches leave the next reflection its budget and time, so it can still read what
       // they found (otherwise the open items, and the founder questions, would be stale).
@@ -1645,9 +1701,8 @@ export function buildResearchMessages(
     website: string | null;
     stage: string;
     mode?: "screening" | "deep";
-    fundResearchBrief?: FundResearchBrief;
     identityHints?: CaseIdentityHints;
-    /** Neutral topics written by a ZDR step; only used while ZDR is enforced. */
+    /** Neutral topics written by a ZDR step; the only fund data a search gets. */
     searchTopics?: readonly string[] | null;
     /**
      * The team's language; the statements and gaps are shown to the team and become its
@@ -1666,9 +1721,10 @@ export function buildResearchMessages(
     asOf: new Date().toISOString().slice(0, 10),
     requiredResearch: module.questions,
     // The fund's thesis, risk posture, gates and ticket are confidential (D4, plan) and
-    // Perplexity has no ZDR: while ZDR is enforced they never go into a search. Neutral search
-    // topics instead are. Built here, so /fond/metode shows exactly what is sent.
-    ...fundFieldsForSearch(input.fundResearchBrief, input.searchTopics, shouldEnforceZdr()),
+    // Perplexity has no ZDR: they never go into a search, whatever the ZDR flag says.
+    // Neutral search topics instead are. Built here, so /fond/metode shows exactly what is
+    // sent.
+    ...fundFieldsForSearch(input.searchTopics),
     ...(input.identityHints &&
     (input.identityHints.founders.length > 0 ||
       input.identityHints.deckHeadline ||
@@ -1707,13 +1763,22 @@ export function buildResearchMessages(
   return { system, user: prompt };
 }
 
-/** A research call that failed after it was sent; `chargeUsd` is the most it may have cost. */
+/**
+ * A research call that failed after it was sent; `chargeUsd` is the most it may have cost. The
+ * message is the server's own sentence: the provider's text can name the model and ends
+ * up in the run's log and error, so it only goes to the server log and stays on `cause`.
+ */
 export class ResearchCallError extends Error {
   readonly chargeUsd: number;
+  /** Interlect's own AI account was rate limited: the run says "try again shortly". */
+  readonly serviceLimited: boolean;
   constructor(cause: unknown, chargeUsd: number) {
-    super(cause instanceof Error ? cause.message : String(cause));
+    super(msg("callFailed"), { cause });
     this.name = "ResearchCallError";
     this.chargeUsd = chargeUsd;
+    const detail = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause);
+    this.serviceLimited = /RateLimit|Free tier|rate limit/i.test(detail);
+    console.error("[research] call failed", detail);
   }
 }
 
@@ -1726,9 +1791,8 @@ async function callResearchGateway(
     website: string | null;
     stage: string;
     mode?: "screening" | "deep";
-    fundResearchBrief?: FundResearchBrief;
     identityHints?: CaseIdentityHints;
-    /** Neutral topics written by a ZDR step; only used while ZDR is enforced. */
+    /** Neutral topics written by a ZDR step; the only fund data a search gets. */
     searchTopics?: readonly string[] | null;
   },
   module: ResearchModule,
@@ -1738,7 +1802,8 @@ async function callResearchGateway(
 ) {
   const token = gatewayToken();
   if (!token) throw missingGatewayToken("public research", msg("noGatewayAccess"));
-  const maxOutputTokens = input.mode === "screening" ? 3_500 : 5_000;
+  const maxOutputTokens =
+    TRACK_MAX_OUTPUT_TOKENS[input.mode === "screening" ? "screening" : "deep"];
   const model =
     input.mode === "screening" ? SCREENING_PUBLIC_RESEARCH_MODEL : PUBLIC_RESEARCH_MODEL;
   const researchTimeoutMs = Math.min(
@@ -1769,7 +1834,7 @@ async function callResearchGateway(
     requestLanguage(),
   );
   // Perplexity has no ZDR, so only public search terms may go here (D4, plan); the
-  // fund's brief is left out while ZDR is enforced (buildResearchMessages).
+  // fund's brief is always left out (buildResearchMessages).
   const gatewayOptions = aiGatewayOptions({ model, data: "public_search" });
   const redactor = await redactorForFund(input.fundId, "public_research", input.service);
   // A call that fails after it was sent may still be billed; the error carries the most it
@@ -2010,13 +2075,20 @@ function mergeCompanyProfiles(packets: PublicResearchOutput[]) {
 /**
  * P1: Vækst og Buyout er kun gyldige for fonde, der har dem i deres stadieliste; for andre
  * fonde gemmes AI'ens forslag som "senere" (samme regel som ved manuel oprettelse).
+ * Stadielisten fra casens egen tese (dens aktive version), ikke teamets.
  */
-async function stageForFund(service: ServiceClient, fundId: string, stage: string) {
+async function stageForFund(
+  service: ServiceClient,
+  fundId: string,
+  thesisId: string,
+  stage: string,
+) {
   if (stage !== "growth" && stage !== "buyout") return stage;
   const { data, error } = await service
     .from("fund_config_versions")
     .select("fund_mandates(stages)")
     .eq("fund_id", fundId)
+    .eq("thesis_id", thesisId)
     .eq("status", "active")
     .maybeSingle();
   if (error) {
@@ -2040,7 +2112,7 @@ async function applyDiscoveredCompanyProfile(
   const { data: caseRow, error } = await service
     .from("cases")
     .select(
-      "company_id, companies(name, legal_name, stage, sector, geography, founded_year, website, domains, cvr_number, registry_country, registry_number, identity_status, identity_confirmed_by, hq_country, profile_source)",
+      "company_id, thesis_id, companies(name, legal_name, stage, sector, geography, founded_year, website, domains, cvr_number, registry_country, registry_number, identity_status, identity_confirmed_by, hq_country, profile_source)",
     )
     .eq("id", caseId)
     .eq("fund_id", fundId)
@@ -2096,7 +2168,12 @@ async function applyDiscoveredCompanyProfile(
   if (identityConfident && profile) {
     if (!company.legal_name && profile.legalName) update["legal_name"] = profile.legalName;
     if (company.stage === "unknown" && profile.stage && profile.stage !== "unknown") {
-      update["stage"] = await stageForFund(service, fundId, profile.stage);
+      update["stage"] = await stageForFund(
+        service,
+        fundId,
+        caseRow["thesis_id"] as string,
+        profile.stage,
+      );
     }
     if (!company.sector && profile.sector) update["sector"] = profile.sector;
     if (!company.geography && profile.geography) update["geography"] = profile.geography;

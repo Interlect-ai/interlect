@@ -9,7 +9,9 @@ import {
 import type { FinancialScore } from "./financial-score";
 import { scoreScreening, SCORING_FORMULA_VERSION } from "./scoring";
 import { CONFIG_SELECT, mapProfile, type ConfigData } from "./fund-profile";
+import { readSetupStageChoice } from "./setup-stage.ts";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import { caseThesis } from "@/lib/funds/thesis-scope.server";
 
 /**
  * Task-svar → score: koden regner scoren igen på den seneste
@@ -97,12 +99,20 @@ export async function recalculateScreeningScore(
     throw new Error(serverText("analysisServer.rescore.failed"));
   }
 
-  const profile = mapProfile(config as unknown as ConfigData);
   const rawCompany = caseRow["companies"] as unknown;
   const company = (Array.isArray(rawCompany) ? rawCompany[0] : rawCompany) as {
     stage: string | null;
   } | null;
-  const validation = run["validation_result"] as { financeScore?: unknown } | null;
+  const validation = run["validation_result"] as {
+    financeScore?: unknown;
+    setupStage?: unknown;
+  } | null;
+  // The same stage's setup as the screening (its criteria are the keys in the stored
+  // answer), even if the case's stage changed since.
+  const profile = mapProfile(config as unknown as ConfigData, {
+    caseStage: company?.stage ?? null,
+    runChoice: readSetupStageChoice(validation?.setupStage),
+  });
   const financeScore = (validation?.financeScore ?? null) as FinancialScore | null;
   const counted = effectiveGateAnswers(answers, {
     completedAt: run["completed_at"] as string,
@@ -260,10 +270,14 @@ export async function answerConfigVersion(
     run = data;
   }
   if (run?.["config_version_id"]) return run["config_version_id"] as string;
+  // The active version of the case's own thesis (the one its next screening uses).
+  const thesis = await caseThesis(service, input.fundId, input.caseId);
+  if (!thesis) return null;
   const { data: active, error: activeError } = await service
     .from("fund_config_versions")
     .select("id")
     .eq("fund_id", input.fundId)
+    .eq("thesis_id", thesis.id)
     .eq("status", "active")
     .maybeSingle();
   if (activeError) {

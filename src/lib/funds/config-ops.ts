@@ -123,8 +123,10 @@ export function applyConfigOps(
 ): ApplyResult {
   const next = cloneDraft(draft);
   const errors: string[] = [];
-  const criterion = (key: string) => next.criteria.find((item) => item.key === key);
-  const gate = (key: string) => next.gates.find((item) => item.key === key);
+  // An edit names a key, and the same key may also stand per stage; the proposals ("Ret
+  // med AI") change only the shared rules and criteria, never a stage's own (does those).
+  const criterion = (key: string) => next.criteria.find((item) => !item.stage && item.key === key);
+  const gate = (key: string) => next.gates.find((item) => !item.stage && item.key === key);
 
   for (const op of ops) {
     switch (op.op) {
@@ -170,7 +172,7 @@ export function applyConfigOps(
         break;
       case "remove_criterion":
         if (!criterion(op.key)) errors.push(`Kriteriet ${op.key} findes ikke i kladden.`);
-        else next.criteria = next.criteria.filter((item) => item.key !== op.key);
+        else next.criteria = next.criteria.filter((item) => item.stage || item.key !== op.key);
         break;
       case "set_gate_treatment": {
         const target = gate(op.key);
@@ -191,7 +193,7 @@ export function applyConfigOps(
         break;
       case "remove_gate":
         if (!gate(op.key)) errors.push(`Mandatreglen ${op.key} findes ikke i kladden.`);
-        else next.gates = next.gates.filter((item) => item.key !== op.key);
+        else next.gates = next.gates.filter((item) => item.stage || item.key !== op.key);
         break;
       case "set_screening_instruction":
         next.screeningInstruction = op.text;
@@ -203,6 +205,20 @@ export function applyConfigOps(
     }
   }
   return { draft: next, errors, limitViolations: checkConfigLimits(next, language) };
+}
+
+/**
+ * The draft as the AI proposals see it: only the shared rules and criteria (the rows of a
+ * version with nothing per stage). The proposals change only those (applyConfigOps), so the model's
+ * input and the diff a person approves show the same rows, never one stage's row in place of a
+ * shared one with the same key.
+ */
+export function sharedRowsOnly(draft: DraftFields): DraftFields {
+  return {
+    ...draft,
+    gates: draft.gates.filter((gate) => !gate.stage),
+    criteria: draft.criteria.filter((criterion) => !criterion.stage),
+  };
 }
 
 /** The draft's screening instruction or cards differ (they are saved apart, 0078). */

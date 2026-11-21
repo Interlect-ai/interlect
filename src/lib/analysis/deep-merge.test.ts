@@ -63,10 +63,10 @@ test("research and specialist reuse keys stay on one version, the synthesis has 
   // can no longer be reused by the retry (loadReusableSpecialists keys on them).
   assert.match(
     source,
-    /DEEP_PROMPT_VERSION =\s*"interlect-deep-specialists-2026-10-16-v16-highlights"/,
+    /DEEP_PROMPT_VERSION =\s*"interlect-deep-specialists-2026-11-03-v17-team-text"/,
   );
   assert.match(source, /DEEP_WORKFLOW_VERSION = "interlect-deep-dd-workflow-v11-evidence-sheet"/);
-  assert.match(source, /DEEP_SYNTHESIS_PROMPT_VERSION =\s*"[^"]*v13-short-tasks[^"]*"/);
+  assert.match(source, /DEEP_SYNTHESIS_PROMPT_VERSION =\s*"[^"]*v14-team-text[^"]*"/);
   const deep = readFileSync(new URL("./deep.functions.ts", import.meta.url), "utf8");
   // Reuse of specialists compares the step's version with the specialist version only.
   assert.match(deep, /step\["prompt_version"\] !== DEEP_PROMPT_VERSION/);

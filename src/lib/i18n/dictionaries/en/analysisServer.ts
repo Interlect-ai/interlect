@@ -91,11 +91,6 @@ export const analysisServer = {
     notSaved: "The evidence sheet could not be saved.",
     none: "No evidence sheet ({reason}); the specialists get the full research.",
   },
-  method: {
-    profileNotFound: "The active setup was not found.",
-    noMembership: "You do not have an active membership in the selected team.",
-    adminOnly: "Only an Admin can see the prompt texts.",
-  },
   rescore: {
     failed: "The score could not be recalculated.",
     screeningNotRead: "The latest screening could not be read, so the score was not recalculated.",
@@ -112,6 +107,13 @@ export const analysisServer = {
   runPlan: {
     fundNotFound: "The team was not found.",
     runNotFound: "The run was not found.",
+    limitChoiceNeeded: "The full analysis does not fit within your team's limit.",
+    limitTooLow:
+      "The analysis cannot start, because your team's limit is too low for the required steps. An Admin or Lead can raise it under Analysis limits.",
+    limitTooLowDeep:
+      "The deep analysis cannot start, because your team's limit is too low for the required steps with this thesis's specialists. An Admin or Lead can raise the limit under Analysis limits or switch specialists off in the thesis.",
+    platformLimitTooLow:
+      "The analysis cannot start, because the installation's fixed limit is lower than the required steps need. Your team cannot raise it; contact Interlect.",
   },
   screening: {
     evidenceNotLoaded: "The screening's evidence could not be loaded.",
@@ -495,12 +497,6 @@ export const analysisServer = {
     tooManyCustom: "At most {max} own specialists can be active (the setup has {count}).",
     noneActive: "At least one specialist must be active in the deep analysis.",
   },
-  /** One line per AI level (ai-settings.functions.ts). */
-  tiers: {
-    light: "Fast and low-cost. Suited to a large deal flow and first sorting.",
-    medium: "Thorough and balanced. The default, and the level Interlect has been tested on most.",
-    heavy: "The most thorough. Most nuanced on difficult cases, but uses the most credits.",
-  },
   /** Length checks of the deep analysis's texts (deep-text-rules.ts). */
   deepText: {
     criterionTooShort:
@@ -792,6 +788,8 @@ export const analysisServer = {
     noGatewayAccess:
       "The AI service could not be used just now. Try again shortly, or write to Interlect.",
     noAnswer: "The public AI research returned no answer.",
+    callFailed: "A search in the public research could not be completed.",
+    serviceLimited: "Interlect's AI service is temporarily limited. Try again shortly.",
     moduleNoResults: "The research module {module} returned claims without search results.",
     moduleNoExactUrl:
       "The research module {module} returned claims without an exact, fetched source URL.",

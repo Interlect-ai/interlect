@@ -560,3 +560,92 @@ test("action verbs match whole words only, and old wording equals new wording (#
     true,
   );
 });
+
+test("T-1093: missing economy figures are one task after the requirements, keyed on its title", () => {
+  const economyTask = {
+    title: "Skaf økonomitallene",
+    question: "Skaf økonomitallene: burn og runway, brugen af pengene.",
+    why: "Interlect kunne ikke finde disse tal i casens materiale eller i registrene.",
+  };
+  const drafts = buildAiTaskDrafts({
+    ...base,
+    unresolvedGateKeys: ["ownership"],
+    economyTask,
+    nextSteps: sanitizeNextSteps(
+      [{ title: "Kundereferencer", kind: "verification", priority: 1 }],
+      keys,
+      3,
+    ),
+  });
+  assert.deepEqual(
+    drafts.map((draft) => draft.title),
+    ["Afklar: Ejerandel mindst 10 %", "Skaf økonomitallene", "Kundereferencer"],
+  );
+  const economy = drafts[1]!;
+  assert.equal(economy.description, economyTask.question);
+  assert.equal(economy.why, economyTask.why);
+  assert.equal(economy.linkedKind, null);
+  assert.equal(economy.kind, "document");
+  const again = buildAiTaskDrafts({ ...base, economyTask: { ...economyTask, question: "Andet." } });
+  assert.equal(
+    again.find((draft) => draft.title === "Skaf økonomitallene")?.dedupeKey,
+    economy.dedupeKey,
+    "a new screening updates the same task",
+  );
+  assert.ok(!buildAiTaskDrafts(base).some((draft) => draft.title === "Skaf økonomitallene"));
+});
+
+test("T-1093: an untouched economy task from an earlier screening gets the new list", () => {
+  const [draft] = buildAiTaskDrafts({
+    ...base,
+    assessments: [],
+    openQuestions: [],
+    economyTask: {
+      title: "Skaf økonomitallene",
+      question: "Skaf økonomitallene: burn og runway.",
+      why: "Interlect kunne ikke finde disse tal.",
+    },
+  });
+  const row: ExistingTaskRow = {
+    id: "task-1",
+    dedupeKey: draft!.dedupeKey,
+    title: draft!.title,
+    description: "Skaf økonomitallene: omsætning og vækst, burn og runway.",
+    origin: "ai",
+    status: "open",
+    assigneeId: null,
+    dueOn: null,
+    answerText: null,
+    answerValue: null,
+    answerDocumentId: null,
+    answerEvidenceId: null,
+    resolvedAt: null,
+    createdAt: "2026-11-01T00:00:00Z",
+    updatedAt: "2026-11-01T00:00:00Z",
+    deletedAt: null,
+    deletedBy: null,
+    sourceRunId: "run-old",
+    sourceRunKind: "screening",
+    linkedKind: null,
+    linkedKey: null,
+  };
+  const plan = (existing: ExistingTaskRow[]) =>
+    planAiTaskWrites({
+      runId: "run-new",
+      runKind: "screening",
+      raised: [draft!],
+      cap: 4,
+      existing,
+    });
+  assert.deepEqual(plan([row]), {
+    insert: [],
+    restore: [],
+    retire: [],
+    refresh: [{ id: "task-1", draft }],
+  });
+  const touched = { ...row, updatedAt: "2026-11-02T00:00:00Z" };
+  assert.deepEqual(plan([touched]).refresh, [], "a task a person changed keeps its text");
+  const same = { ...row, description: draft!.description ?? null };
+  assert.deepEqual(plan([same]).refresh, [], "nothing to refresh");
+  assert.deepEqual(plan([same]).insert, []);
+});

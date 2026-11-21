@@ -57,8 +57,11 @@ export const appServer = {
   },
   credits: {
     exhausted: "Top up to run more analyses.",
+    monthlyLimit:
+      "Your team's monthly limit for analyses has been reached. An Admin or Lead can raise it under Analysis limits.",
     helperExhausted: "The balance is used up. Top up to use the AI help.",
     notReserved: "The credits could not be reserved. Try again shortly.",
+    monthNotRead: "The team's monthly usage could not be read. Try again shortly.",
     ledgerTooLong: "The credit ledger is too long to add up.",
     meterNotLoaded: "The credits could not be loaded. Please try again shortly.",
     mailSubject: "[Interlect · Top up] {fund}",
@@ -119,6 +122,7 @@ export const appServer = {
     adminEditsSetup: "Only an administrator can edit the team setup.",
     adminOrPartnerEditsSetup: "Only an administrator or partner can edit the team setup.",
     adminOrLeadEditsSetup: "Only an Admin or Lead can edit the team setup.",
+    roleCannotPublishSetup: "Your role cannot publish the team setup.",
     teamNameMissing: "The team's name is missing.",
     caseNotInTeam: "The case was not found in the selected team.",
     publishedUnchangeable: "A published version of the setup cannot be changed.",

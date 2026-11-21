@@ -1,3 +1,4 @@
+import { loadAnalysisMonth } from "./analysis-month.server.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -32,6 +33,7 @@ const input = {
   fundId: "fund-1",
   runId: "run-1",
   capUsd: 2.5,
+  capDkk: 5,
   userId: "user-1",
   model: "openai/gpt-5.4-mini",
   kind: "screening" as const,
@@ -303,5 +305,52 @@ test("a limit that cannot be counted stops the call; a call without a person is 
   assert.deepEqual(
     background.calls.map((call) => call.fn),
     ["ai_reserve"],
+  );
+});
+
+test("a refusal says when the team's monthly limit stopped the run, not the balance (T-1003)", async () => {
+  const refusal = (month: { cap_dkk: number | null; used_dkk: number }) =>
+    ({
+      rpc: async (fn: string) =>
+        fn === "fund_analysis_month" ? { data: [month], error: null } : { data: null, error: null },
+    }) as unknown as SupabaseClient;
+  await assert.rejects(
+    () => reserveAnalysisCredits(refusal({ cap_dkk: 10, used_dkk: 8 }), { ...input, capDkk: 5 }),
+    /månedsgrænse/,
+  );
+  // Room in the month, or no limit at all: it was the balance.
+  await assert.rejects(
+    () => reserveAnalysisCredits(refusal({ cap_dkk: 10, used_dkk: 2 }), { ...input, capDkk: 5 }),
+    /Fyld op/,
+  );
+  await assert.rejects(
+    () =>
+      reserveAnalysisCredits(refusal({ cap_dkk: null, used_dkk: 900 }), { ...input, capDkk: 5 }),
+    /Fyld op/,
+  );
+});
+
+test("the month is settled before it is read, and a failed settlement never reads as room", async () => {
+  const calls: string[] = [];
+  const service = {
+    rpc: async (fn: string) => {
+      calls.push(fn);
+      return fn === "fund_analysis_month"
+        ? { data: [{ cap_dkk: 20, used_dkk: 4 }], error: null }
+        : { data: null, error: null };
+    },
+  } as unknown as SupabaseClient;
+  assert.deepEqual(await loadAnalysisMonth(service, "fund-1"), { capDkk: 20, usedDkk: 4 });
+  assert.deepEqual(calls, ["ai_settle_now", "fund_analysis_month"]);
+  const broken = {
+    rpc: async () => ({ data: null, error: { message: "nede" } }),
+  } as unknown as SupabaseClient;
+  // The database's own text ("nede") never reaches the person, only the server's sentence.
+  await assert.rejects(
+    () => loadAnalysisMonth(broken, "fund-1"),
+    (cause: unknown) =>
+      cause instanceof Error &&
+      /månedsforbrug kunne ikke læses|monthly usage could not be read/.test(cause.message) &&
+      !cause.message.includes("nede"),
   );
 });

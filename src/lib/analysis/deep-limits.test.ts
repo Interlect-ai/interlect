@@ -46,8 +46,13 @@ test("an unknown model still gets the design cap", () => {
 
 test("the standard loft of every tier covers the worst-case reservation of one call (60k input tokens)", () => {
   const body = { messages: [{ role: "user", content: "ord ".repeat(60_000) }] };
-  for (const tier of AI_TIERS) {
-    const plan = buildRunPlan("deep", tier, null);
+  // Also at the installation rate of ai_settings (6.9), which now sets the dollars.
+  const plans = AI_TIERS.flatMap((tier) => [
+    buildRunPlan("deep", tier, null),
+    buildRunPlan("deep", tier, null, 4, 6.9),
+  ]);
+  for (const plan of plans) {
+    const tier = plan.tier;
     const specialist = estimateRequestMaximumUsd({
       model: plan.model,
       requestBody: body,

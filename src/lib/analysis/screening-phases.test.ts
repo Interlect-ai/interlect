@@ -86,6 +86,7 @@ test("the hand-off reads the research step and never counts an unknown charge as
         ],
         evidenceSheet: sheet,
         researchFollowUp: null,
+        setupStage: { stage: "seed", caseStage: null, reason: "unknown", assumed: true },
       },
       actual_cost: "0.0712",
       input_tokens: 1200,
@@ -100,6 +101,13 @@ test("the hand-off reads the research step and never counts an unknown charge as
   assert.deepEqual(handOff.founders, [{ name: "Jeppe Rindom", role: "CEO", linkedinUrl: null }]);
   assert.equal(handOff.evidenceSheet?.version, EVIDENCE_SHEET_VERSION);
   assert.equal(handOff.followUp, null);
+  // The stage the research was planned for, which the analysis phase scores.
+  assert.deepEqual(handOff.setupStage, {
+    stage: "seed",
+    caseStage: null,
+    reason: "unknown",
+    assumed: true,
+  });
   // Without a saved charge (or a broken one) the whole research budget counts.
   for (const charge of [undefined, null, "x", -1]) {
     const missing = readResearchHandOff(
@@ -114,6 +122,7 @@ test("the hand-off reads the research step and never counts an unknown charge as
     );
     assert.equal(missing.chargeUsd, 0.39, String(charge));
     assert.equal(missing.actualCostUsd, null);
+    assert.equal(missing.setupStage, null);
   }
   assert.deepEqual(readPromptFounders(undefined), []);
 });
@@ -126,6 +135,7 @@ test("the research phase saves what the analysis phase reads, and fails loudly i
   assert.match(phase, /researchChargeUsd,/);
   assert.match(phase, /promptFounders:/);
   assert.match(phase, /evidenceSheet,/);
+  assert.match(phase, /setupStage: profile\.teamSetup\?\.stage \?\? null,/);
   // A failed save is not logged and ignored: the analysis would get a thinner basis silently.
   assert.match(phase, /if \(sheetSaveError\) \{[\s\S]*?throw new Error/);
   assert.match(phase, /if \(evidenceIdsSaved\.error\)[\s\S]*?throw new Error/);

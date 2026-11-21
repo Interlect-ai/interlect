@@ -57,6 +57,8 @@ export function Sheet({
               {...(description ? {} : { "aria-describedby": undefined })}
             >
               <motion.div
+                // The Interlect-Assistent places its chat next to an open sheet.
+                data-sheet=""
                 className={cn(
                   "fixed inset-y-3 right-3 z-[96] flex w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[24px] bg-surface text-ink-1 shadow-[0_32px_80px_-20px_rgba(23,21,28,.45)] outline-none",
                   className,

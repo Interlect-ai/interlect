@@ -224,6 +224,8 @@ export async function runDeepEvidenceSheetStep(input: {
   /** The public research step's output (its plan and follow-up steer the sheet). */
   researchOutput: unknown;
   priorFailedRunId: string | null;
+  /** The sheet's share of the run's budget; 0 when the planner left it out. */
+  availableUsd: number;
   timeLeftMs: number;
 }): Promise<{ sheet: EvidenceSheet | null; evidenceRows: Array<Record<string, unknown>> }> {
   const { service, runId } = input;
@@ -258,7 +260,7 @@ export async function runDeepEvidenceSheetStep(input: {
         plan: readStoredResearchPlan(research.researchPlan),
         followUp: readStoredResearchFollowUp(research.researchFollowUp),
         evidence,
-        availableUsd: EVIDENCE_SHEET_BUDGET_USD.deep,
+        availableUsd: input.availableUsd,
         timeLeftMs: input.timeLeftMs,
       });
   const completedAt = new Date().toISOString();

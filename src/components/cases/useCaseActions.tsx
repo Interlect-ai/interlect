@@ -4,6 +4,8 @@
  * for), "Fortryd" for 5 s, and the paid runs (screening, dyb analyse). One place, so the
  * list, the bulk bar and the case top say and do the same ("Handlingsnavne").
  */
+import { startWithLimitChoice } from "@/lib/analysis/limit-choice";
+import type { LimitChoice } from "@/lib/analysis/model-tiers";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -294,19 +296,34 @@ export function useCaseActions(fundId: string | null) {
       markBusy(ids, true);
       const started: CaseTarget[] = [];
       let firstError: string | null = null;
+      // "Spørg mig først": asked once per batch, the answer is used for the rest.
+      const atLimit: { choice?: LimitChoice | null } = {};
+      const cancelled: CaseTarget[] = [];
       // One after the other: the runs queue on the server anyway, and a refusal (no finished
       // screening, already analysed) stays attached to its own case.
       for (const target of targets) {
         try {
-          if (run === "screening") await screen({ data: { caseId: target.id, fundId } });
-          else
-            await deep({
-              data: {
-                caseId: target.id,
-                fundId,
-                expected: { phase: target.phase, status: target.status },
-              },
-            });
+          const result = await startWithLimitChoice<{ status: string }>(
+            fundId,
+            run,
+            (choice) =>
+              run === "screening"
+                ? screen({ data: { caseId: target.id, fundId, atLimit: choice } })
+                : deep({
+                    data: {
+                      caseId: target.id,
+                      fundId,
+                      expected: { phase: target.phase, status: target.status },
+                      atLimit: choice,
+                    },
+                  }),
+            atLimit,
+          );
+          // Cancelled at the limit: nothing started, and that is not an error.
+          if (!result) {
+            cancelled.push(target);
+            continue;
+          }
           started.push(target);
         } catch (cause) {
           // The balance refusal comes in the page's language and is kept as it is.
@@ -323,9 +340,12 @@ export function useCaseActions(fundId: string | null) {
         showToast({
           message: `${t(run === "screening" ? "cases.toast.screen" : "cases.toast.deep", {
             subject: subjectOf(started, t),
-          })}${refusedLine(t, targets.length - started.length, "start", firstError)}${
-            options.skipped ?? ""
-          }`,
+          })}${refusedLine(
+            t,
+            targets.length - started.length - cancelled.length,
+            "start",
+            firstError,
+          )}${options.skipped ?? ""}`,
         });
         options.onDone?.(
           targets.filter((target) => !started.includes(target)).map((target) => target.id),

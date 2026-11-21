@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatCitation } from "../chat-contract.ts";
 import type { HistoryRow } from "./prompt.ts";
+import { activeTheses, pickDefaultThesis, thesisRowFrom } from "../../funds/theses.ts";
 
 /**
  * Everything the chat engine reads and writes, behind one interface so the engine can be tested
@@ -130,23 +131,36 @@ export function createSupabaseChatStore(service: SupabaseClient): ChatStore {
     },
 
     async thesis(fundId, full) {
+      // (spec §2.4): the default thesis, and the names of the team's other active theses so
+      // Brain can ask or answer "under which thesis"; get_case names a case's own thesis.
+      const { data: thesisRows, error: thesesError } = await service
+        .from("fund_theses")
+        .select("id, name, status, is_default, created_at")
+        .eq("fund_id", fundId);
+      if (thesesError) throw new Error(`fund_theses: ${thesesError.message}`);
+      const theses = (thesisRows ?? []).map((row) => thesisRowFrom(row as Record<string, unknown>));
+      const chosen = pickDefaultThesis(theses);
+      if (!chosen) return null;
       const { data, error } = await service
         .from("fund_config_versions")
         .select(
           `version,
-          fund_mandates(thesis, stages, geographies, sectors, ticket_min_eur, ticket_max_eur, risk_posture, dealbreakers),
-          mandate_gates(label, description, treatment, sort_order),
-          assessment_criteria(label, description, weight, sort_order)`,
+          fund_mandates(thesis, stages, geographies, sectors, ticket_min_eur, ticket_max_eur, risk_posture, dealbreakers, setup),
+          mandate_gates(stage, label, description, treatment, sort_order),
+          assessment_criteria(stage, label, description, weight, sort_order)`,
         )
         .eq("fund_id", fundId)
+        .eq("thesis_id", chosen.id)
         .eq("status", "active")
         .maybeSingle();
       if (error) throw new Error(`fund_config_versions: ${error.message}`);
       if (!data) return null;
-      return clipText(
+      const others = activeTheses(theses).filter((thesis) => thesis.id !== chosen.id);
+      const text = clipText(
         thesisText(data as unknown as ThesisRow, full),
         full ? THESIS_CHARS.full : THESIS_CHARS.short,
       );
+      return others.length === 0 ? text : `${thesesPreamble(chosen.name, others)}\n${text}`;
     },
 
     async history(fundId, threadId, limit) {
@@ -281,12 +295,15 @@ type ThesisRow = {
   version: number | null;
   fund_mandates: MandateRow | MandateRow[] | null;
   mandate_gates: Array<{
+    /** The stage the rule belongs to (0133); absent or null = every stage. */
+    stage?: string | null;
     label: string;
     description: string | null;
     treatment: string;
     sort_order: number | null;
   }> | null;
   assessment_criteria: Array<{
+    stage?: string | null;
     label: string;
     description: string | null;
     weight: number | null;
@@ -302,12 +319,50 @@ type MandateRow = {
   ticket_max_eur: number | null;
   risk_posture: string | null;
   dealbreakers: unknown;
+  /** 0133: "Hvem er I, og hvordan tænker I?" is `setup.about`. */
+  setup?: unknown;
 };
+
+/** The setup stages by name, in the order the team sees them (Teamopsætning). */
+const STAGE_NAMES: Readonly<Record<string, string>> = {
+  pre_seed: "Pre-seed",
+  seed: "Seed",
+  series_a: "Series A",
+  series_b: "Series B+",
+  growth: "Vækst",
+  buyout: "Buyout",
+  later: "Senere",
+};
+const STAGE_ORDER = Object.keys(STAGE_NAMES);
+
+/** Rows grouped as the setup holds them: the shared first (null), then each stage in order. */
+function byStage<T extends { stage?: string | null }>(rows: T[]): Array<[string | null, T[]]> {
+  const groups = new Map<string | null, T[]>();
+  for (const row of rows) {
+    const stage = row.stage && STAGE_NAMES[row.stage] ? row.stage : null;
+    groups.set(stage, [...(groups.get(stage) ?? []), row]);
+  }
+  return [...groups.entries()].sort(
+    ([a], [b]) => (a ? STAGE_ORDER.indexOf(a) + 1 : 0) - (b ? STAGE_ORDER.indexOf(b) + 1 : 0),
+  );
+}
 
 const bySort = <T extends { sort_order: number | null }>(rows: T[] | null) =>
   [...(rows ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
 /** The active fund set-up as plain text for the system prompt (exported for tests). */
+/**
+ * The line before the default thesis when the team has more than one. Names only: the
+ * other theses' setups are not sent, so a question about one of them is asked back, not guessed.
+ */
+export function thesesPreamble(defaultName: string, others: readonly { name: string }[]): string {
+  return `Standardtese: ${defaultName}. Teamets andre aktive teser: ${others
+    .map((thesis) => thesis.name)
+    .join(
+      ", ",
+    )}. Hver case hører til én tese (se get_case); spørg, hvis svaret afhænger af en anden tese.`;
+}
+
 export function thesisText(row: ThesisRow, full: boolean): string {
   const mandate = Array.isArray(row.fund_mandates) ? row.fund_mandates[0] : row.fund_mandates;
   const lines: string[] = [];
@@ -324,22 +379,26 @@ export function thesisText(row: ThesisRow, full: boolean): string {
   }
   if (full && mandate?.risk_posture?.trim())
     lines.push(`Risikoprofil: ${mandate.risk_posture.trim()}`);
+  const about = (mandate?.setup as { about?: unknown } | null | undefined)?.about;
+  if (full && typeof about === "string" && about.trim())
+    lines.push(`Hvem teamet er, og hvordan det tænker: ${about.trim()}`);
   const dealbreakers = Array.isArray(mandate?.dealbreakers)
     ? (mandate.dealbreakers as unknown[]).filter((item): item is string => typeof item === "string")
     : [];
   list("Dealbreakers", dealbreakers);
-  const gates = bySort(row.mandate_gates);
-  if (gates.length > 0) {
-    lines.push("Mandatkrav:");
+  // A setup per stage is told per stage (the shared rows first), never as one mixed list.
+  const forStage = (title: string, stage: string | null) =>
+    stage ? `${title} for ${STAGE_NAMES[stage]}:` : `${title}:`;
+  for (const [stage, gates] of byStage(bySort(row.mandate_gates))) {
+    lines.push(forStage("Mandatkrav", stage));
     for (const gate of gates) {
       const kind = gate.treatment === "hard" ? "bindende" : "til vurdering";
       const detail = full && gate.description?.trim() ? `: ${gate.description.trim()}` : "";
       lines.push(`- ${gate.label} (${kind})${detail}`);
     }
   }
-  const criteria = bySort(row.assessment_criteria);
-  if (criteria.length > 0) {
-    lines.push("Kriterier og vægte:");
+  for (const [stage, criteria] of byStage(bySort(row.assessment_criteria))) {
+    lines.push(forStage("Kriterier og vægte", stage));
     for (const criterion of criteria) {
       const weight = criterion.weight === null ? "" : ` ${Number(criterion.weight)} %`;
       const detail =

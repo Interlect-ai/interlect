@@ -8,12 +8,18 @@ import { serverText } from "@/lib/i18n/server-text";
 import type { FundProfile } from "@/lib/funds/profiles";
 import type { ScoreCategory } from "@/lib/domain/types";
 import { readScreeningInstruction } from "@/lib/funds/screening-setup";
+import { selectSetupForStage, type SetupStageChoice } from "./setup-stage.ts";
 
-/** The columns `mapProfile` needs from a fund config version. */
+/**
+ * The columns `mapProfile` needs from a fund config version.: with `stage` on the rows and
+ * `setup` on the mandate (0133), so the analysis can pick the case's stage. Every place that maps
+ * a version for an analysis selects these columns (screening, deep, rescore, trial, scripts).
+ */
 export const CONFIG_SELECT = `id, fund_id, profile_key, version, funds(name, language),
-  fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction),
-  mandate_gates(gate_key, label, description, treatment, sort_order),
-  assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor)`;
+  fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction, setup),
+  mandate_gates(stage, gate_key, label, description, treatment, sort_order),
+  assessment_criteria(stage, criterion_key, label, description, score_category, weight, sort_order, code_anchor),
+  fund_specialists(stage)`;
 
 export type ConfigData = {
   id: string;
@@ -38,8 +44,12 @@ export type ConfigData = {
     dealbreakers: string[] | null;
     /** (0078); only selected where the screening prompt is built. */
     screening_instruction?: string | null;
+    /** The setup that is not rows ("about", fixed rules, per stage). */
+    setup?: unknown;
   }>;
   mandate_gates: Array<{
+    /** Null = shared by every stage (all rows of an old version). */
+    stage?: string | null;
     gate_key: string;
     label: string;
     description: string;
@@ -47,6 +57,7 @@ export type ConfigData = {
     sort_order: number;
   }>;
   assessment_criteria: Array<{
+    stage?: string | null;
     criterion_key: string;
     label: string;
     description: string;
@@ -55,14 +66,51 @@ export type ConfigData = {
     sort_order: number;
     code_anchor?: boolean | null;
   }>;
+  /**
+   * Only the stage of each specialist row, so a version whose only per-stage content is a
+   * stage's specialists still has a stage (the set itself: loadSpecialistSet).
+   */
+  fund_specialists?: Array<{ stage?: string | null }>;
 };
 
-export function mapProfile(config: ConfigData): FundProfile {
+/** How `mapProfile` picks the stage. */
+export interface ProfileStageInput {
+  /** The case's company stage (company_stage); missing or "unknown" = unknown. */
+  caseStage?: string | null;
+  /**
+   * The choice a run was made with (`validation_result.setupStage`): a rescore or a deep run on
+   * the same screening must use the same setup, even if the case's stage changed since.
+   */
+  runChoice?: SetupStageChoice | null;
+}
+
+/**
+ * A version as the analysis reads it: the rows of the case's stage (setup-stage.ts) and
+ * the setup that is not rows. Without a case (an editor or an assistant) the stage is unknown, so
+ * the earliest chosen stage is used. A version with nothing per stage maps exactly as before.
+ */
+export function mapProfile(config: ConfigData, input: ProfileStageInput = {}): FundProfile {
   const fund = Array.isArray(config.funds) ? config.funds[0] : config.funds;
   const rawMandate = config.fund_mandates as unknown;
   const mandate = (Array.isArray(rawMandate) ? rawMandate[0] : rawMandate) as
     ConfigData["fund_mandates"][number] | undefined;
   if (!mandate) throw new Error(serverText("analysisServer.common.noMandate"));
+  const {
+    choice,
+    gates: gateRows,
+    criteria: criterionRows,
+    threshold: stageThreshold,
+    setup,
+    economy,
+  } = selectSetupForStage({
+    gates: config.mandate_gates ?? [],
+    criteria: config.assessment_criteria ?? [],
+    mandateStages: mandate.stages,
+    setup: mandate.setup,
+    otherRows: config.fund_specialists ?? [],
+    caseStage: input.caseStage,
+    runChoice: input.runChoice,
+  });
   return {
     id: config.profile_key,
     name: fund?.name ?? config.profile_key,
@@ -77,10 +125,15 @@ export function mapProfile(config: ConfigData): FundProfile {
       note: mandate.ticket_note,
     },
     fundSizeEur: mandate.fund_size_eur == null ? null : Number(mandate.fund_size_eur),
-    analysisThreshold: mandate.analysis_threshold,
+    analysisThreshold: stageThreshold ?? mandate.analysis_threshold,
     approvalMode: mandate.approval_mode,
-    riskPosture: mandate.risk_posture,
-    screeningInstruction: readScreeningInstruction(mandate.screening_instruction),
+    // "Hvem er I, og hvordan tænker I?" replaces the risk lens and the screening
+    // instruction in the new setup (plan punkt 3); the old fields stay in the database and are
+    // still read for old versions, but never reach a prompt beside it (the person cannot see them).
+    riskPosture: setup?.about || mandate.risk_posture,
+    screeningInstruction: setup?.about
+      ? ""
+      : readScreeningInstruction(mandate.screening_instruction),
     language: fundLanguageOf(config.funds),
     distinctiveLens: [
       `Investeringsmodel: ${mandate.strategy_type ?? "custom"}`,
@@ -89,7 +142,7 @@ export function mapProfile(config: ConfigData): FundProfile {
       ),
       ...(mandate.dealbreakers ?? []).map((item) => `Dealbreaker: ${item}`),
     ],
-    gates: [...config.mandate_gates]
+    gates: gateRows
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => ({
         key: item.gate_key,
@@ -97,7 +150,7 @@ export function mapProfile(config: ConfigData): FundProfile {
         description: item.description,
         treatment: item.treatment,
       })),
-    criteria: [...config.assessment_criteria]
+    criteria: criterionRows
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => ({
         key: item.criterion_key,
@@ -110,5 +163,15 @@ export function mapProfile(config: ConfigData): FundProfile {
     sources: [],
     version: `config-v${config.version}`,
     researchedAt: new Date().toISOString().slice(0, 10),
+    ...(choice || setup
+      ? {
+          teamSetup: {
+            stage: choice,
+            about: setup?.about ?? "",
+            fixedRuleEdits: setup?.fixedRules ?? {},
+            economy,
+          },
+        }
+      : {}),
   };
 }

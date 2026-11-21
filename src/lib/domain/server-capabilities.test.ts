@@ -11,6 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { hasCapability, strictFundSettings } from "./workflow.ts";
 
 const ROOT = resolve(import.meta.dirname, "..", "..", "..");
 
@@ -82,13 +83,16 @@ const EXPECTED: Record<string, Record<string, Expected>> = {
     acceptInvitationAsNewUser: { custom: "token holder, before sign-in" },
     acceptInvitationAsExistingUser: { custom: "token holder, signed in" },
   },
-  "analysis/method-detail.functions.ts": {
-    getAnalysisPromptDetail: { custom: "Admin only (canReadPrompts); method-detail.test.ts" },
-  },
   "funds/funds.functions.ts": {
     listMemberFunds: { custom: "the caller's own memberships" },
     createFund: { custom: "Admin in at least one fund (harden S5-3)" },
     deleteFund: "manage_users",
+  },
+  // Spor B: the limits in kroner are for Admin and Lead only.
+  "funds/ai-settings.functions.ts": {
+    getFundAiSettings: "view_case",
+    getFundAnalysisLimits: "configure_fund",
+    updateFundAiSettings: "configure_fund",
   },
 };
 
@@ -123,7 +127,54 @@ for (const [file, expected] of Object.entries(EXPECTED)) {
       assert.match(body, /requireSupabaseAuth|token/, `${name} has no auth middleware`);
       if (typeof want === "string") {
         assert.equal(firstCapability(body), want, `${name} checks the wrong capability`);
+        // The service role passes RLS: no inline getServiceClient() before the first check
+        // (helpers outside the body are not seen here).
+        const serviceRead = body.indexOf("getServiceClient()");
+        assert.ok(
+          serviceRead === -1 || body.indexOf("requireFundCapability(") < serviceRead,
+          `${name} reads with the service role before the capability check`,
+        );
       }
+    }
+  });
+}
+
+// Spor B (spec B.1 punkt 3): going past the team's limit, also one time, is for Admin and
+// Lead only. Medlem may start a screening and a deep analysis, so the start itself does not stop
+// a direct call with atLimit "raise_once"; the choice needs its own configure_fund check, awaited
+// before the run is planned or reserved.
+// workflow.test.ts holds the full matrix; this keeps the premise of the gate next to it.
+test("Medlem starts analyses; neither Medlem nor Læser holds configure_fund", () => {
+  for (const settings of [strictFundSettings, { memberCanDecide: true, memberCanPublish: true }]) {
+    for (const role of ["member", "reader"] as const) {
+      assert.equal(hasCapability([role], "configure_fund", settings), false, role);
+    }
+    assert.equal(hasCapability(["member"], "start_analysis", settings), true);
+    assert.equal(hasCapability(["member"], "approve_deep_analysis", settings), true);
+    for (const role of ["admin", "lead"] as const) {
+      assert.equal(hasCapability([role], "configure_fund", settings), true, role);
+    }
+  }
+});
+
+for (const [file, name] of [
+  ["analysis/screening.functions.ts", "runInitialScreening"],
+  ["analysis/deep.functions.ts", "approveAndRunDeepAnalysis"],
+] as const) {
+  test(`${file}: ${name} lets only configure_fund choose raise_once, before planning`, () => {
+    const body = serverFunctions(readFileSync(join(ROOT, "src", "lib", file), "utf8")).get(name);
+    assert.ok(body, `${name} not found`);
+    const opening = 'if (data.atLimit === "raise_once") {';
+    const gate = body.indexOf(opening);
+    assert.ok(gate > 0, `${name} has no raise_once gate`);
+    assert.equal(body.indexOf(opening, gate + 1), -1, `${name} has more than one raise_once gate`);
+    const block = body.slice(gate, body.indexOf("}", gate));
+    assert.match(block, /^\s*if[^{]*\{\s*await requireFundCapability\(/, "the gate is not awaited");
+    assert.equal(firstCapability(block), "configure_fund", `${name} gates raise_once wrongly`);
+    // Every place the choice reaches the plan or the reservation comes after the gate.
+    for (const use of ["planNewRun(", "reservePlannedRun(", "choice: data.atLimit"]) {
+      const first = body.indexOf(use);
+      assert.ok(first > gate, `${use} comes before the raise_once gate in ${name}`);
     }
   });
 }

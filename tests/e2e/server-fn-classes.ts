@@ -24,6 +24,10 @@ export const PAID_FUNCTIONS: ReadonlySet<string> = new Set([
   "proposeConfigChange",
   "proposeModulePromptOverride",
   "askThesisStep",
+  // The Interlect-Assistent in Teamopsætning (gpt-5.4-mini, capped at 0.06 USD per answer).
+  "askSetupAssistant",
+  // The committee memo's AI draft (gpt-5.4, at most two calls of 0.12 USD).
+  "draftMemoWithAi",
   "proposeBrainWebQueries",
   "findFieldWithBrain",
   "approveBrainIngest",
@@ -96,7 +100,6 @@ export const SAFE_FUNCTIONS: ReadonlySet<string> = new Set([
   "forgetBrainSource",
   // Removes an upload nobody approved (row and file; no AI call, no queue).
   "discardBrainUpload",
-  "getAnalysisPromptDetail",
   "getBrainCapabilities",
   "getBrainCasePanel",
   "getBrainGraph",
@@ -118,6 +121,7 @@ export const SAFE_FUNCTIONS: ReadonlySet<string> = new Set([
   "getCreditMeter",
   "getFundAdminNames",
   "getFundAiSettings",
+  "getFundAnalysisLimits",
   "getFundConfigs",
   "getHiddenSections",
   "getIntakeCapabilities",
@@ -143,6 +147,19 @@ export const SAFE_FUNCTIONS: ReadonlySet<string> = new Set([
   "dismissFieldProposal",
   "listFundChangeHistory",
   "listFundConfigVersions",
+  // Theses in a team; database writes only, no AI call.
+  "listTheses",
+  "createThesis",
+  "renameThesis",
+  "setDefaultThesis",
+  "archiveThesis",
+  "reactivateThesis",
+  // The committee memo's stored data; database reads and writes only, no AI call.
+  "getCaseMemo",
+  "saveMemoInput",
+  "answerMemoGap",
+  "createMemoDraft",
+  "approveMemoVersion",
   "listFundOpenTasks",
   "listFundSuggestions",
   "listHistoricalInvestments",
@@ -165,6 +182,8 @@ export const SAFE_FUNCTIONS: ReadonlySet<string> = new Set([
   "renameBrainThread",
   "requestBrainUpload",
   "resetMemberMfa",
+  // An earlier setup version copied into a new draft (database only).
+  "restoreFundConfigVersion",
   "resetModulePromptOverride",
   "resetResearchModuleOverride",
   "resolveInvitation",
@@ -205,7 +224,11 @@ export const SAFE_FUNCTIONS: ReadonlySet<string> = new Set([
  * app in the browser. server-fn-guard.test.ts fails when a route under src/routes/api is in
  * neither list.
  */
-export const PAID_API_ROUTES: ReadonlySet<string> = new Set(["/api/brain/chat"]);
+export const PAID_API_ROUTES: ReadonlySet<string> = new Set([
+  "/api/brain/chat",
+  // The setup draft per stage (web research and model calls).
+  "/api/fund-setup/draft",
+]);
 
 export const OPERATOR_API_ROUTES: ReadonlySet<string> = new Set([
   "/api/brain/backfill",

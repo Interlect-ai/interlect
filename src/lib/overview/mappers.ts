@@ -38,6 +38,7 @@ export function mapCaseRow(row: Row, language: Language = DEFAULT_LANGUAGE): Cas
     status: row["status"] as CaseStatus,
     createdAt: row["created_at"] as string,
     lastActionAt: row["last_action_at"] as string,
+    ...(typeof row["thesis_id"] === "string" ? { thesisId: row["thesis_id"] } : {}),
     country: company?.hq_country ?? null,
     sector:
       language !== "da" && company?.sector_key

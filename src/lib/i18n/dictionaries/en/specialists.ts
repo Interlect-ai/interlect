@@ -102,6 +102,12 @@ export const specialists: Dictionary["specialists"] = {
         focus1: "Founder-market fit",
         focus2: "Roles and gaps",
         focus3: "Track record",
+        text1:
+          "Assess whether the founders have a real edge in understanding the problem: closeness to the problem, industry insight and documented execution.",
+        text2:
+          "Find out who does what and who is missing. Cross-check roles and employment periods against registers and independent sources; a matching name is not proof of identity.",
+        text3:
+          "Assess what the team has built and delivered before, and whether the results can be documented: exits, customers, products and releases.",
       },
       product_market_gtm: {
         label: "Product and market",
@@ -109,6 +115,10 @@ export const specialists: Dictionary["specialists"] = {
         focus1: "Paying customers",
         focus2: "Market size and timing",
         focus3: "Competitors",
+        text1:
+          "Find out who already pays, how much they pay, and whether the customers are real and named.",
+        text2: "Build the market size from the bottom up, and assess why now is the right time.",
+        text3: "Map direct and indirect competitors, and explain why the case wins.",
       },
       technology_risk: {
         label: "Technology and IP",
@@ -116,6 +126,12 @@ export const specialists: Dictionary["specialists"] = {
         focus1: "Technical lead",
         focus2: "Patents and IP",
         focus3: "Technical risk",
+        text1:
+          "Assess whether the technology works, how far it is from prototype to operation, and whether the lead can last.",
+        text2:
+          "Check patents, licences and whether others can block the solution. Freedom to operate must be documented.",
+        text3:
+          "Find the technical risks that could sink the case: dependencies, scaling, data quality and security.",
       },
       fund_finance_deal: {
         label: "Thesis and deal",
@@ -123,6 +139,11 @@ export const specialists: Dictionary["specialists"] = {
         focus1: "Fit with the thesis",
         focus2: "Financial statements and runway",
         focus3: "Valuation and terms",
+        text1:
+          "Assess how well the case fits the team's thesis: stage, geography, sector and ticket size.",
+        text2:
+          "Go through the financial statements, spending and runway, and assess whether the numbers fit the story.",
+        text3: "Assess valuation and terms against comparable deals, and what can be negotiated.",
       },
     },
     diff: {
@@ -223,6 +244,22 @@ export const specialists: Dictionary["specialists"] = {
         "Change the weight on the criterion instead, and let the instruction say what to emphasise.",
       duplicateQuestion: 'The research question "{question}" appears twice.',
     },
+  },
+  sheet: {
+    suggestion1: "Put more weight on experience in the industry",
+    suggestion2: "Be stricter about what counts as evidence",
+    suggestion3: "Look more at key-person risk",
+    focusToday: "What it focuses on today",
+    moreFocus: "+{count} more points",
+    askLabel: "Tell Interlect what to change",
+    proposalTitle: "Do you want to change it to this?",
+    now: "Now",
+    becomes: "Becomes",
+    moreChanges: "+{count} more changes",
+    approve: "Approve",
+    keepWriting: "Keep writing",
+    showFields: "See and edit exactly what it focuses on",
+    applies: "Applies to new analyses once the setup is published.",
   },
   panel: {
     toggleError: "The specialist could not be changed.",
@@ -381,6 +418,9 @@ export const specialists: Dictionary["specialists"] = {
     stale: "The check predates your latest changes; it runs again when you pause.",
     suggestion: "Suggestion:",
     advice: "Advice:",
+    saveHelp: "Saves the text in the draft. Screenings only use it once you publish the setup.",
+    checkHelp:
+      "Interlect reads your criteria, rules and instruction and points out gaps or contradictions. It changes nothing and uses credits.",
     checkNow: "Check the screening",
     checking: "Checking",
     nothingFound: "Interlect found nothing to fix in the screening.",

@@ -18,7 +18,7 @@
     "check:audit": "node scripts/check-audit.mjs",
     "check:migrations": "node scripts/check-migration-numbers.mjs",
     "format": "prettier --write .",
-    "test": "node --test src/lib/ai/*.test.ts src/lib/analysis/*.test.ts src/lib/analysis/registries/*.test.ts src/lib/funds/*.test.ts src/lib/domain/*.test.ts src/lib/auth/*.test.ts src/lib/cases/*.test.ts src/lib/brain/*.test.ts src/lib/brain/*/*.test.ts src/lib/display/*.test.ts src/lib/errors/*.test.ts src/lib/ui/*.test.ts src/lib/charts/*.test.ts src/lib/overview/*.test.ts src/lib/i18n/*.test.ts src/lib/health-cache.test.ts src/lib/health-runs.test.ts src/lib/security/*.test.ts src/lib/internal/*.test.ts scripts/lib/export-fund.test.ts scripts/lib/db-tls.test.ts scripts/lib/migration-log.test.ts scripts/lib/registries-check.test.ts scripts/lib/audit-exceptions.test.mjs scripts/selfhost/lib/*.test.ts src/lib/outbound-user-agent.test.ts",
+    "test": "node --test src/lib/ai/*.test.ts src/lib/analysis/*.test.ts src/lib/analysis/registries/*.test.ts src/lib/funds/*.test.ts src/lib/memo/*.test.ts src/lib/domain/*.test.ts src/lib/auth/*.test.ts src/lib/cases/*.test.ts src/lib/brain/*.test.ts src/lib/brain/*/*.test.ts src/lib/display/*.test.ts src/lib/errors/*.test.ts src/lib/ui/*.test.ts src/lib/charts/*.test.ts src/lib/overview/*.test.ts src/lib/i18n/*.test.ts src/lib/health-cache.test.ts src/lib/health-runs.test.ts src/lib/security/*.test.ts src/lib/internal/*.test.ts scripts/lib/export-fund.test.ts scripts/lib/db-tls.test.ts scripts/lib/migration-log.test.ts scripts/lib/registries-check.test.ts scripts/lib/analysis-reconcile.test.ts scripts/lib/audit-exceptions.test.mjs scripts/selfhost/lib/*.test.ts src/lib/outbound-user-agent.test.ts",
     "db:local": "node scripts/local-db.mjs",
     "test:rls": "node scripts/test-rls.mjs",
     "test:forget-person-db": "node scripts/test-forget-person-db.mjs",
@@ -37,7 +37,13 @@
     "export:fund": "node scripts/export-fund.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "registries:check": "node --import ./scripts/lib/register-alias.mjs scripts/registries-check.ts",
-    "seed:demo": "node --import ./scripts/lib/register-alias.mjs scripts/selfhost/seed-demo.ts"
+    "seed:demo": "node --import ./scripts/lib/register-alias.mjs scripts/selfhost/seed-demo.ts",
+    "test:theses-db": "node scripts/test-theses-db.mjs",
+    "test:config-restore-db": "node scripts/test-config-restore-db.mjs",
+    "test:setup-per-stage-db": "node scripts/test-setup-per-stage-db.mjs",
+    "test:setup-per-stage-server-db": "node scripts/test-setup-per-stage-server-db.mjs",
+    "test:thesis-functions-db": "node scripts/test-thesis-functions-db.mjs",
+    "test:memo-db": "node scripts/test-memo-db.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

@@ -8,8 +8,8 @@
  * The step reads the fund's confidential text so it knows what must not leak, and its answer is
  * not trusted either: a kept question is the original, a rewrite passes the code filter again, a
  * question it leaves out is dropped, and when the step fails none of these questions is sent (the
- * fixed questions and the neutral topics still run). Only while ZDR is enforced; without it the
- * brief itself goes to the search. The pure parts are here (tested in
+ * fixed questions and the neutral topics still run). Always, whatever the ZDR flag says: the
+ * brief never goes to the search. The pure parts are here (tested in
  * question-neutralizer.test.ts); the call is in question-neutralizer.server.ts.
  */
 import { neutralQuestions, type TopicsBrief } from "./search-topics.ts";
@@ -202,7 +202,7 @@ export function neutralQuestionsByModule(
 }
 
 /**
- * The research tracks under ZDR: the fixed default questions, and of the questions written from
+ * The research tracks (always): the fixed default questions, and of the questions written from
  * the fund's setup only what the ZDR step let through. A track the fund rewrote searches its own
  * questions that got through, or its default questions when none did; the own specialists' and
  * the plan's questions come after them. `neutral` is the step's answer for

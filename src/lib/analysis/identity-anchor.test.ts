@@ -88,14 +88,13 @@ test("the research gates the plan's questions, the follow-up and the entity mark
   // The anchor is known before the plan's questions are added to the tracks.
   const modulesAt = source.indexOf("const modules: readonly ResearchModule[] =");
   assert.ok(modulesAt > anchorAt);
-  // Under ZDR the plan's questions reach the tracks only through the ZDR step; both paths
-  // add them only with an anchor.
+  // The plan's questions reach the tracks only through the ZDR step (always),
+  // and only with an anchor.
   const modulesCode = source.slice(modulesAt, modulesAt + 600);
   assert.match(
     modulesCode,
     /planCandidates: anchor \? \(neutral\?\.planCandidates \?\? \[\]\) : \[\]/,
   );
-  assert.match(modulesCode, /: researchPlan && anchor/);
   assert.match(
     source,
     /if \(input\.researchPlan && followUpTier && input\.fundResearchBrief && maxRounds > 0 && anchor\)/,

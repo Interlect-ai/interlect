@@ -38,6 +38,10 @@ export const fundServer = {
     notEnabled: "AI-niveauer er ikke slået til i databasen endnu (migration 0036).",
     notSaved: "Indstillingen kunne ikke gemmes.",
     capRange: "Loftet skal ligge mellem {min} og {max} kr.",
+    capTooLow:
+      "Grænsen skal mindst være {min} kr. på dette niveau, ellers kan analysen ikke gennemføres.",
+    overPlatform: "Grænsen kan højst være {max} kr. på denne installation.",
+    monthlyRange: "Månedsgrænsen skal ligge mellem 0 og {max} kr.",
   },
   assist: {
     notStarted: "Hjælpen kunne ikke startes. Prøv igen om lidt.",
@@ -71,6 +75,12 @@ export const fundServer = {
     noSetup: "Det valgte team har endnu ingen opsætning.",
     versionsNotLoaded: "Versionshistorikken kunne ikke hentes.",
     draftNotCreated: "Kladden kunne ikke oprettes. Prøv igen om lidt.",
+    restoreDraftExists:
+      "Der er allerede en kladde. Udgiv eller slet den, før du gendanner en ældre version.",
+    restoreArchived: "Tesen er arkiveret. Genaktivér den, før du gendanner en version.",
+    restoreFailed: "Versionen kunne ikke gendannes. Prøv igen om lidt.",
+    stagesNeedSetup:
+      "Regler og kriterier pr. stadie kan kun gemmes sammen med hele opsætningen. Genindlæs siden, og prøv igen.",
     draftNotSaved: "Kladden kunne ikke gemmes. Prøv igen om lidt.",
     draftNotPublished: "Kladden kunne ikke udgives. Prøv igen om lidt.",
     versionNotLoaded: "Versionen af opsætningen kunne ikke hentes.",
@@ -152,6 +162,10 @@ export const fundServer = {
       "Teamet har lavet {count} prøvekørsler af screeningen den seneste time. Vent lidt, før I prøver igen.",
   },
   specialists: {
+    deepPlatformTooLow:
+      "Med så mange specialister er installationens faste grænse for dyb analyse for lav, så ingen dyb analyse på denne tese kan starte. Teamet kan ikke selv hæve den; kontakt Interlect eller slå specialister fra.",
+    deepLimitTooLow:
+      "Med så mange specialister er teamets grænse for dyb analyse for lav, så ingen dyb analyse på denne tese kan starte. En Admin eller Lead kan hæve grænsen under Analysegrænser.",
     draftUnusable: "AI'en gav et udkast, der ikke kunne bruges. Prøv igen om lidt.",
     casesNotLoaded: "Casene kunne ikke hentes.",
     notScreened: "Casen skal være screenet, før specialisten kan prøves på den.",
@@ -180,5 +194,9 @@ export const fundServer = {
   },
   thesisChat: {
     askSomething: "Skriv et spørgsmål.",
+    notFound:
+      "Ikke fundet: der er endnu ikke nok at bygge et forslag på. Skriv en sætning selv (mindst 20 tegn), eller udfyld et tidligere trin.",
+    notFoundRejected:
+      "Ikke fundet: Interlect kunne ikke skrive et forslag uden at gætte på tal eller udfylde en skabelon. Skriv lidt mere om netop det, du vil have hjælp til.",
   },
 } as const;

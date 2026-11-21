@@ -36,6 +36,7 @@ import {
   type ConfigData,
 } from "@/lib/analysis/screening.functions";
 import { scoreScreening } from "@/lib/analysis/scoring";
+import { CONFIG_SELECT } from "@/lib/analysis/fund-profile";
 import { recordAttempt, reserveAssistCredits, settleAssistCredits } from "./assist-calls.server";
 import { serverText } from "@/lib/i18n/server-text";
 
@@ -53,11 +54,8 @@ import { serverText } from "@/lib/i18n/server-text";
 const TRIAL_AUDIT_ACTION = "fund_screening_trial_run";
 const TRIAL_RUNS_PER_HOUR = 10;
 
-/** The columns mapProfile needs, with the screening instruction (0078). */
-const TRIAL_CONFIG_SELECT = `id, fund_id, profile_key, version, status, funds(name, language),
-  fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction),
-  mandate_gates(gate_key, label, description, treatment, sort_order),
-  assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor)`;
+/** The columns mapProfile needs (with the stage per row and the setup) and the status. */
+const TRIAL_CONFIG_SELECT = `${CONFIG_SELECT}, status`;
 
 export interface ScreeningTrialView {
   caseId: string;
@@ -118,8 +116,6 @@ export const trialRunScreening = createServerFn({ method: "POST" })
       throw new Error(serverText("fundServer.trial.draftOnly"));
     }
     const config = configRow as unknown as ConfigData;
-    const profile = mapProfile(config);
-    if (!profile.criteria.length) throw new Error(serverText("fundServer.trial.noCriteria"));
     const service = getServiceClient();
 
     const { data: caseRow, error: caseError } = await service
@@ -134,6 +130,14 @@ export const trialRunScreening = createServerFn({ method: "POST" })
       caseRow["companies"],
     );
     if (!company) throw new Error(serverText("fundServer.common.caseCompanyNotFound"));
+    // The draft's setup for the case's stage, as a real screening would use it.
+    const mapped = mapProfile(config, { caseStage: company.stage });
+    // The trial compares scores; the economy points change no score and are not shown
+    // here, so they are not asked (and not paid for).
+    const profile = mapped.teamSetup
+      ? { ...mapped, teamSetup: { ...mapped.teamSetup, economy: null } }
+      : mapped;
+    if (!profile.criteria.length) throw new Error(serverText("fundServer.trial.noCriteria"));
 
     const { data: currentRun, error: currentError } = await service
       .from("analysis_runs")

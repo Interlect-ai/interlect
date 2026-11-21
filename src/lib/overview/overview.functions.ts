@@ -19,6 +19,8 @@ import { runStatusText, runsSince } from "./rules";
 import { buildOverview, type OverviewCore } from "./snapshot";
 import { serverText } from "@/lib/i18n/server-text";
 import { withDemoView } from "@/lib/display/display-names.server";
+import { chosenThesis, loadTheses } from "@/lib/funds/thesis-scope.server";
+import { activeTheses, type ThesisRow } from "@/lib/funds/theses";
 
 const fundIdSchema = z.guid();
 
@@ -52,6 +54,8 @@ export type OverviewResult =
 const inputSchema = z.object({
   fundId: fundIdSchema,
   period: z.enum(["4w", "12w", "52w"]).default("4w"),
+  /** One thesis (spec §4.1); without it, every active thesis ("Alle teser"). */
+  thesisId: z.guid().optional(),
 });
 
 export const getOverviewSnapshot = createServerFn({ method: "GET" })
@@ -69,37 +73,66 @@ export const getOverviewSnapshot = createServerFn({ method: "GET" })
         data.fundId,
         "view_case",
       );
-      const { data: config, error: configError } = await context.supabase
-        .from("fund_config_versions")
-        .select("id, version, fund_mandates(analysis_threshold, stages)")
-        .eq("fund_id", data.fundId)
-        .eq("status", "active")
-        .maybeSingle();
+      // The shown theses (one chosen, else every active one, the default first) and the
+      // active version of each.
+      const shownTheses = data.thesisId
+        ? [await chosenThesis(context.supabase, data.fundId, data.thesisId)].filter(
+            (thesis): thesis is ThesisRow => thesis !== null,
+          )
+        : activeTheses(await loadTheses(context.supabase, data.fundId));
+      const { data: configRows, error: configError } = shownTheses.length
+        ? await context.supabase
+            .from("fund_config_versions")
+            .select("id, version, thesis_id, fund_mandates(analysis_threshold, stages)")
+            .eq("fund_id", data.fundId)
+            .eq("status", "active")
+            .in(
+              "thesis_id",
+              shownTheses.map((thesis) => thesis.id),
+            )
+        : { data: [], error: null };
       if (configError) {
         console.error(`[overview] profile (fund ${data.fundId})`, configError.message);
         throw new Error(serverText("appServer.overview.notLoaded"));
       }
+      const configs = shownTheses
+        .map((thesis) => (configRows ?? []).find((row) => row["thesis_id"] === thesis.id))
+        .filter((row): row is NonNullable<typeof row> => row !== undefined)
+        .map((row) => {
+          const mandate = one<{
+            analysis_threshold: number | string | null;
+            stages: string[] | null;
+          }>(row["fund_mandates"]);
+          const thresholdValue = Number(mandate?.analysis_threshold);
+          return {
+            id: row["id"] as string,
+            version: Number(row["version"]),
+            thesisId: row["thesis_id"] as string,
+            threshold: Number.isFinite(thresholdValue) ? thresholdValue : 72,
+            stages: mandate?.stages ?? [],
+          };
+        });
+      const config = configs[0];
       if (!config) return { status: "no_profile", fundName: access.fundName };
 
       const now = new Date();
-      const mandate = one<{
-        analysis_threshold: number | string | null;
-        stages: string[] | null;
-      }>(config.fund_mandates);
-      const thresholdValue = Number(mandate?.analysis_threshold);
-      const threshold = Number.isFinite(thresholdValue) ? thresholdValue : 72;
-      const configId = config.id as string;
+      // The dashed line and the default for a case without its own: the first shown thesis.
+      const threshold = config.threshold;
+      const configIds = configs.map((entry) => entry.id);
+      const thesisIds = configs.map((entry) => entry.thesisId);
+      const thresholdByThesis = new Map(configs.map((entry) => [entry.thesisId, entry.threshold]));
+      const fundStages = [...new Set(configs.flatMap((entry) => entry.stages))];
 
       let rows;
       try {
         rows = await Promise.all([
-          loadCaseRows(context.supabase, data.fundId, access.language),
-          loadRuns(context.supabase, data.fundId, configId, runsSince(now)),
+          loadCaseRows(context.supabase, data.fundId, access.language, thesisIds),
+          loadRuns(context.supabase, data.fundId, configIds, runsSince(now)),
           loadRecalcs(context.supabase, data.fundId),
           loadTransitionEvents(context.supabase, data.fundId),
           loadOpenTaskRows(context.supabase, data.fundId),
           loadRunningRuns(context.supabase, data.fundId),
-          loadOlderVersionScreenedCaseIds(context.supabase, data.fundId, configId),
+          loadOlderVersionScreenedCaseIds(context.supabase, data.fundId, configIds),
         ]);
       } catch (cause) {
         console.error(
@@ -115,7 +148,13 @@ export const getOverviewSnapshot = createServerFn({ method: "GET" })
         now,
         period: data.period,
         threshold,
-        fundStages: mandate?.stages ?? [],
+        thresholdByCase: new Map(
+          caseRows.flatMap((row) => {
+            const own = row.thesisId ? thresholdByThesis.get(row.thesisId) : undefined;
+            return own === undefined ? [] : [[row.id, own] as const];
+          }),
+        ),
+        fundStages,
         viewerId: context.userId,
         cases: caseRows,
         runs: runs.configRuns,
@@ -133,8 +172,9 @@ export const getOverviewSnapshot = createServerFn({ method: "GET" })
         .filter((run) => openCaseIds.has(run.caseId))
         .map((run) => ({ ...run, companyName: nameOf(run.caseId) }));
 
-      // Aktivitet: runs per Danish calendar day, the last 14 days.
-      const recent = runs.recent;
+      // Aktivitet: runs per Danish calendar day, the last 14 days (the shown theses' cases only).
+      const shownCaseIds = new Set(caseRows.map((row) => row.id));
+      const recent = runs.recent.filter((run) => shownCaseIds.has(run["case_id"] as string));
       const today = copenhagenDate(now);
       const activityByDay = Array.from({ length: 14 }, (_, index) => ({
         day: shiftDate(today, -(13 - index)),

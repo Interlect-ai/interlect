@@ -105,6 +105,8 @@ export const fundEditor = {
     duplicateCriterion: "Kriteriet {name} findes to gange.",
     duplicateGate: "Mandatreglen {name} findes to gange.",
     thresholdRange: "Tærsklen skal ligge mellem 0 og 100.",
+    teamTextBudget:
+      "Teamets tekst fylder {used} tegn, men højst {limit} kan komme med i analysen. Gør teksten kortere.",
   },
   rules: {
     criterionClash: "To kriterier har samme navn: {names}. Giv dem forskellige navne.",
@@ -220,9 +222,6 @@ export const fundEditor = {
     researchTitle: "Research-spørgsmål",
     researchDescription:
       "Det, Interlect søger svar på i den offentlige research før screening og dyb analyse.",
-    promptsBefore: "Den bogstavelige tekst, modellerne får, kan ses under",
-    promptsLink: "Prompts",
-    promptsAfter: ".",
   },
   mandate: {
     binding: "Bindende",
@@ -233,17 +232,17 @@ export const fundEditor = {
     lockedReason: "Fra CVR-regnskabet; behandlingen er fast",
     theRule: "reglen",
     theMandateRule: "mandatreglen",
-    removeGate: "Fjern gate",
-    newGate: "Ny gate",
+    removeGate: "Fjern reglen",
+    newGate: "Ny regel",
     gateType: "Type af gate",
     cancel: "Annullér",
-    addGate: "Tilføj gate",
-    gateRemoved: "Gate fjernet",
+    addGate: "Tilføj regel",
+    gateRemoved: "Reglen er fjernet",
     empty: "Der er ingen mandatregler endnu. Tilføj mindst én, før kladden kan udgives.",
     suggestionsTitle: "Forslag ud fra grundlaget",
     suggestionsHint:
       "Grundlaget stopper ikke selv en case. Vil I have det håndhævet, så tilføj det som regel. Reglen følger grundlaget, også når det ændres; skift til bindende, hvis et brud altid skal stoppe casen.",
-    financeTitle: "Finans-gates fra regnskaberne",
+    financeTitle: "Finansregler fra årsrapporterne",
     financeHint:
       "Fra CVR-regnskaberne. Behandlingen er låst: kun positiv egenkapital er bindende. Uden regnskab er reglen ukendt, ikke brudt.",
     reasonsTitle: "Årsager til beslutninger",
@@ -338,8 +337,9 @@ export const fundEditor = {
     empty: "Der er ingen kriterier endnu. Tilføj mindst ét, før kladden kan udgives.",
     add: "Tilføj kriterium",
     threshold: "Anbefalet score for dyb analyse",
-    groupsTitle: "Casens 5 oversigtsgrupper",
-    groupsDescription: "Sådan samles jeres kriterier på casens forside.",
+    groupsTitle: "De fem grupper i komitérapporten",
+    groupsDescription:
+      "Jeres kriterier samlet i fem grupper. Grupperne bruges i komitérapporten til at forklare, hvorfor scoren ændrede sig fra screening til dyb analyse; selve scoren regnes pr. kriterium.",
     noneInGroup: "Ingen kriterier endnu.",
   },
   publish: {

@@ -3,6 +3,8 @@
  * cases screenet mod en ældre version af tesen. Kræver et klik; screeningerne sættes i kø
  * én ad gangen, så de ikke rammer loftet samtidig.
  */
+import { startWithLimitChoice } from "@/lib/analysis/limit-choice";
+import type { LimitChoice } from "@/lib/analysis/model-tiers";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,14 +38,22 @@ export function RescreenPanel({ fundId }: { fundId: string }) {
   const mutation = useMutation({
     mutationFn: async (caseIds: string[]) => {
       const failed: string[] = [];
+      // "Spørg mig først": asked once for the batch ("raise once" is asked per case).
+      const atLimit: { choice?: LimitChoice | null } = {};
       setProgress({ done: 0, total: caseIds.length, failed });
       for (const [index, caseId] of caseIds.entries()) {
+        const name =
+          query.data?.candidates.find((candidate) => candidate.caseId === caseId)?.companyName ??
+          caseId;
         try {
-          await screen({ data: { fundId, caseId } });
+          const result = await startWithLimitChoice(
+            fundId,
+            "screening",
+            (choice) => screen({ data: { fundId, caseId, atLimit: choice } }),
+            atLimit,
+          );
+          if (!result) failed.push(`${name}: ${t("fundSetup.limitChoice.notStarted")}`);
         } catch (cause) {
-          const name =
-            query.data?.candidates.find((candidate) => candidate.caseId === caseId)?.companyName ??
-            caseId;
           failed.push(
             `${name}: ${userMessage(cause, t("fundSetup.rescreen.unknownError"), language)}`,
           );

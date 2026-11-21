@@ -13,6 +13,7 @@ import {
   autoGates,
   buildDraftFields,
   chatContext,
+  isPresetQuestion,
   fitWeights,
   initialWizardState,
   localizeDefaultCriteria,
@@ -24,6 +25,7 @@ import {
   ticketBar,
   uniqueKey,
 } from "./thesis-wizard.ts";
+import { translate } from "../i18n/translate.ts";
 
 const template = {
   strategyType: "venture" as const,
@@ -180,7 +182,65 @@ test("summary and chat context only contain what the user filled in", () => {
   state.type = 4;
   state.other = "Venturestudie";
   assert.equal(summaryRows(state)[0]!.value, "Nordhav, Venturestudie");
-  assert.equal(chatContext(state)["investor_type"], "Nordhav, Venturestudie");
+  assert.equal(chatContext(state)["investor_type"], "Venturestudie");
+  assert.equal(chatContext(state)["team_name"], "Nordhav");
+});
+
+test("T-1034a: the chat context leaves out the values the page fills in to start with", () => {
+  for (const language of ["da", "en"] as const) {
+    const start = initialWizardState(language);
+    const context = chatContext(start);
+    // The 1-5 m kr. ticket, the balanced risk, the starting criteria and derived gates are not
+    // the team's own words, so none of them reaches the helper (the source of "DKK 1,000,000–5,000,000").
+    for (const value of Object.values(context)) assert.equal(value, "", JSON.stringify(context));
+  }
+  const state = initialWizardState("en");
+  state.phases = [1];
+  state.thesis = "B2B software for Nordic SMEs";
+  const context = chatContext(state);
+  assert.equal(context["frames"], "Seed");
+  assert.equal(context["thesis"], "B2B software for Nordic SMEs");
+  assert.doesNotMatch(JSON.stringify(context), /1\.000\.000|5\.000\.000|kr\.|Risikovillighed/);
+  // The team's own choices do come through.
+  state.ticketMin = "500000";
+  state.ticketMax = "2000000";
+  state.risk = 4;
+  state.criteria = state.criteria.map((c, i) => (i === 0 ? { ...c, weight: c.weight + 2 } : c));
+  state.gates = [{ key: "no_crypto", label: "No crypto", icon: "ban", review: false }];
+  const own = chatContext(state);
+  assert.match(own["frames"]!, /ticket 500\.000-2\.000\.000 kr\./);
+  assert.match(own["thesis"]!, /Risikovillighed: /);
+  assert.match(own["weights"]!, / 24 %/);
+  assert.equal(own["dealbreakers"], "No crypto (bindende)");
+});
+
+test("T-1034a: derived gates and the starting ticket gate never reach the helper", () => {
+  const state = initialWizardState("da");
+  state.geo = [0];
+  // The mandate step saves the whole list on the first edit, derived gates included.
+  state.gates = autoGates(state).map((gate) =>
+    gate.key === "geography_fit" ? { ...gate, review: true } : gate,
+  );
+  const dealbreakers = chatContext(state)["dealbreakers"]!;
+  assert.doesNotMatch(dealbreakers, /1\.000\.000|5\.000\.000|kr\./);
+  // The gate the team changed itself stays.
+  assert.match(dealbreakers, /\(vurdering\)/);
+  // Untouched derived gates are left out.
+  state.gates = autoGates(state);
+  assert.equal(chatContext(state)["dealbreakers"], "");
+});
+
+test("T-1034a: the fixed question behind the suggestion button is recognised in both languages", () => {
+  assert.equal(
+    isPresetQuestion("Suggest our framework: stages, geography, sectors and ticket."),
+    true,
+  );
+  assert.equal(
+    isPresetQuestion("  suggest our framework: stages,  geography, sectors and ticket. "),
+    true,
+  );
+  assert.equal(isPresetQuestion(translate("da", "thesis.suggestQuestion.thesis")), true);
+  assert.equal(isPresetQuestion("We invest in seed B2B software in the Nordics"), false);
 });
 
 test("ticket bar and presets follow the prototype", () => {

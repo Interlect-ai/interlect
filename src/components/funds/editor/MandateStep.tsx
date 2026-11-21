@@ -7,7 +7,7 @@
  * reports stay as lists. The fixed rules are shown with a lock. Nothing here reaches an analysis
  * before the draft is published.
  */
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   Ban,
@@ -158,91 +158,197 @@ function GateRow({
   const treatment = isFinanceGate(gate.key) ? financeGateTreatment(gate.key) : gate.treatment;
   const hard = treatment === "hard";
   const Icon = gateIcon(gate);
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
   return (
-    <div
-      className={cn(
-        "group grid min-h-[68px] grid-cols-[34px_minmax(0,1fr)_auto_auto] items-center gap-3.5 px-4 py-2.5 max-md:grid-cols-[34px_minmax(0,1fr)_auto]",
-        index > 0 && "border-t border-line",
-      )}
-    >
-      <span
-        aria-hidden
-        className="grid size-[34px] place-items-center rounded-[10px] transition-colors duration-300"
-        style={{
-          background: hard ? "var(--critical-wash)" : "var(--warning-wash)",
-          color: hard ? "var(--critical)" : "var(--warning)",
-        }}
-      >
-        <Icon className="size-[15px]" strokeWidth={1.75} />
-      </span>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <input
-          aria-label={t("fundEditor.mandate.gateName")}
-          value={gate.label}
-          onChange={(event) =>
-            onPatch({
-              label: event.target.value,
-              // Finance rules and the basis rules keep their fixed key: the code calculates the
-              // finance rules, and a new name must not make a suggestion appear again.
-              key:
-                finance || BASIS_GATE_KEYS.has(gate.key)
-                  ? gate.key
-                  : uniqueKey(event.target.value, gate.key, otherKeys),
-            })
+    <div className={cn(index > 0 && "border-t border-line")}>
+      {/* A rule folds out to be edited, so there is no doubt that it can be. */}
+      <div className="grid min-h-[68px] grid-cols-[34px_minmax(0,1fr)_auto_auto] items-center gap-3.5 px-4 py-2.5 max-md:grid-cols-[34px_minmax(0,1fr)_auto]">
+        <span
+          aria-hidden
+          className="grid size-[34px] place-items-center rounded-[10px] transition-colors duration-300"
+          style={{
+            background: hard ? "var(--critical-wash)" : "var(--warning-wash)",
+            color: hard ? "var(--critical)" : "var(--warning)",
+          }}
+        >
+          <Icon className="size-[15px]" strokeWidth={1.75} />
+        </span>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={() => setOpen((value) => !value)}
+          className="flex min-w-0 cursor-pointer flex-col items-start gap-0.5 border-0 bg-transparent p-0 text-left font-[inherit]"
+        >
+          <span className="max-w-full truncate text-[15px] font-medium text-ink-1">
+            {gate.label || t("fundEditor.mandate.theRule")}
+          </span>
+          <span className="line-clamp-1 text-meta leading-[1.45] text-ink-3">
+            {gate.description}
+          </span>
+        </button>
+        <GateToggle
+          hard={hard}
+          locked={finance}
+          lockedReason={t("fundEditor.mandate.lockedReason")}
+          label={gate.label || t("fundEditor.mandate.theRule")}
+          onChange={(next) => onPatch({ treatment: next ? "hard" : "review" })}
+        />
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          aria-label={
+            open ? t("fundSetup.rules.close") : t("fundSetup.rules.edit", { name: gate.label })
           }
-          className="w-full min-w-0 rounded-xs border-0 bg-transparent p-0 font-[inherit] text-[15px] font-medium text-ink-1 outline-none focus-visible:shadow-[0_0_0_2px_var(--action)]"
-        />
-        <textarea
-          aria-label={t("fundEditor.mandate.gateDescription")}
-          value={gate.description}
-          rows={1}
-          onChange={(event) => onPatch({ description: event.target.value })}
-          className="field-sizing-content w-full min-w-0 resize-none rounded-xs border-0 bg-transparent p-0 font-[inherit] text-meta leading-[1.45] text-ink-3 outline-none focus-visible:shadow-[0_0_0_2px_var(--action)]"
-        />
-      </div>
-      <GateToggle
-        hard={hard}
-        locked={finance}
-        lockedReason={t("fundEditor.mandate.lockedReason")}
-        label={gate.label || t("fundEditor.mandate.theRule")}
-        onChange={(next) => onPatch({ treatment: next ? "hard" : "review" })}
-      />
-      <div className="flex items-center gap-0.5 max-md:col-span-3 max-md:justify-end">
-        <button
-          type="button"
-          aria-label={t("fundEditor.fields.moveUp", {
-            noun: gate.label || t("fundEditor.mandate.theMandateRule"),
-          })}
-          disabled={index === 0}
-          onClick={() => onMove(-1)}
-          className="grid size-[30px] cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-4 transition-colors hover:bg-hover hover:text-ink-1 disabled:cursor-default disabled:opacity-30"
+          onClick={() => setOpen((value) => !value)}
+          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-pill border-0 bg-canvas px-3 font-[inherit] text-meta font-medium text-ink-1 transition-colors hover:bg-hover max-md:col-span-3 max-md:justify-self-end"
         >
-          <ChevronUp className="size-3.5" aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label={t("fundEditor.fields.moveDown", {
-            noun: gate.label || t("fundEditor.mandate.theMandateRule"),
-          })}
-          disabled={index === count - 1}
-          onClick={() => onMove(1)}
-          className="grid size-[30px] cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-4 transition-colors hover:bg-hover hover:text-ink-1 disabled:cursor-default disabled:opacity-30"
-        >
-          <ChevronDown className="size-3.5" aria-hidden />
-        </button>
-        <button
-          type="button"
-          title={t("fundEditor.mandate.removeGate")}
-          aria-label={t("fundEditor.fields.removeNoun", {
-            noun: gate.label || t("fundEditor.mandate.theMandateRule"),
-          })}
-          onClick={onRemove}
-          className="grid size-[30px] cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-4 transition-colors hover:bg-critical-wash hover:text-critical"
-        >
-          <X className="size-3.5" aria-hidden />
+          {open ? t("fundSetup.rules.done") : t("fundSetup.rules.editShort")}
+          <ChevronDown
+            className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")}
+            aria-hidden
+          />
         </button>
       </div>
+      <Collapse open={open}>
+        <div id={bodyId} className="flex flex-col gap-3.5 px-4 pt-1 pb-5 pl-[66px] max-md:pl-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-meta font-medium text-ink-2">{t("fundSetup.rules.name")}</span>
+            <input
+              value={gate.label}
+              disabled={finance}
+              onChange={(event) =>
+                onPatch({
+                  label: event.target.value,
+                  // Finance rules and the basis rules keep their fixed key: the code calculates the
+                  // finance rules, and a new name must not make a suggestion appear again.
+                  key:
+                    finance || BASIS_GATE_KEYS.has(gate.key)
+                      ? gate.key
+                      : uniqueKey(event.target.value, gate.key, otherKeys),
+                })
+              }
+              className={fieldClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-meta font-medium text-ink-2">{t("fundSetup.rules.what")}</span>
+            <textarea
+              value={gate.description}
+              rows={4}
+              disabled={finance}
+              onChange={(event) => onPatch({ description: event.target.value.slice(0, 1000) })}
+              className={cn(fieldClass, "min-h-[96px] resize-y py-2.5 leading-[1.5]")}
+            />
+            <span className="text-meta text-ink-3">{t("fundSetup.rules.whatHint")}</span>
+          </label>
+          <p className="m-0 rounded-md bg-canvas px-3.5 py-3 text-meta leading-[1.5] text-ink-2">
+            {finance
+              ? t("fundEditor.mandate.lockedReason")
+              : hard
+                ? t("fundSetup.rules.bindingMeans")
+                : t("fundSetup.rules.reviewMeans")}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label={t("fundEditor.fields.moveUp", {
+                noun: gate.label || t("fundEditor.mandate.theMandateRule"),
+              })}
+              disabled={index === 0}
+              onClick={() => onMove(-1)}
+              className="grid size-[30px] cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-3 transition-colors hover:bg-hover hover:text-ink-1 disabled:cursor-default disabled:opacity-30"
+            >
+              <ChevronUp className="size-3.5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label={t("fundEditor.fields.moveDown", {
+                noun: gate.label || t("fundEditor.mandate.theMandateRule"),
+              })}
+              disabled={index === count - 1}
+              onClick={() => onMove(1)}
+              className="grid size-[30px] cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-3 transition-colors hover:bg-hover hover:text-ink-1 disabled:cursor-default disabled:opacity-30"
+            >
+              <ChevronDown className="size-3.5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="ml-auto inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-pill border-0 bg-transparent px-3 font-[inherit] text-meta font-medium text-ink-3 transition-colors hover:bg-critical-wash hover:text-critical"
+            >
+              <X className="size-3.5" aria-hidden />
+              {t("fundEditor.mandate.removeGate")}
+            </button>
+          </div>
+        </div>
+      </Collapse>
     </div>
+  );
+}
+
+/**
+ * Rules to add as tiles you tap (not "a lot of text in a box"): icon, name, one
+ * line of what it checks and a "+". Used for the suggestions from the basis and the finance rules.
+ */
+function RuleTiles({
+  title,
+  hint,
+  items,
+  onAdd,
+}: {
+  title: string;
+  hint: string;
+  items: Array<{ key: string; label: string; detail: string; hard: boolean; icon: LucideIcon }>;
+  onAdd: (key: string) => void;
+}) {
+  const t = useT();
+  return (
+    <section className="flex flex-col gap-3">
+      <div>
+        <p className="m-0 text-list font-semibold text-ink-1">{title}</p>
+        <p className="mt-1 mb-0 text-meta leading-[1.45] text-ink-3">{hint}</p>
+      </div>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2.5">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <motion.button
+              key={item.key}
+              type="button"
+              aria-label={t("fundEditor.mandate.addNamed", { name: item.label })}
+              onClick={() => onAdd(item.key)}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="group flex min-h-[124px] cursor-pointer flex-col items-start gap-2.5 rounded-lg border-0 bg-surface p-4 text-left font-[inherit] shadow-card transition-shadow hover:shadow-raised"
+            >
+              <span className="flex w-full items-center justify-between">
+                <span
+                  aria-hidden
+                  className="grid size-8 place-items-center rounded-[10px]"
+                  style={{
+                    background: item.hard ? "var(--critical-wash)" : "var(--warning-wash)",
+                    color: item.hard ? "var(--critical)" : "var(--warning)",
+                  }}
+                >
+                  <Icon className="size-[14px]" strokeWidth={1.75} />
+                </span>
+                <span className="inline-flex h-7 items-center gap-1 rounded-pill bg-canvas px-2.5 text-meta font-medium text-ink-1 transition-colors group-hover:bg-inverse group-hover:text-ink-inverse">
+                  <Plus className="size-3.5" aria-hidden />
+                  {t("fundEditor.mandate.add")}
+                </span>
+              </span>
+              <span className="text-list font-semibold leading-[1.3] text-ink-1">{item.label}</span>
+              <span className="line-clamp-2 text-meta leading-[1.45] text-ink-3">
+                {item.detail}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -330,10 +436,13 @@ export function MandateStep({
   fundId,
   value,
   onChange,
+  hideFinance = false,
 }: {
   fundId: string;
   value: EditorState;
   onChange: (value: EditorState) => void;
+  /** The finance rules have their own sheet under the Financials card. */
+  hideFinance?: boolean;
 }) {
   const t = useT();
   const language = useLanguage();
@@ -427,81 +536,57 @@ export function MandateStep({
       )}
 
       {suggestions.length > 0 && (
-        <section className="rounded-lg bg-canvas p-[18px]">
-          <p className="m-0 text-list font-semibold text-ink-1">
-            {t("fundEditor.mandate.suggestionsTitle")}
-          </p>
-          <p className="mt-1 mb-0 text-meta leading-4 text-ink-3">
-            {t("fundEditor.mandate.suggestionsHint")}
-          </p>
-          <ul className="m-0 mt-3 list-none divide-y divide-line p-0">
-            {suggestions.map((gate) => (
-              <li key={gate.key} className="flex items-start justify-between gap-3 py-2.5">
-                <span className="min-w-0">
-                  <span className="block text-list text-ink-1">{gate.label}</span>
-                  <span className="block text-meta text-ink-3">{gate.basis}</span>
-                </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  aria-label={t("fundEditor.mandate.addNamed", { name: gate.label })}
-                  onClick={() =>
-                    setGates([
-                      ...gates,
-                      {
-                        key: gate.key,
-                        label: gate.label,
-                        description: gate.description,
-                        treatment: gate.treatment,
-                      },
-                    ])
-                  }
-                >
-                  {t("fundEditor.mandate.add")}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <RuleTiles
+          title={t("fundEditor.mandate.suggestionsTitle")}
+          hint={t("fundEditor.mandate.suggestionsHint")}
+          items={suggestions.map((gate) => ({
+            key: gate.key,
+            label: gate.label,
+            detail: gate.basis,
+            hard: gate.treatment === "hard",
+            icon: gateIcon({ ...gate } as Gate),
+          }))}
+          onAdd={(key) => {
+            const gate = suggestions.find((item) => item.key === key);
+            if (!gate) return;
+            setGates([
+              ...gates,
+              {
+                key: gate.key,
+                label: gate.label,
+                description: gate.description,
+                treatment: gate.treatment,
+              },
+            ]);
+          }}
+        />
       )}
 
-      {financeLeft.length > 0 && (
-        <section className="rounded-lg bg-canvas p-[18px]">
-          <p className="m-0 text-list font-semibold text-ink-1">
-            {t("fundEditor.mandate.financeTitle")}
-          </p>
-          <p className="mt-1 mb-0 text-meta leading-4 text-ink-3">
-            {t("fundEditor.mandate.financeHint")}
-          </p>
-          <ul className="m-0 mt-3 list-none divide-y divide-line p-0">
-            {financeLeft.map((gate) => (
-              <li key={gate.key} className="flex items-start justify-between gap-3 py-2.5">
-                <span className="min-w-0">
-                  <span className="block text-list text-ink-1">{gate.label}</span>
-                  <span className="block text-meta text-ink-3">{gate.description}</span>
-                </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  aria-label={t("fundEditor.mandate.addNamed", { name: gate.label })}
-                  onClick={() =>
-                    setGates([
-                      ...gates,
-                      {
-                        key: gate.key,
-                        label: gate.label,
-                        description: gate.description,
-                        treatment: gate.treatment,
-                      },
-                    ])
-                  }
-                >
-                  {t("fundEditor.mandate.add")}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {!hideFinance && financeLeft.length > 0 && (
+        <RuleTiles
+          title={t("fundEditor.mandate.financeTitle")}
+          hint={t("fundEditor.mandate.financeHint")}
+          items={financeLeft.map((gate) => ({
+            key: gate.key,
+            label: gate.label,
+            detail: gate.description,
+            hard: financeGateTreatment(gate.key) === "hard",
+            icon: Coins,
+          }))}
+          onAdd={(key) => {
+            const gate = financeLeft.find((item) => item.key === key);
+            if (!gate) return;
+            setGates([
+              ...gates,
+              {
+                key: gate.key,
+                label: gate.label,
+                description: gate.description,
+                treatment: gate.treatment,
+              },
+            ]);
+          }}
+        />
       )}
 
       <Disclosure

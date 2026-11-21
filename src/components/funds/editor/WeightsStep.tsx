@@ -247,7 +247,7 @@ export function WeightsStep({
               onMouseEnter={() => setHovered(index)}
               onMouseLeave={() => setHovered(null)}
             >
-              <div className="grid min-h-[56px] grid-cols-[10px_minmax(0,1fr)_minmax(0,1.2fr)_72px_28px_20px] items-center gap-3.5 px-[18px] py-1.5 max-md:grid-cols-[10px_minmax(0,1fr)_72px_28px_20px]">
+              <div className="grid min-h-[56px] grid-cols-[10px_minmax(0,1fr)_minmax(0,1.2fr)_72px_28px_28px] items-center gap-3.5 px-[18px] py-1.5 max-md:grid-cols-[10px_minmax(0,1fr)_72px_28px_28px]">
                 <span
                   aria-hidden
                   className="size-2 rounded-full"
@@ -331,13 +331,22 @@ export function WeightsStep({
                 >
                   <Trash2 aria-hidden className="size-4" />
                 </button>
-                <ChevronDown
-                  aria-hidden
-                  className={cn(
-                    "size-4 text-ink-4 transition-transform duration-[280ms] ease-standard",
-                    expanded && "rotate-180",
-                  )}
-                />
+                {/* The arrow opens the row too (it was only an icon). */}
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-label={criterion.label || t("fundEditor.weights.theCriterion")}
+                  onClick={() => toggle(id)}
+                  className="grid size-7 cursor-pointer place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-3 transition-colors hover:bg-canvas hover:text-ink-1"
+                >
+                  <ChevronDown
+                    aria-hidden
+                    className={cn(
+                      "size-4 transition-transform duration-[280ms] ease-standard",
+                      expanded && "rotate-180",
+                    )}
+                  />
+                </button>
               </div>
               <Collapse open={expanded}>
                 <div className="flex flex-col gap-3.5 px-[18px] pt-1 pb-5 pl-[42px] max-md:pl-[18px]">
@@ -421,6 +430,10 @@ export function WeightsStep({
                       {t("fundEditor.weights.codeAnchor")}
                     </label>
                   )}
+                  {/* What each button does, in one line. */}
+                  <p className="m-0 text-meta leading-[1.5] text-ink-3">
+                    {t("fundSetup.map.criterionButtons")}
+                  </p>
                   <div className="flex flex-wrap items-start gap-1.5">
                     <CriterionAssist
                       fundId={fundId}

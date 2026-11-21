@@ -50,7 +50,8 @@ test("uden instruktion er prompten som før", () => {
   const without = buildScreeningPrompt(profile, caseInput);
   const empty = buildScreeningPrompt({ ...profile, screeningInstruction: "   " }, caseInput);
   assert.equal(empty.system, without.system);
-  assert.doesNotMatch(without.system, /teamets_instruktion|screeningsinstruktion/i);
+  // The fixed rule names the tag; the section itself starts with the tag on its own line.
+  assert.doesNotMatch(without.system, /\n<teamets_instruktion>\n|screeningsinstruktion/i);
   assert.equal(screeningInstructionSection(undefined), "");
 });
 

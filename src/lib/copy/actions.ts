@@ -1,5 +1,5 @@
 /**
- * The shared action vocabulary ("Handlingsnavne"): the same
+ * The shared action vocabulary ("Bilag B. Handlingsnavne"): the same
  * words in the Cases list, the bulk bar, the case's split button, confirmation dialogs
  * and toasts. Use these constants; never write an action name by hand.
  *
@@ -66,7 +66,7 @@ const TONE = {
   quiet: { color: "ink-3", wash: "bg-sunken" },
 } as const satisfies Record<string, ActionTone>;
 
-/** Shared descriptions ("Handlingsnavne"). */
+/** Shared descriptions ("Bilag B. Handlingsnavne"). */
 export const ACTION_DESCRIPTIONS = {
   staysInPhase: "Bliver i fasen, kan genoptages",
   activeAgain: "Casen bliver aktiv igen",

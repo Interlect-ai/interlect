@@ -76,6 +76,7 @@ export async function writeAiTasksWith(
 
     const inserted = await insertTasks(service, input, start, plan.insert);
     const restored = await restoreTasks(service, writeAudit, input, start, plan.restore, existing);
+    await refreshTasks(service, input, plan.refresh, existing);
     // Retire last, and only when the new tasks were saved: a run that failed to write must not
     // also remove the tasks the team had.
     if (inserted.failed === 0 && plan.retire.length) {
@@ -292,6 +293,47 @@ async function insertTasks(
 }
 
 /** A gap the system retired earlier and this run raises again: back on the list, new wording. */
+/**
+ * Replaces the text of an untouched AI task with the newer run's (the economy task's list
+ * of missing figures). Only while nobody has touched it: open, unanswered, not deleted, and
+ * `updated_at` as read, which is left alone so the task stays untouched. A failure is logged and
+ * leaves the old text; it never fails the run.
+ */
+async function refreshTasks(
+  service: SupabaseClient,
+  input: { fundId: string; caseId: string; runId: string },
+  refresh: Array<{ id: string; draft: AiTaskDraft }>,
+  existing: readonly ExistingTaskRow[],
+): Promise<void> {
+  const byId = new Map(existing.map((row) => [row.id, row]));
+  for (const { id, draft } of refresh) {
+    const previous = byId.get(id);
+    if (!previous) continue;
+    const { error } = await service
+      .from("case_tasks")
+      .update({
+        title: draft.title,
+        why: draft.why,
+        description: draft.description ?? null,
+        source_run_id: input.runId,
+      })
+      .eq("id", id)
+      .eq("fund_id", input.fundId)
+      .eq("case_id", input.caseId)
+      .is("deleted_at", null)
+      .eq("status", "open")
+      .is("answer_text", null)
+      .is("answer_value", null)
+      .is("answer_document_id", null)
+      .is("answer_evidence_id", null)
+      .eq("updated_at", previous.updatedAt)
+      .select("id");
+    if (error) {
+      console.error(`[ai-tasks] run ${input.runId}: task ${id} was not refreshed`, error.message);
+    }
+  }
+}
+
 async function restoreTasks(
   service: SupabaseClient,
   writeAudit: AuditWriter,

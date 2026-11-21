@@ -100,7 +100,30 @@ test("sanitizeNextSteps keeps the question, and a long title becomes the questio
     kind: "task",
     priority: 2,
   }));
-  assert.equal(sanitizeNextSteps(many, keys, MAX_SCREENING_NEXT_STEPS).length, 8);
+  assert.equal(sanitizeNextSteps(many, keys, MAX_SCREENING_NEXT_STEPS).length, 4);
+});
+
+test("T-1025: the screening's list holds at most 4 steps (0, 4, 5 and 8 in), most important first", () => {
+  assert.equal(MAX_SCREENING_NEXT_STEPS, 4);
+  const steps = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      title: `Opgave ${index}`,
+      kind: "task",
+      // Every third is priority 1, the rest 2 and 3: the order is by priority, then as written.
+      priority: index % 3 === 2 ? 1 : index % 2 ? 3 : 2,
+    }));
+  const titles = (count: number) =>
+    sanitizeNextSteps(steps(count), keys, MAX_SCREENING_NEXT_STEPS).map((step) => step.title);
+  assert.deepEqual(titles(0), []);
+  assert.deepEqual(titles(4), ["Opgave 2", "Opgave 0", "Opgave 1", "Opgave 3"]);
+  assert.deepEqual(titles(5), ["Opgave 2", "Opgave 0", "Opgave 4", "Opgave 1"]);
+  // 8 in: both priority-1 steps first, then priority 2 in the model's order; priority 3 is cut.
+  assert.deepEqual(titles(8), ["Opgave 2", "Opgave 5", "Opgave 0", "Opgave 4"]);
+  // The screening's own tasks are built from the capped list only.
+  const drafts = buildAiTaskDrafts(
+    screening({ nextSteps: sanitizeNextSteps(steps(8), keys, MAX_SCREENING_NEXT_STEPS) }),
+  );
+  assert.equal(drafts.length, 4);
 });
 
 test("a screening with a curated list: short titles, the question as description, no raw questions", () => {
@@ -296,4 +319,46 @@ test("review: a requirement with a quote keeps the key an older run stored", () 
   )[0]!;
   // Before the key came from the cleaned title (the trailing quote stripped).
   assert.equal(quoted.dedupeKey, 'gate@v1:sector:afklar: sektor: "klima');
+});
+
+test("T-1025: five unknown gates and a full list of 4: every gate still gets its task", () => {
+  const fiveGates = Array.from({ length: 5 }, (_, index) => ({
+    key: `g${index}`,
+    label: `Krav ${index}`,
+    treatment: "review",
+  }));
+  const gateKeys = { gates: fiveGates.map((gate) => gate.key), criteria: keys.criteria };
+  const nextSteps = sanitizeNextSteps(
+    [
+      { title: "Churn pr. kohorte", kind: "document", priority: 2 },
+      ...fiveGates.map((gate) => ({
+        title: `Afklar ${gate.label}`,
+        kind: "question",
+        linkedKind: "gate",
+        linkedKey: gate.key,
+        priority: 1,
+      })),
+    ],
+    gateKeys,
+    MAX_SCREENING_NEXT_STEPS,
+  );
+  // The list keeps 4, all of them gate steps (priority 1 first).
+  assert.equal(nextSteps.length, 4);
+  assert.ok(nextSteps.every((step) => step.linkedKind === "gate"));
+  const drafts = buildAiTaskDrafts(
+    screening({
+      gates: fiveGates,
+      unresolvedGateKeys: fiveGates.map((gate) => gate.key),
+      nextSteps,
+    }),
+  );
+  // Code makes the fifth gate's task itself; no gate is left without one.
+  const gateTasks = drafts.filter((draft) => draft.linkedKind === "gate");
+  assert.deepEqual(gateTasks.map((draft) => draft.linkedKey).sort(), [
+    "g0",
+    "g1",
+    "g2",
+    "g3",
+    "g4",
+  ]);
 });

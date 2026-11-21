@@ -2,32 +2,27 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { internalPagesEnabled } from "./internal-pages.ts";
 
-test("customers run production, so the internal pages are closed there (T-639)", () => {
-  assert.equal(internalPagesEnabled({ VERCEL_ENV: "production" }), false);
-  // A customer installation never has the switch, whatever else it has.
+test("every Vercel deployment closes the internal pages: customers, staging and previews (T-1023)", () => {
+  assert.equal(internalPagesEnabled({ VERCEL: "1", VERCEL_ENV: "production" }), false);
+  assert.equal(internalPagesEnabled({ VERCEL: "1", VERCEL_ENV: "preview" }), false);
+  assert.equal(internalPagesEnabled({ VERCEL_ENV: "preview" }), false);
+  assert.equal(internalPagesEnabled({ VERCEL: "1", NODE_ENV: "development" }), false);
+});
+
+test("the old switch no longer opens them (T-639's INTERLECT_INTERNAL_PAGES is gone)", () => {
   assert.equal(
-    internalPagesEnabled({ VERCEL_ENV: "production", INTERLECT_INTERNAL_PAGES: "yes" }),
+    internalPagesEnabled({ VERCEL: "1", VERCEL_ENV: "production", INTERLECT_INTERNAL_PAGES: "on" }),
+    false,
+  );
+  assert.equal(
+    internalPagesEnabled({ NODE_ENV: "production", INTERLECT_INTERNAL_PAGES: "on" }),
     false,
   );
 });
 
-test("a self-hosted installation closes them everywhere with INTERLECT_INTERNAL_PAGES=off", () => {
-  assert.equal(internalPagesEnabled({ INTERLECT_INTERNAL_PAGES: "off" }), false);
-  assert.equal(
-    internalPagesEnabled({ VERCEL_ENV: "preview", INTERLECT_INTERNAL_PAGES: "off" }),
-    false,
-  );
-  assert.equal(
-    internalPagesEnabled({ VERCEL_ENV: "production", INTERLECT_INTERNAL_PAGES: "OFF" }),
-    false,
-  );
-});
-
-test("staging previews, local development and an opened staging production keep them", () => {
-  assert.equal(internalPagesEnabled({ VERCEL_ENV: "preview" }), true);
-  assert.equal(internalPagesEnabled({}), true);
-  assert.equal(
-    internalPagesEnabled({ VERCEL_ENV: "production", INTERLECT_INTERNAL_PAGES: "on" }),
-    true,
-  );
+test("only local development keeps them", () => {
+  assert.equal(internalPagesEnabled({ NODE_ENV: "development" }), true);
+  assert.equal(internalPagesEnabled({ NODE_ENV: "production" }), false);
+  assert.equal(internalPagesEnabled({ NODE_ENV: "test" }), false);
+  assert.equal(internalPagesEnabled({}), false);
 });

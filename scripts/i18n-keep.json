@@ -7,6 +7,7 @@
   "src/lib/analysis/prompt.ts": "Screeningens prompt til modellen (T-614a).",
   "src/lib/funds/screening-check.ts": "Prompt til kvalitetstjekket af fondens screeningsinstruktion.",
   "src/lib/funds/thesis-steps.ts": "Instruktioner til modellen pr. trin i Ny investeringstese.",
+  "src/lib/memo/draft.ts": "Prompten og genforsøgsbeskeden til modellen for komitémemoens udkast (T-1085); en engelsk fond får sprogreglen sidst. Intet her vises for brugeren.",
   "src/lib/funds/config-templates.ts": "Skabeloner, der gemmes i fondens opsætning som fondens egen tekst (T-614b3a).",
   "src/lib/funds/config-templates-en.ts": "Skabelonernes engelske tekst, der gemmes i et engelsk teams opsætning som teamets egen tekst (T-632).",
   "src/lib/ai/redact.ts": "Maskeringens mønstre genkender dansk tekst (beløb, navne, adresser).",

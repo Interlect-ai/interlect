@@ -9,6 +9,8 @@ import { getServiceClient } from "@/lib/supabase/admin.server";
 import type { ScoreCategory } from "@/lib/domain/types";
 import { specialistCatalog } from "@/lib/analysis/specialist-catalog";
 import { loadSpecialistSet } from "@/lib/analysis/specialist-set.server";
+import { loadFundAiSettings, loadPlatformLimits } from "@/lib/analysis/run-plan.server";
+import { buildRunPlan, capWithinPlatform, tooLowCause } from "@/lib/analysis/model-tiers";
 import {
   CUSTOM_SPECIALIST_KEY,
   MAX_CUSTOM_SPECIALISTS_DEFAULT,
@@ -19,6 +21,8 @@ import {
 } from "@/lib/analysis/specialist-set";
 import { customSpecialistSchema, type CustomSpecialistInput } from "./specialist-assist";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import type { SetupStage } from "@/lib/analysis/setup-stage";
+import { setupStageSchema } from "./setup-input";
 
 /**
  * The fund's own set of specialists in the fund setup: read the set of a version,
@@ -36,10 +40,20 @@ const standardIdSchema = z.enum([
   "fund_finance_deal",
 ]);
 const keySchema = z.string().regex(CUSTOM_SPECIALIST_KEY);
+/**
+ * the stage whose own set is meant; left out (or null) = the shared set (every call). A stage
+ * without its own rows runs the shared set; its first change copies the shared
+ * set into the stage, so the stage starts from what it runs with today (setup-stage.ts).
+ */
+const stageSchema = setupStageSchema.nullable().optional();
 export type { CustomSpecialistInput };
 
 export interface FundSpecialistsView {
   configId: string;
+  /** The stage the view is for; null = the shared set. */
+  stage: SetupStage | null;
+  /** The stage has its own set (else it shows and runs the shared one). */
+  ownSet: boolean;
   /** True for a draft the user may change (Admin and Lead). */
   editable: boolean;
   /** The installation's limit on active own specialists (`ai_settings`, standard 3). */
@@ -104,26 +118,40 @@ async function requireDraft(
 
 async function readView(
   supabase: SupabaseClient,
+  fundId: string,
   configId: string,
   editable: boolean,
   canConfigure: boolean,
+  stage: SetupStage | null,
 ): Promise<FundSpecialistsView> {
   // 0104: the override texts are readable only by who configures the fund. The others still see
   // that a module is "Tilpasset" (and the warnings), so the set is read with the service role for
   // them; none of the texts reaches the view. The caller has already been checked against the fund.
   const [{ set, rows, overrides }, maxCustom] = await Promise.all([
-    loadSpecialistSet(canConfigure ? supabase : getServiceClient(), configId),
+    loadSpecialistSet(canConfigure ? supabase : getServiceClient(), configId, stage),
     loadMaxCustom(),
   ]);
+  const deepTooLow = await deepLimitTooLowFor(fundId, set.length);
+  const deepWarning =
+    deepTooLow === "platform"
+      ? serverText("fundServer.specialists.deepPlatformTooLow")
+      : deepTooLow === "team"
+        ? serverText("fundServer.specialists.deepLimitTooLow")
+        : null;
   const off = new Set(
     rows.filter((row) => row.kind === "standard" && !row.enabled).map((row) => row.specialist_key),
   );
   return {
     configId,
+    stage,
+    ownSet: stage !== null && rows.some((row) => row.stage === stage),
     editable,
     maxCustom,
     problems: specialistSetProblems(rows, maxCustom, requestLanguage()),
-    warnings: specialistSetWarnings(set, requestLanguage()),
+    warnings: [
+      ...specialistSetWarnings(set, requestLanguage()),
+      ...(deepWarning ? [deepWarning] : []),
+    ],
     standard: specialistCatalog.map((module) => ({
       id: module.id,
       title: module.title,
@@ -158,11 +186,52 @@ async function readView(
   };
 }
 
+/**
+ * Why no deep analysis on the thesis could start with this many specialists, or null when one can
+ * the bottom for the level grows with the specialists, so the editor warns before
+ * publishing. "platform" when the installation's own hard limit is under the bottom (the team
+ * cannot raise it), else "team". No amount: kroner are for Analysegrænser only (beslutningslog 2.
+ * nov). A failed read never blocks the editor; the run checks again when it starts.
+ */
+async function deepLimitTooLowFor(
+  fundId: string,
+  specialistCount: number,
+): Promise<"platform" | "team" | null> {
+  if (specialistCount === 0) return null;
+  try {
+    const service = getServiceClient();
+    const [settings, platform] = await Promise.all([
+      loadFundAiSettings(service, fundId),
+      loadPlatformLimits(service),
+    ]);
+    if (!settings) return null;
+    const cap = capWithinPlatform(
+      "deep",
+      settings.deepTier,
+      settings.deepCapDkk,
+      platform.capsDkk.deep,
+      specialistCount,
+    );
+    const plan = buildRunPlan("deep", settings.deepTier, cap, specialistCount, platform.usdToDkk);
+    if (plan.scope.status !== "too_low") return null;
+    return tooLowCause(
+      "deep",
+      settings.deepTier,
+      platform.capsDkk.deep,
+      specialistCount,
+      platform.usdToDkk,
+    );
+  } catch (cause) {
+    console.error("[fund-specialists] deep limit", cause);
+    return null;
+  }
+}
+
 /** The set of one version (a draft or the active one); every member may read it. */
 export const getFundSpecialists = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
-    z.object({ fundId: fundIdSchema, configId: configIdSchema }).parse(input),
+    z.object({ fundId: fundIdSchema, configId: configIdSchema, stage: stageSchema }).parse(input),
   )
   .handler(async ({ data, context }): Promise<FundSpecialistsView> => {
     const access = await requireFundCapability(
@@ -174,13 +243,97 @@ export const getFundSpecialists = createServerFn({ method: "GET" })
     const version = await loadVersion(context.supabase, data.fundId, data.configId);
     const canConfigure = hasCapability(access.roles, "configure_fund", access.settings);
     const editable = version.status === "draft" && canConfigure;
-    return readView(context.supabase, data.configId, editable, canConfigure);
+    return readView(
+      context.supabase,
+      data.fundId,
+      data.configId,
+      editable,
+      canConfigure,
+      data.stage ?? null,
+    );
   });
 
-/** The rows of the draft as they would be after a change, for the rule check before saving. */
-async function draftRows(supabase: SupabaseClient, configId: string) {
-  const { rows } = await loadSpecialistSet(supabase, configId);
+/** The rows of the draft's set (the stage's own, else the shared), for the rule check before saving. */
+async function draftRows(supabase: SupabaseClient, configId: string, stage: SetupStage | null) {
+  const { rows } = await loadSpecialistSet(supabase, configId, stage);
   return rows;
+}
+
+const STANDARD_IDS = standardIdSchema.options;
+
+/**
+ * Before the first change to a stage's own set, the shared set is copied into the stage,
+ * with an explicit row for each standard specialist (on or off). The stage then always has rows of
+ * its own: without them it would fall back to the shared set (a standard specialist that is on has
+ * no row in the shared set; overdragelsen fra session 2, punkt h). `rows` is the stage's set as it
+ * will be (for the checks); `ensure` writes the copy and is called only right before the change
+ * itself, so a refused change leaves the stage reading the shared set as before.
+ */
+async function stageSet(
+  supabase: SupabaseClient,
+  userId: string,
+  configId: string,
+  stage: SetupStage | null,
+): Promise<{ rows: FundSpecialistRow[]; ensure: () => Promise<void> }> {
+  const rows = await draftRows(supabase, configId, stage);
+  if (!stage || rows.some((row) => row.stage === stage)) {
+    return { rows, ensure: async () => {} };
+  }
+  const off = new Set(
+    rows.filter((row) => row.kind === "standard" && !row.enabled).map((row) => row.specialist_key),
+  );
+  const copies: FundSpecialistRow[] = [
+    ...STANDARD_IDS.map((id) => ({
+      stage,
+      specialist_key: id,
+      kind: "standard" as const,
+      enabled: !off.has(id),
+      sort_order: 0,
+      name: null,
+      purpose: null,
+      mandate: null,
+      evidence_tests: null,
+      risk_areas: null,
+      research_questions: [],
+      output_focus: [],
+      categories: [],
+    })),
+    ...rows.filter((row) => row.kind === "custom").map((row) => ({ ...row, stage })),
+  ];
+  return {
+    rows: copies,
+    ensure: async () => {
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("fund_specialists").insert(
+        copies.map((row) => ({
+          config_version_id: configId,
+          stage,
+          specialist_key: row.specialist_key,
+          kind: row.kind,
+          enabled: row.enabled,
+          sort_order: row.sort_order,
+          name: row.name,
+          purpose: row.purpose,
+          mandate: row.mandate,
+          evidence_tests: row.evidence_tests,
+          risk_areas: row.risk_areas,
+          research_questions: row.research_questions,
+          output_focus: row.output_focus,
+          categories: row.categories,
+          updated_by: userId,
+          updated_at: now,
+        })),
+      );
+      if (error) failWrite(error, serverText("fundServer.specialists.notSaved"));
+    },
+  };
+}
+
+/** A query on the draft's rows narrowed to one set: the stage's own, or the shared (stage null). */
+function inSet<
+  Q extends { eq: (column: string, value: string) => Q; is: (column: string, value: null) => Q },
+>(query: Q, stage: SetupStage | null): Q {
+  return stage ? query.eq("stage", stage) : query.is("stage", null);
 }
 
 function refuseBrokenSet(rows: FundSpecialistRow[], maxCustom: number) {
@@ -207,12 +360,17 @@ function failWrite(error: DbErrorLike, fallback: string): never {
  * row without an error, so the version is read again: a write that did not land is never shown
  * as saved.
  */
-async function viewAfterWrite(supabase: SupabaseClient, fundId: string, configId: string) {
+async function viewAfterWrite(
+  supabase: SupabaseClient,
+  fundId: string,
+  configId: string,
+  stage: SetupStage | null,
+) {
   const version = await loadVersion(supabase, fundId, configId);
   if (version.status !== "draft") {
     throw new Error(serverText("fundServer.specialists.changedElsewhere"));
   }
-  return readView(supabase, configId, true, true);
+  return readView(supabase, fundId, configId, true, true, stage);
 }
 
 /** Switches a standard specialist off or on in the draft (on = no row, as). */
@@ -225,21 +383,68 @@ export const setStandardSpecialist = createServerFn({ method: "POST" })
         configId: configIdSchema,
         moduleId: standardIdSchema,
         enabled: z.boolean(),
+        stage: stageSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<FundSpecialistsView> => {
     await requireDraft(context.supabase, context.userId, data.fundId, data.configId);
+    const stage = data.stage ?? null;
+    if (stage) {
+      // A stage keeps an explicit row per standard specialist (stageSet), so it is updated.
+      const { rows, ensure } = await stageSet(
+        context.supabase,
+        context.userId,
+        data.configId,
+        stage,
+      );
+      if (
+        !data.enabled &&
+        specialistSetProblems(
+          rows.map((row) =>
+            row.kind === "standard" && row.specialist_key === data.moduleId
+              ? { ...row, enabled: false }
+              : row,
+          ),
+          Number.MAX_SAFE_INTEGER,
+        ).length
+      ) {
+        throw new Error(serverText("fundServer.specialists.oneActive"));
+      }
+      await ensure();
+      const { error } = await context.supabase
+        .from("fund_specialists")
+        .update({
+          enabled: data.enabled,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("config_version_id", data.configId)
+        .eq("stage", stage)
+        .eq("specialist_key", data.moduleId)
+        .eq("kind", "standard");
+      if (error)
+        failWrite(
+          error,
+          serverText(
+            data.enabled
+              ? "fundServer.specialists.notEnabled"
+              : "fundServer.specialists.notDisabled",
+          ),
+        );
+      return viewAfterWrite(context.supabase, data.fundId, data.configId, stage);
+    }
     if (data.enabled) {
       const { error } = await context.supabase
         .from("fund_specialists")
         .delete()
         .eq("config_version_id", data.configId)
+        .is("stage", null)
         .eq("specialist_key", data.moduleId)
         .eq("kind", "standard");
       if (error) failWrite(error, serverText("fundServer.specialists.notEnabled"));
     } else {
-      const rows = (await draftRows(context.supabase, data.configId)).filter(
+      const rows = (await draftRows(context.supabase, data.configId, null)).filter(
         (row) => row.specialist_key !== data.moduleId,
       );
       const after: FundSpecialistRow[] = [
@@ -271,11 +476,12 @@ export const setStandardSpecialist = createServerFn({ method: "POST" })
           updated_by: context.userId,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "config_version_id,specialist_key" },
+        // The key includes the stage (0133, nulls not distinct): this is the shared row.
+        { onConflict: "config_version_id,stage,specialist_key" },
       );
       if (error) failWrite(error, serverText("fundServer.specialists.notDisabled"));
     }
-    return viewAfterWrite(context.supabase, data.fundId, data.configId);
+    return viewAfterWrite(context.supabase, data.fundId, data.configId, null);
   });
 
 /**
@@ -291,13 +497,15 @@ export const saveCustomSpecialist = createServerFn({ method: "POST" })
         configId: configIdSchema,
         key: keySchema.optional(),
         specialist: customSpecialistSchema,
+        stage: stageSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<FundSpecialistsView> => {
     await requireDraft(context.supabase, context.userId, data.fundId, data.configId);
-    const [rows, maxCustom] = await Promise.all([
-      draftRows(context.supabase, data.configId),
+    const stage = data.stage ?? null;
+    const [{ rows, ensure }, maxCustom] = await Promise.all([
+      stageSet(context.supabase, context.userId, data.configId, stage),
       loadMaxCustom(),
     ]);
     const existing = data.key
@@ -316,9 +524,11 @@ export const saveCustomSpecialist = createServerFn({ method: "POST" })
       ? existing.sort_order
       : Math.min(100, Math.max(0, ...rows.map((row) => row.sort_order)) + 1);
     const { specialist } = data;
+    await ensure();
     const { error } = await context.supabase.from("fund_specialists").upsert(
       {
         config_version_id: data.configId,
+        stage,
         specialist_key: existing?.specialist_key ?? newCustomSpecialistKey(),
         kind: "custom",
         enabled,
@@ -334,10 +544,10 @@ export const saveCustomSpecialist = createServerFn({ method: "POST" })
         updated_by: context.userId,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "config_version_id,specialist_key" },
+      { onConflict: "config_version_id,stage,specialist_key" },
     );
     if (error) failWrite(error, serverText("fundServer.specialists.notSaved"));
-    return viewAfterWrite(context.supabase, data.fundId, data.configId);
+    return viewAfterWrite(context.supabase, data.fundId, data.configId, stage);
   });
 
 /** Switches the fund's own specialist off or on in the draft (on only within the limit). */
@@ -350,13 +560,15 @@ export const setCustomSpecialistEnabled = createServerFn({ method: "POST" })
         configId: configIdSchema,
         key: keySchema,
         enabled: z.boolean(),
+        stage: stageSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<FundSpecialistsView> => {
     await requireDraft(context.supabase, context.userId, data.fundId, data.configId);
-    const [rows, maxCustom] = await Promise.all([
-      draftRows(context.supabase, data.configId),
+    const stage = data.stage ?? null;
+    const [{ rows, ensure }, maxCustom] = await Promise.all([
+      stageSet(context.supabase, context.userId, data.configId, stage),
       loadMaxCustom(),
     ]);
     if (!rows.some((row) => row.kind === "custom" && row.specialist_key === data.key)) {
@@ -370,29 +582,41 @@ export const setCustomSpecialistEnabled = createServerFn({ method: "POST" })
       ),
       data.enabled ? maxCustom : Number.MAX_SAFE_INTEGER,
     );
-    const { error } = await context.supabase
-      .from("fund_specialists")
-      .update({
-        enabled: data.enabled,
-        updated_by: context.userId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("config_version_id", data.configId)
-      .eq("specialist_key", data.key)
-      .eq("kind", "custom");
+    await ensure();
+    const { error } = await inSet(
+      context.supabase
+        .from("fund_specialists")
+        .update({
+          enabled: data.enabled,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("config_version_id", data.configId)
+        .eq("specialist_key", data.key)
+        .eq("kind", "custom"),
+      stage,
+    );
     if (error) failWrite(error, serverText("fundServer.specialists.notChanged"));
-    return viewAfterWrite(context.supabase, data.fundId, data.configId);
+    return viewAfterWrite(context.supabase, data.fundId, data.configId, stage);
   });
 
 /** Removes the fund's own specialist from the draft (published versions keep theirs). */
 export const deleteCustomSpecialist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
-    z.object({ fundId: fundIdSchema, configId: configIdSchema, key: keySchema }).parse(input),
+    z
+      .object({
+        fundId: fundIdSchema,
+        configId: configIdSchema,
+        key: keySchema,
+        stage: stageSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }): Promise<FundSpecialistsView> => {
     await requireDraft(context.supabase, context.userId, data.fundId, data.configId);
-    const rows = await draftRows(context.supabase, data.configId);
+    const stage = data.stage ?? null;
+    const { rows, ensure } = await stageSet(context.supabase, context.userId, data.configId, stage);
     if (!rows.some((row) => row.kind === "custom" && row.specialist_key === data.key)) {
       throw new Error(serverText("fundServer.common.specialistNotInDraft"));
     }
@@ -400,12 +624,16 @@ export const deleteCustomSpecialist = createServerFn({ method: "POST" })
       rows.filter((row) => row.specialist_key !== data.key),
       Number.MAX_SAFE_INTEGER,
     );
-    const { error } = await context.supabase
-      .from("fund_specialists")
-      .delete()
-      .eq("config_version_id", data.configId)
-      .eq("specialist_key", data.key)
-      .eq("kind", "custom");
+    await ensure();
+    const { error } = await inSet(
+      context.supabase
+        .from("fund_specialists")
+        .delete()
+        .eq("config_version_id", data.configId)
+        .eq("specialist_key", data.key)
+        .eq("kind", "custom"),
+      stage,
+    );
     if (error) failWrite(error, serverText("fundServer.specialists.notDeleted"));
-    return viewAfterWrite(context.supabase, data.fundId, data.configId);
+    return viewAfterWrite(context.supabase, data.fundId, data.configId, stage);
   });

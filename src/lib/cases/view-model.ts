@@ -202,6 +202,8 @@ export interface HistoryEntry {
   createdAt: string;
   completedAt: string | null;
   errorMessage: string | null;
+  /** "Stoppet på prisgrænsen": the finished steps are kept; never an amount. */
+  stoppedAtLimit: boolean;
 }
 
 export interface CaseViewModel {
@@ -528,6 +530,7 @@ export function fromCaseDetail(
       createdAt: entry.createdAt,
       completedAt: entry.completedAt,
       errorMessage: entry.errorMessage,
+      stoppedAtLimit: entry.stoppedAtLimit === true,
     })),
     criteria: latest?.criteria ?? [],
     strengths: latest?.strengths ?? [],

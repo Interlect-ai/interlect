@@ -9,6 +9,7 @@ import { type Language } from "../i18n/language.ts";
 
 export const HISTORY_ACTIONS = [
   "fund_config_draft_created",
+  "fund_config_restored_as_draft",
   "fund_config_activated",
   "fund_config_proposal_created",
   "fund_config_proposal_applied",
@@ -135,6 +136,14 @@ export function describeHistoryEvent(
       return version
         ? translate(language, "fundSetup.history.draftCreatedVersion", { version })
         : translate(language, "fundSetup.history.draftCreated");
+    }
+    case "fund_config_restored_as_draft": {
+      // An earlier version copied into a new draft; nothing old was changed.
+      const version = typeof data["version"] === "number" ? data["version"] : null;
+      const source = typeof data["source_version"] === "number" ? data["source_version"] : null;
+      return version && source
+        ? translate(language, "fundSetup.history.restoredVersion", { source, version })
+        : translate(language, "fundSetup.history.restored");
     }
     case "fund_config_activated": {
       const version = typeof data["version"] === "number" ? data["version"] : null;

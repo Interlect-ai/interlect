@@ -4,6 +4,14 @@
  * database URL belongs to the customer it is used for. No I/O, so it is unit tested.
  */
 
+import {
+  AI_TIERS,
+  lowestCapDkk,
+  STANDARD_SPECIALIST_COUNT,
+  type AiRunKind,
+  type AiTier,
+} from "../../../src/lib/analysis/model-tiers.ts";
+
 export type CreditKind = "gift" | "purchase";
 
 /** Finished analyses booked at their cap because the gateway reported no price. */
@@ -96,7 +104,7 @@ function onOff(raw: string) {
   throw new Error(`must be on or off, got "${raw}"`);
 }
 
-/** The installation settings in ai_settings (0070, 0071, 0076, 0085), with the database's own limits. */
+/** The installation settings in ai_settings (0070, 0071, 0076, 0085, 0123), with the database's own limits. */
 export const SETTINGS: readonly Setting[] = [
   { flag: "usd-to-dkk", column: "usd_to_dkk", parse: numberIn(0, 100, { exclusiveMin: true }) },
   { flag: "brain-share-pct", column: "brain_share_pct", parse: numberIn(0, 100) },
@@ -113,6 +121,17 @@ export const SETTINGS: readonly Setting[] = [
     column: "max_custom_specialists",
     parse: numberIn(0, 6, { integer: true }),
   },
+  {
+    flag: "platform-screening-cap-dkk",
+    column: "platform_screening_cap_dkk",
+    parse: numberIn(1, 100),
+  },
+  { flag: "platform-deep-cap-dkk", column: "platform_deep_cap_dkk", parse: numberIn(5, 500) },
+  {
+    flag: "platform-monthly-cap-dkk",
+    column: "platform_monthly_cap_dkk",
+    parse: numberIn(0, 10_000),
+  },
   { flag: "credits-enforced", column: "credits_enforced", parse: onOff },
   { flag: "display-currency", column: "display_currency", parse: oneOf("DKK", "EUR") },
   {
@@ -122,6 +141,79 @@ export const SETTINGS: readonly Setting[] = [
   },
   { flag: "default-language", column: "default_language", parse: oneOf("da", "en") },
 ];
+
+/** The level a team starts on (run-plan.server.ts), whose bottom a hard limit may never go under. */
+const STANDARD_TIER: Record<AiRunKind, AiTier> = { screening: "light", deep: "medium" };
+const PLATFORM_CAP_FLAG: Record<AiRunKind, string> = {
+  screening: "platform-screening-cap-dkk",
+  deep: "platform-deep-cap-dkk",
+};
+
+/** The installation's rate and hard limits per run, as they are or will be after a change. */
+export type PlatformCaps = { usdToDkk: number; capsDkk: Record<AiRunKind, number> };
+
+/**
+ * (C4-2): a hard limit under the bottom of the standard level means no run of that kind can
+ * start in the installation, and the team is told to raise a limit it cannot raise. Such a limit,
+ * or a new rate that puts the limit under the bottom, is refused. The bottom is worked out with the
+ * four standard specialists; a thesis with more needs more (the warnings below).
+ */
+export function platformCapProblems(caps: PlatformCaps): string[] {
+  const problems: string[] = [];
+  for (const kind of ["screening", "deep"] as const) {
+    const floor = lowestCapDkk(kind, STANDARD_TIER[kind], STANDARD_SPECIALIST_COUNT, caps.usdToDkk);
+    if (caps.capsDkk[kind] < floor) {
+      problems.push(
+        `--${PLATFORM_CAP_FLAG[kind]} must be at least ${floor} at a rate of ${caps.usdToDkk} ` +
+          `(the bottom of the standard level), got ${caps.capsDkk[kind]}`,
+      );
+    }
+  }
+  return problems;
+}
+
+/** A team's own levels and limits (funds), for the warnings after a change. */
+export type TeamLimits = {
+  name: string;
+  screeningTier: AiTier;
+  deepTier: AiTier;
+  screeningCapDkk: number | null;
+  deepCapDkk: number | null;
+};
+
+/**
+ * What a change of the rate or a hard limit leaves under the bottom without refusing it:
+ * levels above the standard that no team can use any more, and teams whose own limit is now too
+ * low to start (their Admin or Lead raises it under Analysegrænser). Four specialists, as above.
+ */
+export function capFloorWarnings(caps: PlatformCaps, teams: readonly TeamLimits[]): string[] {
+  const warnings: string[] = [];
+  for (const kind of ["screening", "deep"] as const) {
+    for (const tier of AI_TIERS) {
+      // The standard level under its bottom is refused by platformCapProblems, not warned about.
+      if (tier === STANDARD_TIER[kind]) continue;
+      const floor = lowestCapDkk(kind, tier, STANDARD_SPECIALIST_COUNT, caps.usdToDkk);
+      if (caps.capsDkk[kind] < floor) {
+        warnings.push(
+          `Warning: no ${kind} at level ${tier} can start (needs at least ${floor}, the hard limit is ${caps.capsDkk[kind]}).`,
+        );
+      }
+    }
+  }
+  for (const team of teams) {
+    for (const kind of ["screening", "deep"] as const) {
+      const tier = kind === "screening" ? team.screeningTier : team.deepTier;
+      const own = kind === "screening" ? team.screeningCapDkk : team.deepCapDkk;
+      const floor = lowestCapDkk(kind, tier, STANDARD_SPECIALIST_COUNT, caps.usdToDkk);
+      if (own !== null && own < floor) {
+        warnings.push(
+          `Warning: ${team.name} cannot start a ${kind} at level ${tier}: its own limit ${own} is under ${floor}. An Admin or Lead raises it under Analysegrænser.`,
+        );
+      }
+    }
+  }
+  return warnings;
+}
 
 /**
  * Turns the given flags into column changes. DKK is always 1 krone per unit, so switching to DKK
@@ -149,6 +241,26 @@ export function settingChanges(flags: Record<string, string | undefined>) {
     throw new Error(
       "--display-currency EUR needs --dkk-per-display-unit (kroner per euro, e.g. 7.46)",
     );
+  }
+  // Sent together with the rate, the hard limits must fit the bottom at that rate. Without it the
+  // installation's own rate decides, so customer:settings checks after reading it.
+  const sentCaps = {
+    screening: changes["platform_screening_cap_dkk"],
+    deep: changes["platform_deep_cap_dkk"],
+  };
+  if (
+    changes["usd_to_dkk"] !== undefined &&
+    (sentCaps.screening !== undefined || sentCaps.deep !== undefined)
+  ) {
+    const usdToDkk = Number(changes["usd_to_dkk"]);
+    const problems = platformCapProblems({
+      usdToDkk,
+      capsDkk: {
+        screening: sentCaps.screening === undefined ? Infinity : Number(sentCaps.screening),
+        deep: sentCaps.deep === undefined ? Infinity : Number(sentCaps.deep),
+      },
+    });
+    if (problems.length > 0) throw new Error(problems.join("; "));
   }
   return changes;
 }

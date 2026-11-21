@@ -32,13 +32,13 @@ import { Route as InternBrainTestRouteImport } from './routes/intern.brain-test'
 import { Route as InternGraferRouteImport } from './routes/intern.grafer'
 import { Route as InternKomponenterRouteImport } from './routes/intern.komponenter'
 import { Route as InternOrbsRouteImport } from './routes/intern.orbs'
-import { Route as InternPromptsRouteImport } from './routes/intern.prompts'
 import { Route as InternVelarisRouteImport } from './routes/intern.velaris'
 import { Route as InvitationAcceptRouteImport } from './routes/invitation.accept'
 import { Route as ApiBrainBackfillRouteImport } from './routes/api/brain/backfill'
 import { Route as ApiBrainChatRouteImport } from './routes/api/brain/chat'
 import { Route as ApiBrainCronRouteImport } from './routes/api/brain/cron'
 import { Route as ApiBrainEvalRouteImport } from './routes/api/brain/eval'
+import { Route as ApiFundSetupDraftRouteImport } from './routes/api/fund-setup/draft'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -155,11 +155,6 @@ const InternOrbsRoute = InternOrbsRouteImport.update({
   path: '/intern/orbs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InternPromptsRoute = InternPromptsRouteImport.update({
-  id: '/intern/prompts',
-  path: '/intern/prompts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InternVelarisRoute = InternVelarisRouteImport.update({
   id: '/intern/velaris',
   path: '/intern/velaris',
@@ -190,6 +185,11 @@ const ApiBrainEvalRoute = ApiBrainEvalRouteImport.update({
   path: '/api/brain/eval',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFundSetupDraftRoute = ApiFundSetupDraftRouteImport.update({
+  id: '/api/fund-setup/draft',
+  path: '/api/fund-setup/draft',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -213,7 +213,6 @@ export interface FileRoutesByFullPath {
   '/intern/grafer': typeof InternGraferRoute
   '/intern/komponenter': typeof InternKomponenterRoute
   '/intern/orbs': typeof InternOrbsRoute
-  '/intern/prompts': typeof InternPromptsRoute
   '/intern/velaris': typeof InternVelarisRoute
   '/invitation/accept': typeof InvitationAcceptRoute
   '/cases/': typeof CasesIndexRoute
@@ -222,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/api/brain/chat': typeof ApiBrainChatRoute
   '/api/brain/cron': typeof ApiBrainCronRoute
   '/api/brain/eval': typeof ApiBrainEvalRoute
+  '/api/fund-setup/draft': typeof ApiFundSetupDraftRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -243,7 +243,6 @@ export interface FileRoutesByTo {
   '/intern/grafer': typeof InternGraferRoute
   '/intern/komponenter': typeof InternKomponenterRoute
   '/intern/orbs': typeof InternOrbsRoute
-  '/intern/prompts': typeof InternPromptsRoute
   '/intern/velaris': typeof InternVelarisRoute
   '/invitation/accept': typeof InvitationAcceptRoute
   '/cases': typeof CasesIndexRoute
@@ -252,6 +251,7 @@ export interface FileRoutesByTo {
   '/api/brain/chat': typeof ApiBrainChatRoute
   '/api/brain/cron': typeof ApiBrainCronRoute
   '/api/brain/eval': typeof ApiBrainEvalRoute
+  '/api/fund-setup/draft': typeof ApiFundSetupDraftRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -276,7 +276,6 @@ export interface FileRoutesById {
   '/intern/grafer': typeof InternGraferRoute
   '/intern/komponenter': typeof InternKomponenterRoute
   '/intern/orbs': typeof InternOrbsRoute
-  '/intern/prompts': typeof InternPromptsRoute
   '/intern/velaris': typeof InternVelarisRoute
   '/invitation/accept': typeof InvitationAcceptRoute
   '/cases/': typeof CasesIndexRoute
@@ -285,6 +284,7 @@ export interface FileRoutesById {
   '/api/brain/chat': typeof ApiBrainChatRoute
   '/api/brain/cron': typeof ApiBrainCronRoute
   '/api/brain/eval': typeof ApiBrainEvalRoute
+  '/api/fund-setup/draft': typeof ApiFundSetupDraftRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -310,7 +310,6 @@ export interface FileRouteTypes {
     | '/intern/grafer'
     | '/intern/komponenter'
     | '/intern/orbs'
-    | '/intern/prompts'
     | '/intern/velaris'
     | '/invitation/accept'
     | '/cases/'
@@ -319,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/brain/chat'
     | '/api/brain/cron'
     | '/api/brain/eval'
+    | '/api/fund-setup/draft'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -340,7 +340,6 @@ export interface FileRouteTypes {
     | '/intern/grafer'
     | '/intern/komponenter'
     | '/intern/orbs'
-    | '/intern/prompts'
     | '/intern/velaris'
     | '/invitation/accept'
     | '/cases'
@@ -349,6 +348,7 @@ export interface FileRouteTypes {
     | '/api/brain/chat'
     | '/api/brain/cron'
     | '/api/brain/eval'
+    | '/api/fund-setup/draft'
   id:
     | '__root__'
     | '/'
@@ -372,7 +372,6 @@ export interface FileRouteTypes {
     | '/intern/grafer'
     | '/intern/komponenter'
     | '/intern/orbs'
-    | '/intern/prompts'
     | '/intern/velaris'
     | '/invitation/accept'
     | '/cases/'
@@ -381,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/brain/chat'
     | '/api/brain/cron'
     | '/api/brain/eval'
+    | '/api/fund-setup/draft'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -402,13 +402,13 @@ export interface RootRouteChildren {
   InternGraferRoute: typeof InternGraferRoute
   InternKomponenterRoute: typeof InternKomponenterRoute
   InternOrbsRoute: typeof InternOrbsRoute
-  InternPromptsRoute: typeof InternPromptsRoute
   InternVelarisRoute: typeof InternVelarisRoute
   InvitationAcceptRoute: typeof InvitationAcceptRoute
   ApiBrainBackfillRoute: typeof ApiBrainBackfillRoute
   ApiBrainChatRoute: typeof ApiBrainChatRoute
   ApiBrainCronRoute: typeof ApiBrainCronRoute
   ApiBrainEvalRoute: typeof ApiBrainEvalRoute
+  ApiFundSetupDraftRoute: typeof ApiFundSetupDraftRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -574,13 +574,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InternOrbsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/intern/prompts': {
-      id: '/intern/prompts'
-      path: '/intern/prompts'
-      fullPath: '/intern/prompts'
-      preLoaderRoute: typeof InternPromptsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/intern/velaris': {
       id: '/intern/velaris'
       path: '/intern/velaris'
@@ -621,6 +614,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brain/eval'
       fullPath: '/api/brain/eval'
       preLoaderRoute: typeof ApiBrainEvalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/fund-setup/draft': {
+      id: '/api/fund-setup/draft'
+      path: '/api/fund-setup/draft'
+      fullPath: '/api/fund-setup/draft'
+      preLoaderRoute: typeof ApiFundSetupDraftRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -671,13 +671,13 @@ const rootRouteChildren: RootRouteChildren = {
   InternGraferRoute: InternGraferRoute,
   InternKomponenterRoute: InternKomponenterRoute,
   InternOrbsRoute: InternOrbsRoute,
-  InternPromptsRoute: InternPromptsRoute,
   InternVelarisRoute: InternVelarisRoute,
   InvitationAcceptRoute: InvitationAcceptRoute,
   ApiBrainBackfillRoute: ApiBrainBackfillRoute,
   ApiBrainChatRoute: ApiBrainChatRoute,
   ApiBrainCronRoute: ApiBrainCronRoute,
   ApiBrainEvalRoute: ApiBrainEvalRoute,
+  ApiFundSetupDraftRoute: ApiFundSetupDraftRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

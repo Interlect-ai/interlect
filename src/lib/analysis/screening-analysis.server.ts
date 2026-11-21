@@ -11,6 +11,8 @@ import {
   loadFinanceCodeScore,
 } from "./financial-statements";
 import { evaluateFinanceGate, isFinanceGate } from "./financial-gates";
+import { economyPoint, pointsOn } from "@/lib/funds/economy-points";
+import { economyTask, evaluateEconomy, registryFigures } from "./economy-check";
 import { getServiceClient } from "@/lib/supabase/admin.server";
 import { buildScreeningPrompt, type ScreeningCaseInput } from "./prompt";
 import { parseScreeningOutput } from "./contracts";
@@ -24,26 +26,120 @@ import { PROMPT_EVIDENCE_SELECT, toPromptEvidence } from "./evidence-selection";
 import { failedScreeningCosts, sumCompleteCosts } from "./gateway-response";
 import { redactorForFund } from "@/lib/ai/redact-dictionary.server";
 import { buildMemoryQueryText, retrieveFundMemory, type FundMemoryStatus } from "./memory";
-import { assertActualSpendWithinBudget, budgetCharge } from "./budgets";
+import { assertActualSpendWithinBudget, budgetCharge, stopReasonOf } from "./budgets";
 import { SCREENING_CALL_TIMEOUT_MS, type RunPlan } from "./model-tiers";
 import { founderQuestions } from "./research-followup";
 import { promptEvidenceSheet } from "./evidence-sheet";
 import { loadStoredRunPlan } from "./run-plan.server";
 import { CONFIG_SELECT, mapProfile, type ConfigData } from "./fund-profile";
-import { readResearchHandOff, screeningClaimDecision } from "./screening-phases";
+import {
+  readResearchHandOff,
+  screeningClaimDecision,
+  stoppedResearchToReuse,
+  stoppedTracksToReuse,
+  type StoppedResearch,
+} from "./screening-phases";
+import type { StoredResearchTrack } from "./research-tracks";
 import { enqueueScreeningAnalysis } from "./screening-queue.server";
 import {
   callGateway,
+  screeningJsonSchema,
   ScreeningGatewayError,
   validateConfiguredCoverage,
   validateEvidenceReferences,
 } from "./screening.functions";
+import { promptFingerprint } from "./prompt-fingerprint";
+import { storePromptFingerprint } from "./prompt-fingerprint.server";
 import { withRunLanguage } from "./run-language.server";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
 
 /** The fund-fit call's step and the research's (each in its own function). */
 export type ScreeningStepKey = "screening_research" | "fund_screening";
 type ServiceClient = ReturnType<typeof getServiceClient>;
+
+/**
+ * What the screening before this one left when it stopped at its limit: its research step,
+ * read back so the next try pays only for what is missing: the finished research, or the tracks it
+ * finished before it stopped inside the research. Nothing when there is nothing to reuse;
+ * a failed read only means that the research runs again.
+ */
+export async function loadStoppedScreeningResearch(
+  service: ServiceClient,
+  input: {
+    fundId: string;
+    caseId: string;
+    configVersionId: string;
+    promptVersion: string;
+    researchVersion: string;
+    researchModel: string;
+  },
+): Promise<{ research: StoppedResearch | null; tracks: StoredResearchTrack[] }> {
+  const nothing = { research: null, tracks: [] };
+  const { data: run, error } = await service
+    .from("analysis_runs")
+    .select(
+      "id, status, stop_reason, config_version_id, prompt_template_version, input_evidence_ids, completed_at",
+    )
+    .eq("fund_id", input.fundId)
+    .eq("case_id", input.caseId)
+    .eq("kind", "screening")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error(`[screening] stopped run not read (case ${input.caseId})`, error.message);
+    return nothing;
+  }
+  if (run?.["stop_reason"] !== "price_limit" || !run["completed_at"]) return nothing;
+  const stoppedAt = run["completed_at"] as string;
+  const [step, evidence, documents] = await Promise.all([
+    service
+      .from("analysis_run_steps")
+      .select("status, output_json, prompt_version, model_name")
+      .eq("run_id", run["id"] as string)
+      .eq("step_key", "screening_research")
+      .maybeSingle(),
+    service
+      .from("evidence_items")
+      .select("id", { count: "exact", head: true })
+      .eq("fund_id", input.fundId)
+      .eq("case_id", input.caseId)
+      .gt("collected_at", stoppedAt),
+    service
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("fund_id", input.fundId)
+      .eq("case_id", input.caseId)
+      .gt("created_at", stoppedAt),
+  ]);
+  const readError = step.error ?? evidence.error ?? documents.error;
+  if (readError) {
+    console.error(
+      `[screening] stopped research not read (case ${input.caseId})`,
+      readError.message,
+    );
+    return nothing;
+  }
+  const newMaterial = (evidence.count ?? 0) + (documents.count ?? 0);
+  if (newMaterial > 0) {
+    console.info(
+      `[screening] the research runs again (case ${input.caseId}): ${evidence.count ?? 0} evidence and ${documents.count ?? 0} documents since the stop`,
+    );
+  }
+  const current = {
+    configVersionId: input.configVersionId,
+    promptVersion: input.promptVersion,
+    researchVersion: input.researchVersion,
+    researchModel: input.researchModel,
+    newerMaterial: newMaterial > 0,
+    now: Date.now(),
+  };
+  return {
+    research: stoppedResearchToReuse(run, step.data, current),
+    // Stopped inside the research: the tracks it finished are not paid again.
+    tracks: stoppedTracksToReuse(run, step.data, current),
+  };
+}
 
 /**
  * A screening that failed in either phase: the run, the case, the step and the job are marked,
@@ -68,20 +164,26 @@ export async function failScreeningRun(
 ): Promise<void> {
   const { runId, plan } = input;
   const message = input.cause instanceof Error ? input.cause.message : "Screeningen fejlede.";
+  const callCostUsd =
+    input.callCostUsd ??
+    (input.cause instanceof ScreeningGatewayError ? input.cause.costUsd : null);
   const costs = failedScreeningCosts({
     failedStep: input.activeStepKey,
     incurredUsd: input.incurredUsd,
     incurredChargeUsd: input.incurredChargeUsd,
-    callCostUsd:
-      input.callCostUsd ??
-      (input.cause instanceof ScreeningGatewayError ? input.cause.costUsd : null),
+    callCostUsd,
   });
+  // The failed step keeps its charge (the call's, or the research's so far), so the steps
+  // add up to what the run charged (`validation_result.budget.chargedUsd`).
+  const stepChargeUsd =
+    input.activeStepKey === "fund_screening" ? callCostUsd : input.incurredChargeUsd;
   const results = await Promise.all([
     service
       .from("analysis_runs")
       .update({
         status: "failed",
         error_message: message,
+        stop_reason: stopReasonOf(input.cause),
         actual_cost: costs.runUsd,
         validation_result: {
           ok: false,
@@ -109,6 +211,7 @@ export async function failScreeningRun(
         status: "failed",
         error_message: message,
         actual_cost: costs.stepUsd,
+        ...(stepChargeUsd === null ? {} : { charged_cost: stepChargeUsd }),
         completed_at: new Date().toISOString(),
       })
       .eq("run_id", runId)
@@ -332,7 +435,6 @@ async function runScreeningAnalysisInLanguage(
       throw new Error(serverText("analysisServer.screening.researchNotFound"));
     }
     const config = configResult.data as unknown as ConfigData;
-    const profile = mapProfile(config);
     const caseRow = caseResult.data as Record<string, unknown>;
     const rawCompany = caseRow["companies"] as unknown;
     const company = (Array.isArray(rawCompany) ? rawCompany[0] : rawCompany) as {
@@ -347,6 +449,13 @@ async function runScreeningAnalysisInLanguage(
       stepResult.data as Parameters<typeof readResearchHandOff>[0],
       plan.budget.researchUsd,
     );
+    // The stage the research was planned for (the start's choice), so the analysis scores
+    // the criteria the research and the evidence sheet were made for; kept on the run below, so a
+    // rescore and the deep analysis on this screening use the same one.
+    const profile = mapProfile(config, {
+      caseStage: company.stage,
+      runChoice: research.setupStage,
+    });
     researchCostUsd = research.actualCostUsd;
     researchChargeUsd = research.chargeUsd;
     const chosenIds = ((run["input_evidence_ids"] as string[] | null) ?? []).filter(Boolean);
@@ -386,11 +495,18 @@ async function runScreeningAnalysisInLanguage(
     // C7: finans-gates regnes i kode før AI-kaldet, så AI'ens tekst stemmer med dem.
     const financeGateKeys = profile.gates.map((gate) => gate.key).filter(isFinanceGate);
     const hasFinanceCriterion = profile.criteria.some(isCodeAnchored);
-    // Regnskaberne læses én gang og bruges til gates, kode-score og efterkontrol.
+    // The stage's economy points the registry can settle are computed in code too.
+    const economy = profile.teamSetup?.economy ?? null;
+    const hasRegistryEconomy = economy
+      ? pointsOn(economy).some((point) => economyPoint(point.key).source !== "material")
+      : false;
+    // Regnskaberne læses én gang og bruges til gates, kode-score, økonomi og efterkontrol.
     const financeContext =
-      financeGateKeys.length || hasFinanceCriterion
+      financeGateKeys.length || hasFinanceCriterion || hasRegistryEconomy
         ? await loadFinanceGateContext(service, fundId, caseId, company.stage)
         : null;
+    const economyFromRegistry = registryFigures(economy, financeContext);
+    if (economyFromRegistry.length) caseInput = { ...caseInput, economyFromRegistry };
     if (financeContext && financeGateKeys.length) {
       caseInput = {
         ...caseInput,
@@ -414,6 +530,18 @@ async function runScreeningAnalysisInLanguage(
       caseInput = { ...caseInput, financeCodeScore: financeScore.score };
     }
     const prompt = buildScreeningPrompt(profile, caseInput);
+    // What exactly the model was asked, recognisable afterwards without storing the prompt.
+    const fingerprint = promptFingerprint({
+      system: prompt.system,
+      user: prompt.user,
+      schema: screeningJsonSchema(profile, inputEvidenceIds),
+    });
+    // Written before the call, in its own update (a failed call was sent too); never fails the run.
+    await storePromptFingerprint(
+      service,
+      { runId, stepKey: "fund_screening", alsoRun: true },
+      fingerprint,
+    );
     // Teamets gate-svar læses før det betalte kald (harden G11).
     const storedTeamAnswers = await loadTeamGateAnswers(service, {
       fundId: fundId,
@@ -457,6 +585,16 @@ async function runScreeningAnalysisInLanguage(
     if (output.caseId !== caseId) throw new Error(serverText("analysisServer.common.otherCase"));
     validateConfiguredCoverage(output, profile);
     validateEvidenceReferences(output, new Set(inputEvidenceIds));
+    // The stage's economy: registry figures, the AI's sourced answers, limits compared in
+    // code. A missing figure is never a break and stops nothing.
+    const economyResult = evaluateEconomy({
+      stage: profile.teamSetup?.stage?.stage,
+      setup: economy,
+      registry: financeContext,
+      answers: output.economy,
+      allowedEvidenceIds: new Set(inputEvidenceIds),
+    });
+    const missingEconomyTask = economyTask(economyResult, profile.language ?? "da");
     // Teamets gate-svar under samme opsætning gælder også for den nye screening (harden F2):
     // et brud, teamet har registreret, kan ikke skjules bag et nyt AI-svar. Det gemte
     // AI-svar (raw_response) forbliver AI'ens eget.
@@ -486,6 +624,11 @@ async function runScreeningAnalysisInLanguage(
           // AI'ens vurdering, og scoren kan regnes igen fra kørslen alene.
           teamGateAnswers: teamAnswers,
           blockers: result.blockers,
+          // The stage whose setup the case was screened with ("stadie antaget" when
+          // assumed); null for a version with nothing per stage.
+          setupStage: profile.teamSetup?.stage ?? null,
+          // The stage's economy points on this screening (marked, met, missing...).
+          ...(economyResult ? { economy: economyResult } : {}),
           financeScore: financeScoreAudit(financeScore, result),
           costCurrency: "USD",
           aiTier: plan.tier,
@@ -548,6 +691,8 @@ async function runScreeningAnalysisInLanguage(
           output_tokens: completion.outputTokens,
           total_tokens: completion.totalTokens,
           actual_cost: completion.actualCostUsd,
+          // An unknown price counts with its charge, as in the run's `chargedUsd`.
+          charged_cost: budgetCharge(completion.actualCostUsd, completion.estimatedMaximumUsd),
           output_json: output,
           completed_at: new Date().toISOString(),
         })
@@ -581,7 +726,9 @@ async function runScreeningAnalysisInLanguage(
         assessments: output.assessments,
         openQuestions: output.openQuestions,
         researchQuestions: founderQuestions(research.followUp),
-        // The screening's own curated list (prompt v12); older output has none.
+        economyTask: missingEconomyTask,
+        // The screening's own curated list (prompt v12); older output has none.:
+        // the one economy task takes a place, so the least important step goes (four stay four).
         nextSteps:
           output.nextSteps === undefined
             ? undefined
@@ -591,7 +738,7 @@ async function runScreeningAnalysisInLanguage(
                   gates: profile.gates.map((gate) => gate.key),
                   criteria: profile.criteria.map((criterion) => criterion.key),
                 },
-                MAX_SCREENING_NEXT_STEPS,
+                missingEconomyTask ? MAX_SCREENING_NEXT_STEPS - 1 : MAX_SCREENING_NEXT_STEPS,
               ),
       },
     });

@@ -211,17 +211,17 @@ test("every deep step saves its charge, and the run books the sum (T-784)", () =
   assert.match(worker, /charged_cost: chargedSynthesis,\s*output_json: output,/);
   assert.match(sheet, /charged_cost: outcome\.chargeUsd,/);
   // The run's error handling saves the failed step's charge (research or synthesis).
-  assert.match(worker, /failedStepChargeUsd\(cause, completion\),\s*\);/);
+  assert.match(worker, /failedStepChargeUsd\(cause, completion\),\s*stopReasonOf\(cause\),\s*\);/);
   assert.match(
     worker,
     /\.\.\.\(stepChargeUsd === null \? \{\} : \{ charged_cost: stepChargeUsd \}\),/,
   );
   // Completion, failure and release write the sum where the settlement (0114) reads it.
   const persist = worker.slice(worker.indexOf("async function persistDeepAnalysis("));
-  assert.match(
-    persist,
-    /const chargedUsd = stepCosts\.everyStepKnown \? stepCosts\.chargedUsd : null;/,
-  );
+  // The run's sums come from its steps by one rule, shared with the direct runner.
+  assert.match(persist, /\} = runTotalsFromSteps\(\[\.\.\.steps\.values\(\)\]\);/);
+  const totals = readFileSync(new URL("./gateway-response.ts", import.meta.url), "utf8");
+  assert.match(totals, /chargedUsd: costs\.everyStepKnown \? costs\.chargedUsd : null,/);
   assert.match(
     persist,
     /customCap: context\.plan\.customCap,\s*chargedUsd,\s*actualUsd: totalCostUsd,/,

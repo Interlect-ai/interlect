@@ -1,6 +1,6 @@
 /**
- * Interlect motion tokens: exactly (wins over the prototypes' CSS values). The durations and curves
- * are also CSS variables in
+ * Interlect motion tokens: exactly (afsnit 6 og) §2 (wins over the prototypes' CSS values). The
+ * durations and curves are also CSS variables in
  * src/styles.css (--dur-*, --ease-*), so CSS and motion animations move alike.
  *
  * Rules (§5): interactive things use springs, curves only for fades and

@@ -20,6 +20,8 @@ import { getServiceClient } from "@/lib/supabase/admin.server";
 import type { MandateSnapshot } from "@/lib/cases/intake-mandate";
 import { createCaseOriginProbe, mayEditCaseOrigin } from "@/lib/cases/intake-probe";
 import { domainOfWebsite, lookupExistingCase } from "@/lib/cases/intake-duplicate";
+import { defaultThesis, loadTheses } from "@/lib/funds/thesis-scope.server";
+import type { ThesisRow } from "@/lib/funds/theses";
 import { hasCapability } from "@/lib/domain/workflow";
 import { serverText } from "@/lib/i18n/server-text";
 import { fromDemoView, inDemoView } from "@/lib/display/display-names.server";
@@ -64,50 +66,103 @@ export const getIntakeCapabilities = createServerFn({ method: "GET" })
 // Mandate snapshot for the preview
 // ---------------------------------------------------------------------------------------
 
+/**
+ * The theses a new case is made under in one team (spec flere-teser-i-et-team §4.3): the
+ * chosen ones that belong to the team and are active, else the team's default thesis. Read with
+ * the caller's client (RLS).
+ */
+async function intakeTheses(
+  supabase: Parameters<typeof requireFundCapability>[0],
+  fundId: string,
+  thesisIds: readonly string[] | undefined,
+): Promise<ThesisRow[]> {
+  if (thesisIds?.length) {
+    const own = (await loadTheses(supabase, fundId)).filter((thesis) =>
+      thesisIds.includes(thesis.id),
+    );
+    // A chosen thesis that was archived (or never published) meanwhile is refused, never
+    // silently swapped for the default thesis.
+    if (own.some((thesis) => thesis.status !== "active")) {
+      throw new Error(serverText("thesisServer.notSelectable"));
+    }
+    if (own.length) return own;
+  }
+  const fallback = await defaultThesis(supabase, fundId);
+  return fallback?.status === "active" ? [fallback] : [];
+}
+
+const thesisIdsSchema = z.array(z.guid()).max(20).optional();
+
 export const getIntakeMandate = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
-    z.object({ fundIds: z.array(fundIdSchema).min(1).max(20) }).parse(input),
+    z
+      .object({
+        fundIds: z.array(fundIdSchema).min(1).max(20),
+        /** The chosen theses; a team without one in the list uses its default thesis. */
+        thesisIds: thesisIdsSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }): Promise<MandateSnapshot[]> => {
     const snapshots: MandateSnapshot[] = [];
     for (const fundId of data.fundIds) {
       await requireFundCapability(context.supabase, context.userId, fundId, "view_case");
-      const { data: config, error } = await context.supabase
-        .from("fund_config_versions")
-        .select(
-          "fund_id, funds(name), fund_mandates(stages, geographies), mandate_gates(gate_key, label, sort_order)",
-        )
-        .eq("fund_id", fundId)
-        .eq("status", "active")
-        .maybeSingle();
-      if (error) {
-        console.error("[getIntakeMandate]", error.message);
-        throw new Error(serverText("caseServer.intake.requirementsNotLoaded"));
+      for (const thesis of await intakeTheses(context.supabase, fundId, data.thesisIds)) {
+        const snapshot = await thesisMandate(context.supabase, fundId, thesis);
+        if (snapshot) snapshots.push(snapshot);
       }
-      if (!config) continue;
-      const row = config as unknown as {
-        funds: { name: string } | { name: string }[] | null;
-        fund_mandates:
-          | { stages: string[] | null; geographies: string[] | null }
-          | { stages: string[] | null; geographies: string[] | null }[]
-          | null;
-        mandate_gates: { gate_key: string; label: string; sort_order: number | null }[] | null;
-      };
-      const fund = Array.isArray(row.funds) ? row.funds[0] : row.funds;
-      const mandate = Array.isArray(row.fund_mandates) ? row.fund_mandates[0] : row.fund_mandates;
-      snapshots.push({
-        fundId,
-        fundName: fund?.name ?? "",
-        stages: mandate?.stages ?? [],
-        geographies: mandate?.geographies ?? [],
-        gates: [...(row.mandate_gates ?? [])]
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-          .map((gate) => ({ key: gate.gate_key, label: gate.label })),
-      });
     }
     return snapshots;
   });
+
+/** One thesis's active mandate for the preview, or null when it has no published version. */
+async function thesisMandate(
+  supabase: Parameters<typeof requireFundCapability>[0],
+  fundId: string,
+  thesis: ThesisRow,
+): Promise<MandateSnapshot | null> {
+  const { data: config, error } = await supabase
+    .from("fund_config_versions")
+    .select(
+      "fund_id, funds(name), fund_mandates(stages, geographies), mandate_gates(stage, gate_key, label, sort_order)",
+    )
+    .eq("fund_id", fundId)
+    .eq("thesis_id", thesis.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) {
+    console.error("[getIntakeMandate]", error.message);
+    throw new Error(serverText("caseServer.intake.requirementsNotLoaded"));
+  }
+  if (!config) return null;
+  const row = config as unknown as {
+    funds: { name: string } | { name: string }[] | null;
+    fund_mandates:
+      | { stages: string[] | null; geographies: string[] | null }
+      | { stages: string[] | null; geographies: string[] | null }[]
+      | null;
+    mandate_gates:
+      | { stage?: string | null; gate_key: string; label: string; sort_order: number | null }[]
+      | null;
+  };
+  const fund = Array.isArray(row.funds) ? row.funds[0] : row.funds;
+  const mandate = Array.isArray(row.fund_mandates) ? row.fund_mandates[0] : row.fund_mandates;
+  return {
+    fundId,
+    fundName: fund?.name ?? "",
+    thesisId: thesis.id,
+    thesisName: thesis.name,
+    stages: mandate?.stages ?? [],
+    geographies: mandate?.geographies ?? [],
+    // The thesis' shared mandate (every rule of a version with nothing per stage); a
+    // stage's own rules apply once the case's stage is known, in the screening.
+    gates: [...(row.mandate_gates ?? [])]
+      .filter((gate) => !gate.stage)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((gate) => ({ key: gate.gate_key, label: gate.label })),
+  };
+}
 
 // ---------------------------------------------------------------------------------------
 // Duplicate check
@@ -115,6 +170,8 @@ export const getIntakeMandate = createServerFn({ method: "GET" })
 
 export interface ExistingCaseHit {
   fundId: string;
+  /** The thesis the existing case belongs to. */
+  thesisId: string;
   caseId: string;
   companyName: string;
 }
@@ -132,6 +189,8 @@ export const findExistingCases = createServerFn({ method: "POST" })
           .string()
           .regex(/^\d{8}$/)
           .nullish(),
+        /** The chosen theses; a team without one in the list uses its default thesis. */
+        thesisIds: thesisIdsSchema,
       })
       .parse(input),
   )
@@ -140,20 +199,26 @@ export const findExistingCases = createServerFn({ method: "POST" })
     const hits: ExistingCaseHit[] = [];
     for (const fundId of data.fundIds) {
       await requireFundCapability(context.supabase, context.userId, fundId, "create_case");
-      // RLS-scoped read: the caller's own fund only.
-      let existing;
-      try {
-        existing = await lookupExistingCase(context.supabase, {
-          fundId,
-          companyName: await fromDemoView(fundId, data.companyName),
-          domain,
-          cvrNumber: data.cvrNumber ?? null,
-        });
-      } catch (cause) {
-        console.error("[findExistingCases]", cause);
-        throw new Error(serverText("caseServer.intake.existingNotChecked"));
+      const companyName = await fromDemoView(fundId, data.companyName);
+      for (const thesis of await intakeTheses(context.supabase, fundId, data.thesisIds)) {
+        // RLS-scoped read: the caller's own fund only.
+        let existing;
+        try {
+          existing = await lookupExistingCase(context.supabase, {
+            fundId,
+            companyName,
+            domain,
+            cvrNumber: data.cvrNumber ?? null,
+            thesisId: thesis.id,
+          });
+        } catch (cause) {
+          console.error("[findExistingCases]", cause);
+          throw new Error(serverText("caseServer.intake.existingNotChecked"));
+        }
+        if (existing) {
+          hits.push(await inDemoView(fundId, { fundId, thesisId: thesis.id, ...existing }));
+        }
       }
-      if (existing) hits.push(await inDemoView(fundId, { fundId, ...existing }));
     }
     return hits;
   });

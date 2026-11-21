@@ -1,4 +1,5 @@
 import { AI_BUDGETS, type PricedModel } from "./budgets.ts";
+import { floorDkk, planRunScope, type RunScope } from "./run-planner.ts";
 
 /**
  * AI-niveauer pr. fond: Let, Middel og Tung, valgt særskilt for
@@ -18,11 +19,19 @@ export const DEFAULT_AI_TIER: AiTier = "medium";
 
 export type AiRunKind = "screening" | "deep";
 
-export const AI_TIER_LABELS: Record<AiTier, string> = {
-  light: "Let",
-  medium: "Middel",
-  heavy: "Tung",
-};
+/** What happens when a full analysis does not fit the team's limit. */
+export const LIMIT_ACTIONS = ["shrink", "ask"] as const;
+export type LimitAction = (typeof LIMIT_ACTIONS)[number];
+export const DEFAULT_LIMIT_ACTION: LimitAction = "shrink";
+
+/** What the person chose when a full analysis did not fit the limit (spec B.1 punkt 3). */
+export const LIMIT_CHOICES = ["reduce", "raise_once"] as const;
+export type LimitChoice = (typeof LIMIT_CHOICES)[number];
+
+/** The action from the database; an unknown or missing value falls back to the default. */
+export function normalizeLimitAction(value: unknown): LimitAction {
+  return value === "ask" || value === "shrink" ? value : DEFAULT_LIMIT_ACTION;
+}
 
 export function isAiTier(value: unknown): value is AiTier {
   return typeof value === "string" && (AI_TIERS as readonly string[]).includes(value);
@@ -114,6 +123,13 @@ const TIER_BASE: Record<AiRunKind, Record<AiTier, { dkk: number; usd: number } &
   },
 };
 
+/**
+ * The rate the table above is worked out at, and the rate of every run stored before 0123. A new
+ * run uses the one rate in ai_settings (`usd_to_dkk`), so its cap in kroner is also what
+ * the credit ledger books.
+ */
+export const TABLE_USD_TO_DKK: number = AI_BUDGETS.exchangeRateDkkPerUsd;
+
 /** A typo must never be able to burn money: hard limits for what a fund may confirm. */
 export const CAP_LIMITS_DKK: Record<AiRunKind, { min: number; max: number }> = {
   screening: { min: 1, max: 100 },
@@ -137,11 +153,53 @@ export interface RunPlan {
   budget: RunBudget;
   /** True when the fund has confirmed its own cap instead of the tier's standard. */
   customCap: boolean;
+  /** The rate from kroner to dollars the budget is worked out at, kept on the run (0123). */
+  usdToDkk: number;
+  /** What the run does inside its limit. Worked out again the same from the stored run. */
+  scope: RunScope;
   /**
    * True for the plan runs had (and while the columns of 0036 do not exist yet).
    * A legacy plan is not written to the run's tier and cap columns.
    */
   legacy: boolean;
+  /**
+   * What a continuation after a stop at the price limit reserves and may spend,
+   * only the parts the stopped run did not finish (`run-continuation.ts`). Absent: the whole budget.
+   */
+  reserve?: RunReserve | undefined;
+}
+
+/** What a run reserves in the credit ledger, against the team's month, and may spend. */
+export interface RunReserve {
+  usd: number;
+  /** The same in kroner at the run's rate, rounded up to whole øre. */
+  dkk: number;
+}
+
+function ceil2(value: number): number {
+  return Math.ceil(value * 100 - 1e-9) / 100;
+}
+
+/** A reservation of `usd` dollars on this plan: never more than the plan, also in kroner. */
+export function reserveOf(plan: RunPlan, usd: number): RunReserve {
+  return { usd, dkk: Math.min(plan.budget.dkk, ceil2(usd * plan.usdToDkk)) };
+}
+
+/** What the run reserves and may spend: a continuation's missing parts, else its whole budget. */
+export function planReserve(plan: RunPlan): RunReserve {
+  return plan.reserve ?? { usd: plan.budget.usd, dkk: plan.budget.dkk };
+}
+
+/**
+ * The plan a stored run may spend (the worker path): a run keeps what it reserved in
+ * `estimated_cost`, its plan's dollars or, for a continuation, only the missing parts.
+ * A value at or above the plan never raises what the run may use.
+ */
+export function storedReserve(plan: RunPlan, estimatedCost: unknown): RunPlan {
+  if (estimatedCost === null || estimatedCost === undefined) return plan;
+  const usd = Number(estimatedCost);
+  if (!Number.isFinite(usd) || usd < 0 || usd >= plan.budget.usd - 0.000001) return plan;
+  return { ...plan, reserve: reserveOf(plan, usd) };
 }
 
 /**
@@ -175,9 +233,11 @@ function round4(value: number): number {
 /**
  * The tier's standard cap for a run with `specialistCount` specialists. Screening and a deep run
  * with the four standard specialists get the table's values unchanged. Otherwise only the
- * specialist part changes (one quarter of the table's specialist part per specialist), the USD
- * cap is the sum of the parts and the DKK cap is rounded up to whole kroner, so the parts still
- * never pass it.
+ * specialist part changes (one quarter of the table's specialist part per specialist) and the USD
+ * cap is the sum of the parts. The standard is a sum in kroner (spec B.0: "Middel 35, Tung 60 kr.;
+ * stiger med teamets egne specialister"), so the DKK cap grows with the dollars from the table's
+ * own kroner, rounded up to whole kroner, never through a copy of the exchange rate: the one rate
+ * in ai_settings turns the kroner into the run's dollars (`resolveRunBudget`).
  */
 function baseBudget(
   kind: AiRunKind,
@@ -191,7 +251,7 @@ function baseBudget(
   const analysisUsd = round4(specialistsUsd + base.synthesisUsd);
   const usd = round4(base.researchUsd + analysisUsd);
   return {
-    dkk: Math.ceil(usd * AI_BUDGETS.exchangeRateDkkPerUsd - 1e-9),
+    dkk: Math.ceil((base.dkk * usd) / base.usd - 1e-9),
     usd,
     researchUsd: base.researchUsd,
     analysisUsd,
@@ -202,37 +262,46 @@ function baseBudget(
 
 /**
  * The budget for a run. Without a confirmed cap it is the tier's standard. With one, the cap
- * is the fund's real limit and every part is scaled by the same factor, so the structure
- * (research / analysis / specialists / synthesis) is kept and the parts never add up to more
- * than the cap. A deep run's standard follows its number of specialists.
+ * is the fund's real limit. The dollars are the cap at `usdToDkk`, so the parts follow the rate the
+ * ledger books at. The fixed shares (research / analysis / specialists / synthesis) hold
+ * while they cover what the run needs; under that the planner decides what fits, and the
+ * parts never add up to more than the cap. A deep run's standard follows its number of
+ * specialists.
  */
 export function resolveRunBudget(
   kind: AiRunKind,
   tier: AiTier,
   capDkk: number | null,
   specialistCount: number = STANDARD_SPECIALIST_COUNT,
-): { budget: RunBudget; customCap: boolean } {
+  usdToDkk: number = TABLE_USD_TO_DKK,
+): { budget: RunBudget; customCap: boolean; scope: RunScope } {
   const base = baseBudget(kind, tier, specialistCount);
-  if (capDkk === null || !isValidCapDkk(kind, capDkk) || capDkk === base.dkk) {
-    const { dkk, usd, researchUsd, analysisUsd, specialistsUsd, synthesisUsd } = base;
-    return {
-      budget: { dkk, usd, researchUsd, analysisUsd, specialistsUsd, synthesisUsd },
-      customCap: false,
-    };
-  }
-  const usd = floor4(capDkk / AI_BUDGETS.exchangeRateDkkPerUsd);
+  const cap = capDkk === null || !isValidCapDkk(kind, capDkk) ? base.dkk : capDkk;
+  const customCap = cap !== base.dkk;
+  const usd = !customCap && usdToDkk === TABLE_USD_TO_DKK ? base.usd : floor4(cap / usdToDkk);
   const scale = usd / base.usd;
-  return {
-    budget: {
-      dkk: capDkk,
-      usd,
-      researchUsd: floor4(base.researchUsd * scale),
-      analysisUsd: floor4(base.analysisUsd * scale),
-      specialistsUsd: floor4(base.specialistsUsd * scale),
-      synthesisUsd: floor4(base.synthesisUsd * scale),
-    },
-    customCap: true,
-  };
+  const shares =
+    usd === base.usd
+      ? {
+          researchUsd: base.researchUsd,
+          analysisUsd: base.analysisUsd,
+          specialistsUsd: base.specialistsUsd,
+          synthesisUsd: base.synthesisUsd,
+        }
+      : {
+          researchUsd: floor4(base.researchUsd * scale),
+          analysisUsd: floor4(base.analysisUsd * scale),
+          specialistsUsd: floor4(base.specialistsUsd * scale),
+          synthesisUsd: floor4(base.synthesisUsd * scale),
+        };
+  const { scope, parts } = planRunScope({
+    kind,
+    model: TIER_MODELS[kind][tier],
+    capUsd: usd,
+    specialistCount,
+    shares,
+  });
+  return { budget: { dkk: cap, usd, ...parts }, customCap, scope };
 }
 
 export function buildRunPlan(
@@ -240,9 +309,74 @@ export function buildRunPlan(
   tier: AiTier,
   capDkk: number | null,
   specialistCount: number = STANDARD_SPECIALIST_COUNT,
+  usdToDkk: number = TABLE_USD_TO_DKK,
 ): RunPlan {
-  const { budget, customCap } = resolveRunBudget(kind, tier, capDkk, specialistCount);
-  return { kind, tier, model: TIER_MODELS[kind][tier], budget, customCap, legacy: false };
+  const { budget, customCap, scope } = resolveRunBudget(
+    kind,
+    tier,
+    capDkk,
+    specialistCount,
+    usdToDkk,
+  );
+  return {
+    kind,
+    tier,
+    model: TIER_MODELS[kind][tier],
+    budget,
+    customCap,
+    usdToDkk,
+    scope,
+    legacy: false,
+  };
+}
+
+/** An earlier run's research can stand in for this run's only when it searched at least as much. */
+export function researchCovers(earlier: RunScope, wanted: RunScope): boolean {
+  return wanted.tracks.every((track) => earlier.tracks.includes(track));
+}
+
+/** The lowest limit a run at this level can run at, in whole kroner (spec B.1 punkt 5). */
+export function lowestCapDkk(
+  kind: AiRunKind,
+  tier: AiTier,
+  specialistCount: number = STANDARD_SPECIALIST_COUNT,
+  usdToDkk: number = TABLE_USD_TO_DKK,
+): number {
+  return Math.max(
+    CAP_LIMITS_DKK[kind].min,
+    floorDkk(kind, TIER_MODELS[kind][tier], specialistCount, usdToDkk),
+  );
+}
+
+/**
+ * Who can lift a run that cannot start under the bottom for its level (spec B.1 punkt 5):
+ * the installation, when its own hard limit is under the bottom (the team cannot raise it), else
+ * the team's Admin or Lead. The bottom follows the run's own specialists, so the case's thesis.
+ */
+export function tooLowCause(
+  kind: AiRunKind,
+  tier: AiTier,
+  platformCapDkk: number,
+  specialistCount: number = STANDARD_SPECIALIST_COUNT,
+  usdToDkk: number = TABLE_USD_TO_DKK,
+): "platform" | "team" {
+  return platformCapDkk < lowestCapDkk(kind, tier, specialistCount, usdToDkk) ? "platform" : "team";
+}
+
+/**
+ * The cap a new run gets when the installation has a hard limit: the fund's own cap (or null for
+ * the tier's standard), unless that passes the limit, which then applies. A cap saved
+ * before the limit was lowered is never trusted beyond it.
+ */
+export function capWithinPlatform(
+  kind: AiRunKind,
+  tier: AiTier,
+  ownCapDkk: number | null,
+  platformCapDkk: number,
+  specialistCount: number = STANDARD_SPECIALIST_COUNT,
+): number | null {
+  const wanted = ownCapDkk ?? standardCapDkk(kind, tier, specialistCount);
+  return wanted > platformCapDkk ? platformCapDkk : ownCapDkk;
 }
 
 /** The plan every run had: light screening (mini) and medium deep (gpt-5.4). */
@@ -263,7 +397,7 @@ export function legacyRunPlan(
  */
 export function planFromStoredRun(
   kind: AiRunKind,
-  stored: { ai_tier?: unknown; cost_cap_dkk?: unknown },
+  stored: { ai_tier?: unknown; cost_cap_dkk?: unknown; usd_to_dkk?: unknown },
   /** The run's specialists (its config version's set); four for every older run. */
   specialistCount: number = STANDARD_SPECIALIST_COUNT,
 ): RunPlan {
@@ -272,21 +406,29 @@ export function planFromStoredRun(
     stored.cost_cap_dkk === null || stored.cost_cap_dkk === undefined
       ? null
       : Number(stored.cost_cap_dkk);
+  const rate = Number(stored.usd_to_dkk ?? TABLE_USD_TO_DKK);
   return buildRunPlan(
     kind,
     stored.ai_tier,
     cap !== null && isValidCapDkk(kind, cap) ? cap : null,
     specialistCount,
+    Number.isFinite(rate) && rate > 0 ? rate : TABLE_USD_TO_DKK,
   );
 }
 
 /** The columns a new run stores for its plan; nothing for a legacy plan (see RunPlan.legacy). */
-export function planColumns(plan: RunPlan): { ai_tier?: AiTier; cost_cap_dkk?: number } {
-  return plan.legacy ? {} : { ai_tier: plan.tier, cost_cap_dkk: plan.budget.dkk };
+export function planColumns(plan: RunPlan): {
+  ai_tier?: AiTier;
+  cost_cap_dkk?: number;
+  usd_to_dkk?: number;
+} {
+  return plan.legacy
+    ? {}
+    : { ai_tier: plan.tier, cost_cap_dkk: plan.budget.dkk, usd_to_dkk: plan.usdToDkk };
 }
 
 /**
- * The expected price of one run in DKK, for the comparison of the levels. Real averages per
+ * The expected price of one run in DKK, for the warning that a cap is too low. Real averages per
  * tier are used when the fund has finished runs at the tier; until then this estimate applies
  * (light screening measured at about 0.2-0.3 kr; the other levels follow the model prices).
  */

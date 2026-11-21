@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SECTOR_AGNOSTIC, suggestBasisGates } from "./gate-suggestions.ts";
+import { SECTOR_AGNOSTIC, sharedBasisGate, suggestBasisGates } from "./gate-suggestions.ts";
 
 const basis = {
   stages: ["Seed", "Series A"],
@@ -78,4 +78,19 @@ test("suggestions are written in the page's language (T-622)", () => {
   );
   assert.equal(geography?.label, "Geography fits the mandate");
   assert.match(geography!.description, /not breached\.$/);
+});
+
+test("T-1096: a shared rule for a list is worded as its suggestion, with the chosen weight", () => {
+  const suggested = suggestBasisGates(
+    { stages: ["seed"], geographies: [], sectors: [], ticketMinEur: null, ticketMaxEur: null },
+    [],
+    "en",
+  )[0]!;
+  const shared = sharedBasisGate("stage_fit", "hard", "en");
+  assert.deepEqual(shared, {
+    key: "stage_fit",
+    label: suggested.label,
+    description: suggested.description,
+    treatment: "hard",
+  });
 });

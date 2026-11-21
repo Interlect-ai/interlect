@@ -6,6 +6,7 @@
 import { storedTeamGateAnswers } from "../analysis/gate-answers.ts";
 import { stagePriorScore } from "../analysis/scoring.ts";
 import { gateMarks } from "./gate-marks.ts";
+import { readSetupStageChoice, type SetupStageChoice } from "../analysis/setup-stage.ts";
 import type { CaseListItem, ListCriterionScore } from "@/lib/cases/cases.functions";
 import type { CasePhase, CaseStatus } from "@/lib/cases/lifecycle";
 import type { CaseWorkspaceStatus } from "@/lib/domain/types";
@@ -61,9 +62,14 @@ export interface CaseListPayloadCase {
   /** The latest finished screening's gates, only gateKey and passed. */
   screening_gates: Array<{ gateKey?: unknown; passed?: unknown }> | null;
   screening_team_gate_answers: unknown;
+  /** The stage the latest screening was made with (validation_public, 0134). */
+  screening_setup_stage?: unknown;
   top_risk_level: string | null;
   source_count: number;
   open_tasks: number;
+  /** The case's thesis and its active setup version; absent before 0128. */
+  thesis_id?: string | null;
+  active_config_id?: string | null;
 }
 
 /**
@@ -149,19 +155,48 @@ export interface CaseListProfile {
   threshold: number | null;
   gates: Array<{ key: string; treatment: "hard" | "review" }>;
   criteria: Array<{ key: string; label: string; category: string; weight: number }>;
+  /**
+   * The gates, criteria and threshold for one case's stage (Teamopsætning pr. stadie):
+   * the screening's own stage, else the case's stage resolved. Absent = every case reads the
+   * profile as it is.
+   */
+  forStage?: (
+    caseStage: string | null | undefined,
+    runChoice?: SetupStageChoice | null,
+  ) => Pick<CaseListProfile, "gates" | "criteria" | "threshold">;
 }
 
 /** The list's rows from the payload; runs come newest first, as the database sends them. */
-export function buildCaseList(payload: CaseListPayload, profile: CaseListProfile): CaseListItem[] {
+/**
+ * `profile` is the setup the list was asked for; `profiles` holds the active setup of each other
+ * thesis in the list by version id, so every case is read with its own thesis's threshold,
+ * criteria and gates. A case whose thesis setup is missing falls back to `profile`.
+ */
+export function buildCaseList(
+  payload: CaseListPayload,
+  profile: CaseListProfile,
+  profiles: ReadonlyMap<string, CaseListProfile> = new Map(),
+): CaseListItem[] {
+  const profileByCase = new Map(
+    payload.cases.map((row) => {
+      const own =
+        (row.active_config_id ? profiles.get(row.active_config_id) : undefined) ?? profile;
+      // A setup per stage is read with the case's own stage (the screening's choice first).
+      const staged = own.forStage?.(row.stage, readSetupStageChoice(row.screening_setup_stage));
+      return [row.id, staged ? { ...own, ...staged } : own] as const;
+    }),
+  );
+  const caseProfile = (caseId: string) => profileByCase.get(caseId) ?? profile;
   const runById = new Map(payload.runs.map((run) => [run.id, run]));
   // Kørslerne kommer nyeste først; historikken vendes til kronologisk orden.
   const fitHistoryByCase = new Map<string, number[]>();
   for (const run of payload.runs) {
     // The history compares scores under the active setup; older versions' runs stay out.
+    const ownConfigId = caseProfile(run.case_id).configId;
     if (
-      profile.configId !== undefined &&
+      ownConfigId !== undefined &&
       run.config_version_id != null &&
-      run.config_version_id !== profile.configId
+      run.config_version_id !== ownConfigId
     ) {
       continue;
     }
@@ -193,10 +228,24 @@ export function buildCaseList(payload: CaseListPayload, profile: CaseListProfile
   const nameById = new Map(
     payload.assignees.map((profileRow) => [profileRow.id, profileRow.full_name ?? null]),
   );
-  const criterionByKey = new Map(profile.criteria.map((criterion) => [criterion.key, criterion]));
+  const criteriaByProfile = new Map<
+    CaseListProfile,
+    Map<string, CaseListProfile["criteria"][number]>
+  >();
+  const criteriaFor = (runId: string) => {
+    const run = runById.get(runId);
+    const own = run ? caseProfile(run.case_id) : profile;
+    let byKey = criteriaByProfile.get(own);
+    if (!byKey) {
+      byKey = new Map(own.criteria.map((criterion) => [criterion.key, criterion]));
+      criteriaByProfile.set(own, byKey);
+    }
+    return { own, byKey };
+  };
   const scoresByRun = new Map<string, ListCriterionScore[]>();
   for (const scoreRow of payload.scores) {
     const runId = scoreRow.run_id;
+    const criterionByKey = criteriaFor(runId).byKey;
     const list = scoresByRun.get(runId) ?? [];
     const criterionKey = scoreRow.category;
     list.push({
@@ -208,11 +257,11 @@ export function buildCaseList(payload: CaseListPayload, profile: CaseListProfile
     });
     scoresByRun.set(runId, list);
   }
-  for (const list of scoresByRun.values()) {
+  for (const [runId, list] of scoresByRun) {
+    const { own } = criteriaFor(runId);
     list.sort(
       (a, b) =>
-        criterionOrder(profile.criteria, a.criterionKey) -
-        criterionOrder(profile.criteria, b.criterionKey),
+        criterionOrder(own.criteria, a.criterionKey) - criterionOrder(own.criteria, b.criterionKey),
     );
   }
   const progressByRun = new Map<
@@ -243,6 +292,7 @@ export function buildCaseList(payload: CaseListPayload, profile: CaseListProfile
   }
 
   return payload.cases.map((row) => {
+    const profile = caseProfile(row.id);
     const latestRun = row.latest_run_id ? runById.get(row.latest_run_id) : undefined;
     const profileRun = latestRun
       ? {
@@ -299,6 +349,7 @@ export function buildCaseList(payload: CaseListPayload, profile: CaseListProfile
           ) / 10;
     return {
       id: row.id,
+      thesisId: row.thesis_id ?? null,
       companyName: row.company_name ?? "Ukendt selskab",
       website: row.website ?? null,
       stage: row.stage ?? "unknown",

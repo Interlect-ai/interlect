@@ -33,6 +33,9 @@ import { analysisServer } from "./da/analysisServer.ts";
 import { brainServer } from "./da/brainServer.ts";
 import { appServer } from "./da/appServer.ts";
 import { demoData } from "./da/demoData.ts";
+import { thesisServer } from "./da/thesisServer.ts";
+import { memoServer } from "./da/memoServer.ts";
+import { memo } from "./da/memo.ts";
 
 export const da = {
   shell,
@@ -64,6 +67,9 @@ export const da = {
   brainServer,
   appServer,
   demoData,
+  thesisServer,
+  memoServer,
+  memo,
   common: {
     save: "Gem",
     cancel: "Annuller",

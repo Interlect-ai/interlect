@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import { getServiceClient } from "@/lib/supabase/admin.server";
 import { requireFundCapability } from "@/lib/auth/access.server";
+import { requireCaseThesis } from "@/lib/funds/thesis-scope.server";
 import { type ScreeningCaseInput } from "./prompt";
 import {
   isCaseOwnEvidence,
@@ -44,6 +45,7 @@ import {
 import { planColumns } from "./model-tiers";
 import { COMPANY_LABEL, SCREENING_SUMMARY, SYNTHESIS_NEXT_STEPS } from "./deep-text-rules";
 import { MAX_SCREENING_NEXT_STEPS } from "@/lib/cases/tasks";
+import { economyAsk, economyAskKeys, ECONOMY_ANSWER_MAX } from "./economy-check";
 import { researchDeadlineAt } from "./research-followup";
 import {
   EVIDENCE_SHEET_BUDGET_USD,
@@ -51,9 +53,12 @@ import {
   evidenceBesideSheet,
 } from "./evidence-sheet";
 import { writeEvidenceSheet } from "./evidence-sheet.server";
-import { loadRunPlan } from "./run-plan.server";
-import { releaseAnalysisCredits, reserveAnalysisCredits } from "../ai/credits.server";
-import { mapProfile, type ConfigData } from "./fund-profile";
+import { LIMIT_CHOICES } from "./model-tiers";
+import { planNewRun, reservePlannedRun } from "./run-plan.server";
+import { reusedResearchOutput } from "./screening-phases";
+import { SCREENING_MAX_OUTPUT_TOKENS } from "./run-planner";
+import { releaseAnalysisCredits } from "../ai/credits.server";
+import { CONFIG_SELECT, mapProfile, type ConfigData } from "./fund-profile";
 import {
   average,
   buildOverallScoreRationale,
@@ -69,6 +74,7 @@ export {
 import {
   dispatchScreeningAnalysis,
   failScreeningRun,
+  loadStoppedScreeningResearch,
   type ScreeningStepKey,
 } from "./screening-analysis.server";
 import { withFundLanguage } from "@/lib/i18n/language-scope.server";
@@ -76,30 +82,42 @@ import { requestLanguage, serverText } from "@/lib/i18n/server-text";
 import { gatewayToken, missingGatewayToken } from "@/lib/ai/gateway-token";
 import { STALE_SCREENING_MS } from "@/lib/cases/run-stall";
 import { releaseStalledRun } from "./run-release.server";
+import { saveResearchTracksOnStep } from "./research-tracks.server";
 
 const fundIdSchema = z.guid();
 /** The model (light screening). Runs use the fund's tier model (RunPlan). */
 export const SCREENING_MODEL = "openai/gpt-5.4-mini";
-const PROMPT_VERSION = "interlect-screening-v13-short-texts";
+export const PROMPT_VERSION = "interlect-screening-v15-four-tasks";
 
 // Moved to fund-profile.ts so scripts can load a fund profile; kept here for importers.
 export { mapProfile, type ConfigData };
 
+const limitChoiceSchema = z.enum(LIMIT_CHOICES);
+
 export const runInitialScreening = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ caseId: z.guid(), fundId: fundIdSchema }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        caseId: z.guid(),
+        fundId: fundIdSchema,
+        /** The answer when the team asks first and the full analysis does not fit. */
+        atLimit: limitChoiceSchema.optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     // The research's follow-up rounds and the sheet must end inside this function.
     const functionStartedAt = Date.now();
+    // The active version of the case's own thesis; an archived thesis runs nothing new.
+    const thesis = await requireCaseThesis(context.supabase, data.fundId, data.caseId, {
+      forNewAnalysis: true,
+    });
     const { data: configRow, error: configError } = await context.supabase
       .from("fund_config_versions")
-      .select(
-        `id, fund_id, profile_key, version, funds(name, language),
-        fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction),
-        mandate_gates(gate_key, label, description, treatment, sort_order),
-        assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor)`,
-      )
+      .select(CONFIG_SELECT)
       .eq("fund_id", data.fundId)
+      .eq("thesis_id", thesis.id)
       .eq("status", "active")
       .single();
     if (configError || !configRow)
@@ -167,7 +185,6 @@ export const runInitialScreening = createServerFn({ method: "POST" })
     );
     if (evidenceError) throw new Error(serverText("analysisServer.screening.evidenceNotFetched"));
 
-    const profile = mapProfile(config);
     const rawCompany = caseRow["companies"] as unknown;
     const company = (Array.isArray(rawCompany) ? rawCompany[0] : rawCompany) as {
       name: string;
@@ -177,6 +194,8 @@ export const runInitialScreening = createServerFn({ method: "POST" })
       geography: string | null;
       description: string | null;
     };
+    // The research is planned for the criteria and gates of the case's stage.
+    const profile = mapProfile(config, { caseStage: company.stage });
     let evidenceRows = selectPromptEvidence(initialEvidenceRows ?? [], SCREENING_EVIDENCE_MAX);
     let inputEvidenceIds = evidenceRows.map((row) => row["id"] as string);
     let caseInput: ScreeningCaseInput = {
@@ -189,21 +208,44 @@ export const runInitialScreening = createServerFn({ method: "POST" })
       relatedPastCases: [],
     };
     const service = getServiceClient();
+    // Only Admin and Lead may go past the team's limit, also one time (spec B.1 punkt 3).
+    if (data.atLimit === "raise_once") {
+      await requireFundCapability(context.supabase, context.userId, data.fundId, "configure_fund");
+    }
     // Tier, model and cap are resolved once here and kept on the run.
-    const plan = await loadRunPlan(service, data.fundId, "screening");
+    const planned = await planNewRun(service, {
+      fundId: data.fundId,
+      kind: "screening",
+      choice: data.atLimit,
+    });
+    if (!planned) return { runId: null, status: "limit_choice_needed" as const };
+    // A screening that stopped at its limit left its research: only the analysis is missing.
+    const { research: stoppedResearch, tracks: stoppedTracks } = await loadStoppedScreeningResearch(
+      service,
+      {
+        fundId: data.fundId,
+        caseId: data.caseId,
+        configVersionId: config.id,
+        promptVersion: PROMPT_VERSION,
+        researchVersion: PUBLIC_RESEARCH_VERSION,
+        researchModel: SCREENING_PUBLIC_RESEARCH_MODEL,
+      },
+    );
     const identityHints = await loadCaseIdentityHints(service, data.fundId, data.caseId);
     caseInput = { ...caseInput, founders: identityHints.founders };
     const idempotencyKey = `screening:${data.caseId}:${config.id}:${PROMPT_VERSION}:${retryGeneration}`;
     // Loftet reserveres, før kørslen oprettes; ved tom saldo starter ingen screening.
     const reservedRunId = crypto.randomUUID();
-    const creditLedgerId = await reserveAnalysisCredits(service, {
+    // The plan the month had room for (smaller when another run took the room first).
+    const { plan, ledgerId: creditLedgerId } = await reservePlannedRun(service, planned, {
       fundId: config.fund_id,
-      runId: reservedRunId,
-      capUsd: plan.budget.usd,
-      userId: context.userId,
-      model: plan.model,
       kind: "screening",
+      choice: data.atLimit,
+      runId: reservedRunId,
+      userId: context.userId,
     });
+    // What the planner kept. Without its share the sheet is skipped, and the research has it.
+    const evidenceSheetUsd = plan.scope.evidenceSheet ? EVIDENCE_SHEET_BUDGET_USD.screening : 0;
     const { data: run, error: runError } = await service
       .from("analysis_runs")
       .insert({
@@ -307,6 +349,52 @@ export const runInitialScreening = createServerFn({ method: "POST" })
             .eq("run_id", runId),
         ]);
         if (runStarted.error) throw new Error(serverText("analysisServer.screening.notMarked"));
+        if (stoppedResearch) {
+          // Paid for by the run before this one: this run's research step costs nothing.
+          const now = new Date().toISOString();
+          const [researchKept, evidenceKept, caseKept] = await Promise.all([
+            service
+              .from("analysis_run_steps")
+              .update({
+                status: "complete",
+                attempt_count: 1,
+                started_at: now,
+                completed_at: now,
+                actual_cost: 0,
+                charged_cost: 0,
+                output_json: reusedResearchOutput(stoppedResearch.output),
+              })
+              .eq("run_id", runId)
+              .eq("step_key", activeStepKey),
+            service
+              .from("analysis_runs")
+              .update({ input_evidence_ids: stoppedResearch.evidenceIds })
+              .eq("id", runId),
+            service
+              .from("cases")
+              .update({ execution_status: "screening_in_progress", updated_at: now })
+              .eq("id", data.caseId)
+              .eq("fund_id", data.fundId),
+          ]);
+          if (researchKept.error) {
+            throw new Error(serverText("analysisServer.common.screeningResearchNotSaved"));
+          }
+          if (evidenceKept.error) {
+            throw new Error(serverText("analysisServer.screening.basisNotSaved"));
+          }
+          if (caseKept.error) {
+            console.error(
+              `[screening] case status not updated (run ${runId})`,
+              caseKept.error.message,
+            );
+          }
+          incurredActualCostUsd = 0;
+          researchCostUsd = 0;
+          incurredChargeUsd = 0;
+          activeStepKey = "fund_screening";
+          await dispatchScreeningAnalysis(runId);
+          return true;
+        }
         await service
           .from("cases")
           .update({ execution_status: "collecting_evidence", updated_at: new Date().toISOString() })
@@ -329,13 +417,23 @@ export const runInitialScreening = createServerFn({ method: "POST" })
           stage: company.stage,
           mode: "screening",
           // The evidence sheet's share is set aside from the research budget and time.
-          researchBudgetUsd: plan.budget.researchUsd - EVIDENCE_SHEET_BUDGET_USD.screening,
+          researchBudgetUsd: plan.budget.researchUsd - evidenceSheetUsd,
+          scope: plan.scope,
           researchModuleOverrides,
           fundResearchBrief: buildFundResearchBrief(profile),
           // Brief and plan first; a screening is a new run each time, so nothing to reuse.
+          // The setup always comes along: the check of the fund's questions needs it, also when the
+          // planner left the paid plan out (`scope.researchPlan`).
           researchPlan: {
             tier: plan.tier,
             setup: { profile, screeningInstruction: profile.screeningInstruction },
+          },
+          // The tracks the stopped screening before this one finished are not paid again,
+          // and this run keeps the ones it finishes at once, also when it stops at its limit.
+          researchTracks: {
+            reuse: stoppedTracks,
+            onTracks: (tracks) =>
+              saveResearchTracksOnStep(service, runId, "screening_research", tracks),
           },
           researchDeadlineAt:
             researchDeadlineAt("screening", functionStartedAt) -
@@ -401,7 +499,7 @@ export const runInitialScreening = createServerFn({ method: "POST" })
           plan: publicResearch.researchPlan ?? null,
           followUp: publicResearch.researchFollowUp ?? null,
           evidence: evidenceRows.map(toPromptEvidence),
-          availableUsd: EVIDENCE_SHEET_BUDGET_USD.screening,
+          availableUsd: evidenceSheetUsd,
           timeLeftMs: researchDeadlineAt("screening", functionStartedAt) - Date.now(),
         });
         const evidenceSheet =
@@ -446,6 +544,9 @@ export const runInitialScreening = createServerFn({ method: "POST" })
                 evidenceSheetOutcome.status === "ok" ? "ok" : evidenceSheetOutcome.reason,
               // What the analysis phase reads back in its own function.
               researchChargeUsd,
+              // The stage the research was planned for; the analysis phase scores the
+              // same one, even if the research found the case's stage meanwhile (next screening).
+              setupStage: profile.teamSetup?.stage ?? null,
               promptFounders: publicResearch.identityHints?.founders ?? caseInput.founders ?? [],
             },
           })
@@ -519,12 +620,13 @@ export const runInitialScreening = createServerFn({ method: "POST" })
  * price is unknown, or the maximum after a timeout, so the caller can book it.
  */
 export class ScreeningGatewayError extends Error {
-  constructor(
-    message: string,
-    readonly costUsd: number,
-  ) {
+  // A plain field, not a parameter property: scripts load this file with Node's type stripping
+  // (scripts/screening-eval.ts, masking-eval.ts), which cannot run parameter properties.
+  readonly costUsd: number;
+  constructor(message: string, costUsd: number) {
     super(message);
     this.name = "ScreeningGatewayError";
+    this.costUsd = costUsd;
   }
 }
 
@@ -553,7 +655,7 @@ export async function callGateway(
       "screening",
       serverText("analysisServer.screening.vercelGatewayMissing"),
     );
-  const maxOutputTokens = 9_000;
+  const maxOutputTokens = SCREENING_MAX_OUTPUT_TOKENS;
   const requestBody = {
     model,
     stream: false,
@@ -645,10 +747,13 @@ export async function callGateway(
       requestLanguage(),
     );
   } catch (cause) {
-    throw new ScreeningGatewayError(
+    const failure = new ScreeningGatewayError(
       cause instanceof Error ? cause.message : String(cause),
       budgetCharge(actualCostUsd, estimate),
     );
+    // A stop at the limit stays one through the wrapper.
+    failure.cause = cause;
+    throw failure;
   }
   return {
     content: body.choices![0]!.message!.content!,
@@ -674,6 +779,9 @@ export function screeningJsonSchema(
     maxItems: 4,
     items: { type: "string", maxLength: 450 },
   };
+  // Only the screening asks the stage's economy (the deep run passes caseProfile false).
+  const ask = caseProfile ? economyAsk(profile.teamSetup?.economy) : null;
+  const economyKeys = ask ? economyAskKeys(ask) : [];
   return {
     type: "object",
     additionalProperties: false,
@@ -797,6 +905,7 @@ export function screeningJsonSchema(
       },
       nextSteps: nextStepsJsonSchema(MAX_SCREENING_NEXT_STEPS),
       ...(caseProfile ? caseProfileJsonProperties(profile) : {}),
+      ...(economyKeys.length ? { economy: economyJsonSchema(economyKeys, evidenceId) } : {}),
     },
     required: [
       "schemaVersion",
@@ -814,7 +923,32 @@ export function screeningJsonSchema(
       "proposedRecommendation",
       "nextSteps",
       ...(caseProfile ? ["companyProfile", "keyFindings", "companyLabel"] : []),
+      ...(economyKeys.length ? ["economy"] : []),
     ],
+  };
+}
+
+/**
+ * One answer per economy point and own question the AI reads from the material (prompt
+ * `economySection`); the registry's figures and every comparison with a limit are made in code.
+ */
+function economyJsonSchema(keys: readonly string[], evidenceId: Record<string, unknown>) {
+  return {
+    type: "array",
+    minItems: keys.length,
+    maxItems: keys.length,
+    items: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        key: { type: "string", enum: [...keys] },
+        value: { type: ["number", "null"] },
+        yes: { type: ["boolean", "null"] },
+        answer: { type: "string", maxLength: ECONOMY_ANSWER_MAX },
+        evidenceIds: { type: "array", maxItems: 5, items: evidenceId },
+      },
+      required: ["key", "value", "yes", "answer", "evidenceIds"],
+    },
   };
 }
 

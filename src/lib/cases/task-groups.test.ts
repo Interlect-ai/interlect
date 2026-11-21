@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { groupTasksByLink, previewTasks, prioritizeTasks } from "./task-groups.ts";
+import {
+  groupTasksByLink,
+  previewTasks,
+  prioritizeTasks,
+  TASK_FOLD_THRESHOLD,
+  TASK_PREVIEW_COUNT,
+} from "./task-groups.ts";
 
 const gate = {
   kind: "gate" as const,
@@ -58,17 +64,38 @@ describe("task groups", () => {
     );
   });
 
-  it("shows a short list in full and folds a long one", () => {
-    const short = Array.from({ length: 8 }, (_, i) => make(`s${i}`, null));
-    assert.equal(previewTasks(short, () => false).length, 8);
+  it("T-1025: shows at most 4 open tasks of the whole list (0, 4, 5 and 8 tasks)", () => {
+    const list = (count: number) => Array.from({ length: count }, (_, i) => make(`s${i}`, null));
+    assert.equal(TASK_FOLD_THRESHOLD, 4);
+    assert.equal(TASK_PREVIEW_COUNT, 4);
+    assert.equal(previewTasks(list(0), () => false).length, 0);
+    assert.equal(previewTasks(list(4), () => false).length, 4);
+    assert.equal(previewTasks(list(5), () => false).length, 4);
+    assert.equal(previewTasks(list(8), () => false).length, 4);
     const long = Array.from({ length: 84 }, (_, i) => make(`t${i}`, i % 2 ? crit : null));
-    assert.equal(previewTasks(long, () => false).length, 6);
+    assert.equal(previewTasks(long, () => false).length, 4);
+  });
+
+  it("T-1025: the 4 shown are the most important, in priority order (gates, criteria, the rest)", () => {
+    const tasks = [
+      make("a", null),
+      make("b", crit),
+      { id: "own", link: null, source: "user" },
+      make("c", gate),
+      make("d", null),
+      make("e", crit),
+      make("f", gate),
+    ];
+    assert.deepEqual(
+      previewTasks(tasks, () => false).map((t) => t.id),
+      ["c", "f", "b", "e"],
+    );
   });
 
   it("never hides a task that is being edited or just resolved", () => {
     const long = Array.from({ length: 30 }, (_, i) => make(`t${i}`, null));
     const shown = previewTasks(long, (t) => t.id === "t25");
-    assert.equal(shown.length, 7);
+    assert.equal(shown.length, 5);
     assert.ok(shown.some((t) => t.id === "t25"));
   });
 });

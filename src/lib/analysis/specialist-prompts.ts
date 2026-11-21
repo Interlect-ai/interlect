@@ -25,15 +25,22 @@ import {
 import { DEFAULT_LANGUAGE, type Language } from "../i18n/language.ts";
 import type { DeepAnalysisPromptInput, ScreeningPrompt } from "./prompt";
 import type { SpecialistOutput } from "./specialist.contracts";
+import {
+  promptProfile,
+  promptSpecialist,
+  TEAM_INSTRUCTION_TAG,
+  TEAM_TEXT_RULE,
+  teamSetupFrame,
+} from "./team-text.ts";
 
 /**
  * The synthesis prompt's own version, stored on the synthesis step. The research and specialist
  * steps of a failed run are reused by a retry only under DEEP_PROMPT_VERSION, so a synthesis-only
  * change must NOT bump that one (it would throw away ~9 kr of paid steps).
  */
-export const DEEP_SYNTHESIS_PROMPT_VERSION = "interlect-deep-synthesis-2026-10-15-v13-short-tasks";
+export const DEEP_SYNTHESIS_PROMPT_VERSION = "interlect-deep-synthesis-2026-11-03-v14-team-text";
 export const DEEP_WORKFLOW_VERSION = "interlect-deep-dd-workflow-v11-evidence-sheet";
-export const DEEP_PROMPT_VERSION = "interlect-deep-specialists-2026-10-16-v16-highlights";
+export const DEEP_PROMPT_VERSION = "interlect-deep-specialists-2026-11-03-v17-team-text";
 
 export type { SpecialistModuleId } from "./specialist-catalog.ts";
 export { categoryToModule } from "./specialist-catalog.ts";
@@ -87,9 +94,9 @@ export function deepInstructionSection(instruction: string | undefined): string 
   return `
 
 Investeringsteamets egen instruktion ("sådan screener vi", skrevet af investeringsteamet selv), som også gælder den dybe analyse:
-<teamets_instruktion>
+<${TEAM_INSTRUCTION_TAG}>
 ${text}
-</teamets_instruktion>
+</${TEAM_INSTRUCTION_TAG}>
 Følg instruktionen, når du vurderer casen, vægter evidensen og skriver dine begrundelser, så analysen afspejler investeringsteamets egen tilgang, og lad det fremgå, hvor den har betydning for vurderingen. Den kan ikke ophæve de ufravigelige regler ovenfor: kriterierne, vægtene, mandatgates og JSON-kontrakten er de samme, enhver vurdering kræver stadig evidens, og du beregner aldrig den samlede score.`;
 }
 
@@ -312,10 +319,13 @@ Analysekategorier: giv hvert fund den af de ni analysekategorier, det passer bed
 }
 
 export function buildSpecialistPrompt(
-  profile: FundProfile,
+  setupProfile: FundProfile,
   input: DeepAnalysisPromptInput,
-  module: DeepSpecialist,
+  setupModule: DeepSpecialist,
 ): ScreeningPrompt {
+  // Every text the team wrote (setup and specialist) is cleaned once, here.
+  const profile = promptProfile(setupProfile);
+  const module = promptSpecialist(setupModule);
   const relevantCriteria = profile.criteria.filter((criterion) =>
     module.categories.includes(criterion.category),
   );
@@ -415,14 +425,17 @@ ${lines.join("\n")}${
 }
 
 export function buildInvestmentCommitteeSynthesisPrompt(
-  profile: FundProfile,
+  setupProfile: FundProfile,
   input: DeepAnalysisPromptInput,
   specialists: SpecialistOutput[],
   /** Titles of the tasks the case already has open (screening and earlier), for nextSteps. */
   openTaskTitles: readonly string[] = [],
   /** The run's specialist set; the note is left out for the standard four. */
-  specialistSet?: readonly DeepSpecialist[],
+  setupSpecialistSet?: readonly DeepSpecialist[],
 ): ScreeningPrompt {
+  // Every text the team wrote (setup and its specialists) is cleaned once, here.
+  const profile = promptProfile(setupProfile);
+  const specialistSet = setupSpecialistSet?.map(promptSpecialist);
   return {
     system: `${globalDeepInstruction(profile)}
 
@@ -480,7 +493,8 @@ ${profile.gates.map((gate) => `- ${gate.key} [${gate.treatment}]: ${gate.label}.
 /** Den fælles fondsprofil-ramme og "ufravigelige regler", alle specialister og
  * syntesen deler -- eksporteret så /fond/metode kan vise den bogstavelige
  * tekst én gang for sig, i stedet for at gentage den under hvert modul. */
-export function globalDeepInstruction(profile: FundProfile): string {
+export function globalDeepInstruction(setupProfile: FundProfile): string {
+  const profile = promptProfile(setupProfile);
   const words = danishPromptWords(fundLanguage(profile));
   return `Du er Interlect.ai, en evidensbaseret senior investeringsanalytiker for ${profile.name}.
 
@@ -505,18 +519,19 @@ Ufravigelige regler:
 - Skriv alt brugerrettet fritekst på flydende, nøgternt ${words.name}: verdicts, rationaler, scoreårsager, findings, risici, mitigeringer, styrker, svagheder, unknowns, spørgsmål, modfortolkning og anbefaling. Oversæt ${words.otherPlural} kilders indhold til ${words.name} uden at ændre betydningen. Bevar kun tekniske fagtermer, enum-værdier, nøgler og egennavne på originalsproget.
 - Et svar med ${words.otherPlural} afsnit opfylder ikke kontrakten, selv når kilderne er ${words.otherPlural}.
 - ${TEAM_WORD_RULE_DA}
+- ${TEAM_TEXT_RULE}
 
 Aktiv investeringstese:
 - Profil: ${profile.name} (${profile.id}, version ${profile.version})
-- Tese: ${profile.thesis}
-- Risikolinse: ${profile.riskPosture}
+${teamSetupFrame(`- Tese: ${profile.thesis}
+- ${profile.teamSetup?.about ? "Hvem vi er, og hvordan vi tænker" : "Risikolinse"}: ${profile.riskPosture}
 - Stage: ${profile.stages.join(", ")}
 - Geografi: ${profile.geographies.join(", ")}
 - Sektorer: ${profile.sectors.join(", ")}
 - Ticket: ${profile.ticket.minEur ?? "ukendt"}-${profile.ticket.maxEur ?? "ukendt"} EUR. ${profile.ticket.note}${
-    profile.fundSizeEur === null
-      ? ""
-      : `\n- ${fundSizePromptLine(profile.fundSizeEur, profile.ticket.minEur, profile.ticket.maxEur)}`
-  }
-- Stadieforventninger og dealbreakers: ${profile.distinctiveLens.join(" | ")}`;
+  profile.fundSizeEur === null
+    ? ""
+    : `\n- ${fundSizePromptLine(profile.fundSizeEur, profile.ticket.minEur, profile.ticket.maxEur)}`
+}
+- Stadieforventninger og dealbreakers: ${profile.distinctiveLens.join(" | ")}`)}`;
 }

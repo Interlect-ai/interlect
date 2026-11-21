@@ -2,6 +2,7 @@ import { callCheapGateway, HelperRejected } from "./cheap-gateway.server";
 import {
   PROPOSAL_JSON_SCHEMA,
   proposalResponseSchema,
+  sharedRowsOnly,
   type DraftFields,
   type ProposalResponse,
 } from "./config-ops";
@@ -79,19 +80,22 @@ export async function generateConfigProposal(input: {
         sectors: input.draft.sectors,
         dealbreakers: input.draft.dealbreakers,
         analysisThreshold: input.draft.analysisThreshold,
-        gates: input.draft.gates.map(({ key, label, description, treatment }) => ({
+        // Only the shared rows; the proposals never change a stage's own (config-ops.ts).
+        gates: sharedRowsOnly(input.draft).gates.map(({ key, label, description, treatment }) => ({
           key,
           label,
           description,
           treatment,
         })),
-        criteria: input.draft.criteria.map(({ key, label, description, category, weight }) => ({
-          key,
-          label,
-          description,
-          category,
-          weight,
-        })),
+        criteria: sharedRowsOnly(input.draft).criteria.map(
+          ({ key, label, description, category, weight }) => ({
+            key,
+            label,
+            description,
+            category,
+            weight,
+          }),
+        ),
         screeningInstruction: input.draft.screeningInstruction ?? "",
       },
     }),

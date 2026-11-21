@@ -881,6 +881,80 @@
   }
 }
 
+/* Teamopsætning's AI box ("Tilpas med Interlect", "Fortæl Interlect, hvad der skal
+   ændres") and the flash on a field the Interlect-Assistent changed. The pastel ground and its
+   noise are the prototype's (`Teamopsaetning v3.dc.html`, `.aibox`, `--g1`–`--gbase`). */
+@layer components {
+  .setup-aibox {
+    --aibox-g1: #cfd0ee;
+    --aibox-g2: #f4d6c8;
+    --aibox-g3: #d6cbea;
+    --aibox-g4: #cddcef;
+    --aibox-base: #e8e5f1;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(70% 120% at 0% 0%, var(--aibox-g1), transparent 65%),
+      radial-gradient(60% 100% at 55% 110%, var(--aibox-g2), transparent 65%),
+      radial-gradient(60% 110% at 100% 10%, var(--aibox-g3), transparent 65%),
+      radial-gradient(50% 80% at 82% 100%, var(--aibox-g4), transparent 70%), var(--aibox-base);
+  }
+  .setup-aibox::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .55 0 0 0 0 .5 0 0 0 0 .65 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .setup-aibox > * {
+    position: relative;
+  }
+  .dark .setup-aibox,
+  [data-theme="dark"] .setup-aibox {
+    --aibox-g1: #2b2849;
+    --aibox-g2: #3e2b29;
+    --aibox-g3: #2f2745;
+    --aibox-g4: #222f47;
+    --aibox-base: #1a1925;
+  }
+  @keyframes setup-assistant-flash {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--ai) 55%, transparent);
+      background-color: var(--ai-wash);
+    }
+    100% {
+      box-shadow: 0 0 0 14px transparent;
+    }
+  }
+  .setup-assistant-flash {
+    animation: setup-assistant-flash 1.4s ease-out;
+  }
+  @keyframes setup-assistant-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.98);
+    }
+  }
+  @keyframes setup-assistant-blink {
+    50% {
+      opacity: 0.25;
+    }
+  }
+  .setup-assistant-caret::after {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-1);
+    margin-left: 5px;
+    vertical-align: 1px;
+    animation: setup-assistant-blink 1s infinite;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -94,6 +94,7 @@ export function CriterionAiFix({
     return (
       <button
         type="button"
+        aria-expanded={false}
         onClick={() => setOpen(true)}
         className="inline-flex h-[34px] cursor-pointer items-center gap-[7px] rounded-pill border-0 bg-surface px-3.5 font-[inherit] text-meta font-medium whitespace-nowrap text-ink-1 shadow-pill transition-transform active:scale-[.96]"
       >

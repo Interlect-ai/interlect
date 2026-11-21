@@ -12,7 +12,7 @@ import { SCORE_CATEGORY_GROUPS } from "@/lib/cases/presentation";
 import { SPRING } from "@/lib/motion";
 import { LANGUAGES } from "@/lib/i18n/language";
 import { translate, type MessageKey } from "@/lib/i18n/translate";
-import { useT } from "@/lib/i18n/useT";
+import { useLocaleTag, useT } from "@/lib/i18n/useT";
 import { cn } from "@/lib/utils";
 
 export function Section({
@@ -266,6 +266,60 @@ export function TextField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={fieldClass}
+      />
+    </label>
+  );
+}
+
+/**
+ * An amount in the text field's look. It shows the amount in the team's language
+ * (`500.000` / `500,000`), is typed freely in either format and read when the field is left or
+ * Enter is pressed. An emptied field gives null; text that is not an amount keeps the old value.
+ */
+export function AmountTextField({
+  label,
+  value,
+  onChange,
+  parse,
+  className,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  parse: (text: string) => number | null;
+  className?: string;
+}) {
+  const localeTag = useLocaleTag();
+  const [typing, setTyping] = useState<string | null>(null);
+  const shown = value === null ? "" : value.toLocaleString(localeTag);
+  const commit = () => {
+    if (typing === null) return;
+    setTyping(null);
+    if (!typing.trim()) {
+      if (value !== null) onChange(null);
+      return;
+    }
+    const amount = parse(typing);
+    if (amount !== null && amount !== value) onChange(amount);
+  };
+  return (
+    <label className={cn("flex flex-col gap-1.5", className)}>
+      <FieldLabel>{label}</FieldLabel>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        value={typing ?? shown}
+        onChange={(event) => setTyping(event.target.value.slice(0, 24))}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commit();
+          }
+          if (event.key === "Escape") setTyping(null);
+        }}
+        className={cn(fieldClass, "tabular-nums")}
       />
     </label>
   );

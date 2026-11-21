@@ -116,7 +116,8 @@ test("tom instruktion: specialist- og synteseprompten er uændrede", () => {
   }
   assert.doesNotMatch(
     buildSpecialistPrompt(profile, deepInput, module).system,
-    /teamets_instruktion/,
+    // The fixed rule names the tag; the section itself starts with the tag on its own line.
+    /\n<teamets_instruktion>\n/,
   );
 });
 

@@ -94,11 +94,6 @@ export const analysisServer = {
     notSaved: "Bevisarket kunne ikke gemmes.",
     none: "Intet bevisark ({reason}); specialisterne får den samlede research.",
   },
-  method: {
-    profileNotFound: "Den aktive opsætning blev ikke fundet.",
-    noMembership: "Du har ikke et aktivt medlemskab i det valgte team.",
-    adminOnly: "Kun en Admin kan se prompt-teksterne.",
-  },
   rescore: {
     failed: "Scoren kunne ikke regnes igen.",
     screeningNotRead: "Den seneste screening kunne ikke læses, så scoren blev ikke regnet igen.",
@@ -115,6 +110,13 @@ export const analysisServer = {
   runPlan: {
     fundNotFound: "Teamet blev ikke fundet.",
     runNotFound: "Kørslen blev ikke fundet.",
+    limitChoiceNeeded: "Den fulde analyse passer ikke inden for teamets grænse.",
+    limitTooLow:
+      "Analysen kan ikke starte, fordi teamets grænse er for lav til de obligatoriske trin. En Admin eller Lead kan hæve den under Analysegrænser.",
+    limitTooLowDeep:
+      "Den dybe analyse kan ikke starte, fordi teamets grænse er for lav til de obligatoriske trin med denne teses specialister. En Admin eller Lead kan hæve grænsen under Analysegrænser eller slå specialister fra i tesen.",
+    platformLimitTooLow:
+      "Analysen kan ikke starte, fordi installationens faste grænse er lavere end det, de obligatoriske trin kræver. Teamet kan ikke selv hæve den; kontakt Interlect.",
   },
   screening: {
     evidenceNotLoaded: "Screeningens evidens kunne ikke hentes.",
@@ -489,12 +491,6 @@ export const analysisServer = {
     tooManyCustom: "Højst {max} egne specialister kan være aktive (opsætningen har {count}).",
     noneActive: "Mindst én specialist skal være aktiv i den dybe analyse.",
   },
-  /** One line per AI level (ai-settings.functions.ts). */
-  tiers: {
-    light: "Hurtig og billig. Egnet til stor dealflow og første sortering.",
-    medium: "Grundig og afbalanceret. Standard, og det niveau Interlect er afprøvet mest på.",
-    heavy: "Mest grundig. Mest nuanceret på svære cases, men bruger flest kreditter.",
-  },
   /** Length checks of the deep analysis's texts (deep-text-rules.ts). */
   deepText: {
     criterionTooShort: "Begrundelsen for kriteriet {criterion} er for kort ({length} tegn).",
@@ -777,6 +773,8 @@ export const analysisServer = {
     noGatewayAccess:
       "AI-tjenesten kunne ikke bruges lige nu. Prøv igen om lidt, eller skriv til Interlect.",
     noAnswer: "Den offentlige AI-research returnerede ikke et svar.",
+    callFailed: "En søgning i den offentlige research kunne ikke gennemføres.",
+    serviceLimited: "Interlects AI-tjeneste er midlertidigt begrænset. Prøv igen om lidt.",
     moduleNoResults: "Researchmodulet {module} returnerede påstande uden søgeresultater.",
     moduleNoExactUrl:
       "Researchmodulet {module} returnerede påstande uden en eksakt, hentet kilde-URL.",

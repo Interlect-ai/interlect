@@ -143,7 +143,6 @@ test("every key the analysis reads has a Danish and an English text", () => {
     "financeScore",
     "scoring",
     "specialistSet",
-    "tiers",
     "deepText",
     "findings",
     "gateAnswers",

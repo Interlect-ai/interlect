@@ -4,10 +4,6 @@
  * redesign; only the look is new. The specialist step shows the fund's set as cards
  * (SpecialistCards.tsx); the research strategy below keeps its own editor and older look.
  */
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { getInternalPagesEnabled } from "@/lib/internal/internal-pages.functions";
-import { isAdminRole } from "@/lib/auth/is-admin";
 import { Section } from "./fields";
 import type { FundDocumentProposal } from "@/lib/funds/document-import.functions";
 import type { SaveFundConfigInput } from "@/lib/funds/config.functions";
@@ -286,12 +282,14 @@ export function ThesisStep({
   );
 }
 
+/** "Research questions" is hidden in Specialists until D8 replaces it. */
+const SHOW_RESEARCH_QUESTIONS = false;
+
 export function SpecialistsStep({
   fundId,
   value,
   moduleOverrides,
   researchModuleOverrides,
-  userRoles,
   onUnsavedChange,
 }: {
   fundId: string;
@@ -303,15 +301,8 @@ export function SpecialistsStep({
     { mandate: string[]; evidenceTests: string[]; riskAreas: string[] }
   >;
   researchModuleOverrides: Record<string, { questions: string[] }>;
-  userRoles: string[] | undefined;
 }) {
   const t = useT();
-  // The link to /intern/prompts only where the internal pages exist (never at customers).
-  const internalPages = useQuery({
-    queryKey: ["internal-pages-enabled"],
-    queryFn: () => getInternalPagesEnabled(),
-    staleTime: Infinity,
-  });
   return (
     <div className="flex flex-col gap-8">
       {/* DECISION PENDING (M2): Admin only or Admin + Lead may edit/see the specialist
@@ -323,42 +314,39 @@ export function SpecialistsStep({
         moduleOverrides={moduleOverrides}
         onUnsavedChange={onUnsavedChange}
       />
-      {/* The research strategy keeps its older text scale. */}
-      <div data-legacy-scale="">
-        <Section
-          title={t("fundEditor.basic.researchTitle")}
-          description={t("fundEditor.basic.researchDescription")}
-        >
-          {isAdminRole(userRoles) && internalPages.data === true && (
-            <p className="text-list text-ink-3">
-              {t("fundEditor.basic.promptsBefore")}{" "}
-              <Link to="/intern/prompts" className="text-action hover:text-action-hover">
-                {t("fundEditor.basic.promptsLink")}
-              </Link>
-              {t("fundEditor.basic.promptsAfter")}
-            </p>
-          )}
-          <ResearchStrategyEditor
-            fundId={fundId}
-            configId={value.configId}
-            onUnsavedChange={(unsaved) => onUnsavedChange?.("research", unsaved)}
-            profile={{
-              thesis: value.thesis,
-              stages: value.stages,
-              geographies: value.geographies,
-              sectors: value.sectors,
-              ticketMinEur: value.ticketMinEur,
-              ticketMaxEur: value.ticketMaxEur,
-              ticketNote: value.ticketNote,
-              riskPosture: value.riskPosture,
-              dealbreakers: value.dealbreakers,
-              gates: value.gates,
-              criteria: value.criteria,
-            }}
-            overrides={researchModuleOverrides}
-          />
-        </Section>
-      </div>
+      {/* (TS-2, produktejeren 3 Nov: "Research questions … har vi ikke snakket om at vise sådan her"): the
+   section is hidden, not removed. The saved research questions
+          (research_module_overrides) still steer every run, and the strategy and its "Extra
+          context" come back in the focus box (D8). The research strategy keeps its older text
+          scale. */}
+      {SHOW_RESEARCH_QUESTIONS && (
+        <div data-legacy-scale="">
+          <Section
+            title={t("fundEditor.basic.researchTitle")}
+            description={t("fundEditor.basic.researchDescription")}
+          >
+            <ResearchStrategyEditor
+              fundId={fundId}
+              configId={value.configId}
+              onUnsavedChange={(unsaved) => onUnsavedChange?.("research", unsaved)}
+              profile={{
+                thesis: value.thesis,
+                stages: value.stages,
+                geographies: value.geographies,
+                sectors: value.sectors,
+                ticketMinEur: value.ticketMinEur,
+                ticketMaxEur: value.ticketMaxEur,
+                ticketNote: value.ticketNote,
+                riskPosture: value.riskPosture,
+                dealbreakers: value.dealbreakers,
+                gates: value.gates,
+                criteria: value.criteria,
+              }}
+              overrides={researchModuleOverrides}
+            />
+          </Section>
+        </div>
+      )}
     </div>
   );
 }

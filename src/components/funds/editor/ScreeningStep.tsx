@@ -69,7 +69,10 @@ export function ScreeningStep({
   ensureSaved,
   onReload,
   onUnsavedChange,
+  only,
 }: {
+  /** Only the "Spørg Interlect" box (the other cards' sheets). */
+  only?: "tailor" | undefined;
   fundId: string;
   configId: string;
   /** The draft's screening setup as it is saved. */
@@ -223,57 +226,6 @@ export function ScreeningStep({
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3.5">
-        <div>
-          <h3 className="m-0 text-section font-semibold">
-            {t("specialists.screening.instructionTitle")}
-          </h3>
-          <p className="mt-1 mb-0 text-list text-ink-3">
-            {t("specialists.screening.instructionHelp")}
-          </p>
-        </div>
-        <label className="flex flex-col gap-1.5">
-          <span className="sr-only">{t("specialists.screening.instructionTitle")}</span>
-          <textarea
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            rows={6}
-            placeholder={t("specialists.screening.instructionPlaceholder")}
-            aria-invalid={over || undefined}
-            className={textareaClass}
-          />
-          <span
-            className={cn("self-end text-meta tabular-nums", over ? "text-critical" : "text-ink-4")}
-          >
-            {over
-              ? t("specialists.screening.charsOver", {
-                  count: (-remaining).toLocaleString(localeTag),
-                })
-              : t("specialists.screening.charsOf", {
-                  count: instruction.length.toLocaleString(localeTag),
-                  max: SCREENING_INSTRUCTION_MAX.toLocaleString(localeTag),
-                })}
-          </span>
-        </label>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => saveMutation.mutate()}
-            disabled={!dirty || over || busy}
-            pending={saveMutation.isPending ? "ai" : false}
-            pendingLabel={t("specialists.screening.saving")}
-          >
-            {t("specialists.screening.save")}
-          </Button>
-          {dirty && !saveMutation.isPending && (
-            <span role="status" className="text-meta text-ink-3">
-              {t("specialists.screening.unsaved")}
-            </span>
-          )}
-        </div>
-      </section>
-
       {canAi && (
         <AiBeam active={aiWorking} className="rounded-lg">
           <section
@@ -340,7 +292,69 @@ export function ScreeningStep({
         </AiBeam>
       )}
 
-      {canAi && (
+      {only !== "tailor" && (
+        <section className="flex flex-col gap-3.5">
+          <div>
+            <h3 className="m-0 text-section font-semibold">
+              {t("specialists.screening.instructionTitle")}
+            </h3>
+            <p className="mt-1 mb-0 text-list text-ink-3">
+              {t("specialists.screening.instructionHelp")}
+            </p>
+          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="sr-only">{t("specialists.screening.instructionTitle")}</span>
+            <textarea
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              rows={6}
+              placeholder={t("specialists.screening.instructionPlaceholder")}
+              aria-invalid={over || undefined}
+              className={textareaClass}
+            />
+            <span
+              className={cn(
+                "self-end text-meta tabular-nums",
+                over ? "text-critical" : "text-ink-4",
+              )}
+            >
+              {over
+                ? t("specialists.screening.charsOver", {
+                    count: (-remaining).toLocaleString(localeTag),
+                  })
+                : t("specialists.screening.charsOf", {
+                    count: instruction.length.toLocaleString(localeTag),
+                    max: SCREENING_INSTRUCTION_MAX.toLocaleString(localeTag),
+                  })}
+            </span>
+          </label>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {(dirty || saveMutation.isPending) && (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => saveMutation.mutate()}
+                disabled={!dirty || over || busy}
+                pending={saveMutation.isPending ? "ai" : false}
+                pendingLabel={t("specialists.screening.saving")}
+              >
+                {t("specialists.screening.save")}
+              </Button>
+            )}
+            {dirty && !saveMutation.isPending && (
+              <span role="status" className="text-meta text-ink-3">
+                {t("specialists.screening.unsaved")}
+              </span>
+            )}
+          </div>
+          {/* Every button says what it does. */}
+          <p className="m-0 text-meta leading-[1.5] text-ink-3">
+            {t("specialists.screening.saveHelp")}
+          </p>
+        </section>
+      )}
+
+      {canAi && only !== "tailor" && (
         <section
           aria-label={t("specialists.screening.checkTitle")}
           className="flex flex-col gap-2.5"
@@ -400,7 +414,7 @@ export function ScreeningStep({
           )}
           <div className="flex flex-wrap items-center gap-2.5">
             <Button
-              variant="quiet"
+              variant="secondary"
               size="sm"
               onClick={() => checkMutation.mutate(savedSig)}
               disabled={dirty || busy || checkMutation.isPending}
@@ -409,6 +423,9 @@ export function ScreeningStep({
             >
               {t("specialists.screening.checkNow")}
             </Button>
+            <span className="text-meta leading-[1.5] text-ink-3">
+              {t("specialists.screening.checkHelp")}
+            </span>
             {result && result.issues.length === 0 && !stale && (
               <span role="status" className="text-meta text-ink-3">
                 {t("specialists.screening.nothingFound")}

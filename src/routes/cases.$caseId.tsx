@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { startWithLimitChoice } from "@/lib/analysis/limit-choice";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +35,7 @@ import { approveAndRunDeepAnalysis } from "@/lib/analysis/deep.functions";
 import { canStartDeepRun, parseDeepFocus, parseSpor } from "@/lib/cases/deep-view";
 import { useLanguage, useT } from "@/lib/i18n/useT";
 import type { Language } from "@/lib/i18n/language";
-import { userMessage } from "@/lib/errors/user-message";
+import { publicRunError } from "@/lib/errors/run-error";
 import { isServerRefusal } from "@/lib/errors/server-refusal";
 import type { MessageKey, TranslateVars } from "@/lib/i18n/translate";
 import { pageMeta } from "@/lib/i18n/page-head";
@@ -141,12 +142,22 @@ function CaseDetailPage() {
     query.data ? { phase: query.data.phase, status: query.data.status } : undefined;
   // "Prøv igen" on a stalled screening; the server closes the old run first.
   const screening = useMutation({
-    mutationFn: () => screenCase({ data: { caseId, fundId: fundId! } }),
+    mutationFn: async () => {
+      // The team asks first ("Spørg mig først"); null = cancelled, nothing started.
+      return startWithLimitChoice(fundId!, "screening", (atLimit) =>
+        screenCase({ data: { caseId, fundId: fundId!, atLimit } }),
+      );
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["case", caseId, fundId] }),
   });
   const deepAnalysis = useMutation({
-    mutationFn: () => runDeepAnalysis({ data: { caseId, fundId: fundId!, expected: seenState() } }),
-    onSuccess: async () => {
+    mutationFn: async () => {
+      return startWithLimitChoice(fundId!, "deep", (atLimit) =>
+        runDeepAnalysis({ data: { caseId, fundId: fundId!, expected: seenState(), atLimit } }),
+      );
+    },
+    onSuccess: async (result) => {
+      if (!result) return;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["case", caseId, fundId] }),
         queryClient.invalidateQueries({ queryKey: ["cases", fundId] }),
@@ -172,10 +183,18 @@ function CaseDetailPage() {
     model && hasFinishedScreening && !olderSetupScreening && canStartDeepRun(model.history),
   );
   const latestRun = model?.history[0] ?? null;
+  // "Stoppet på prisgrænsen" is its own calm state in the view, not an error notice.
   const persistedFailure =
-    latestRun?.status === "failed"
+    latestRun?.status === "failed" && !latestRun.stoppedAtLimit
       ? friendlyAnalysisError(latestRun.errorMessage, t, language)
       : null;
+  const stoppedAtLimit = (kind: "screening" | "deep") => {
+    const last = model?.history.find((entry) => entry.kind === kind);
+    return last?.status === "failed" && last.stoppedAtLimit;
+  };
+  const caseAccess = useMyAccess(fundId);
+  const canRunAnalyses = casePermissions(caseAccess.data?.capabilities).canRun;
+  const canEditLimits = caseAccess.data?.capabilities?.includes("configure_fund") === true;
   const analysisBusy = Boolean(
     model &&
     [
@@ -206,7 +225,11 @@ function CaseDetailPage() {
         latestRun.kind === "deep" ? "caseView.route.whatDeep" : "caseView.route.whatScreening",
       );
       const name = model.companyName;
-      if (latestRun.status === "failed") {
+      if (latestRun.status === "failed" && latestRun.stoppedAtLimit) {
+        toast(t("caseView.priceLimit.toast", { what, name }), {
+          description: t("caseView.priceLimit.toastHint"),
+        });
+      } else if (latestRun.status === "failed") {
         toast.error(t("caseView.route.runFailed", { what, name }), {
           description: t("caseView.route.runFailedHint"),
         });
@@ -411,6 +434,11 @@ function CaseDetailPage() {
             if (!olderSetupScreening) deepAnalysis.mutate();
           }}
           retrying={deepAnalysis.isPending}
+          stoppedAtLimit={stoppedAtLimit("deep")}
+          canEditLimits={canEditLimits}
+          onContinue={
+            canRunAnalyses && !olderSetupScreening ? () => deepAnalysis.mutate() : undefined
+          }
           retryAction={
             <button
               type="button"
@@ -445,6 +473,9 @@ function CaseDetailPage() {
           notices={notices}
           onRetry={() => screening.mutate()}
           retrying={screening.isPending}
+          stoppedAtLimit={stoppedAtLimit("screening")}
+          canEditLimits={canEditLimits}
+          onContinue={canRunAnalyses ? () => screening.mutate() : undefined}
           identity={
             model.identity ? (
               <IdentityCard identity={model.identity} website={model.website} />
@@ -588,26 +619,6 @@ function friendlyAnalysisError(
   t: (key: MessageKey, vars?: TranslateVars) => string,
   language: Language,
 ) {
-  if (!error) return t("caseView.route.errGeneric");
-  // Interlect's own AI account, not the customer's: a neutral line. The gateway's own text
-  // stays in the run's error_message and the server log. The customer's credits running out is the
-  // credit meter's message (appServer.credits.exhausted) and is shown as it stands below.
-  if (error.includes("GatewayRateLimitError") || error.includes("Free tier")) {
-    return t("caseView.route.errCredits");
-  }
-  // Also a run from, whose stored error still names the subcontractor.
-  if (error.includes("Invalid API key") || /gateway|vercel/i.test(error)) {
-    return t("caseView.route.errApiKey");
-  }
-  // i18n-keep: matched against the server's error text in both languages, never shown.
-  if (
-    error.includes("researchspor") ||
-    error.includes("søgeresultater") ||
-    error.includes("research tracks") ||
-    error.includes("search results")
-  ) {
-    return t("caseView.route.errResearch");
-  }
-  // Last resort: only the server's own sentences in the team's language reach the page.
-  return userMessage(new Error(error), t("caseView.route.errGeneric"), language);
+  // One mapping for a live error and a stored one (the server maps those too).
+  return publicRunError(error, language) ?? t("caseView.route.errGeneric");
 }

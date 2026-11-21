@@ -56,7 +56,8 @@ import {
   type DeepSpecialist,
 } from "./specialist-prompts";
 import { MAX_SPECIALISTS, specialistSetSummary } from "./specialist-set";
-import { loadSpecialistSet } from "./specialist-set.server";
+import { loadRunSetupStage, loadSpecialistSet } from "./specialist-set.server";
+import { CONFIG_SELECT } from "./fund-profile";
 import {
   recordCvrLookupStep,
   buildFundResearchBrief,
@@ -70,10 +71,27 @@ import {
   type PublicResearchResult,
   type CaseIdentityHints,
 } from "./public-research";
-import { assertActualSpendWithinBudget, budgetCharge } from "./budgets";
-import { DEEP_CALL_TIMEOUT_MS, legacyRunPlan, type RunPlan } from "./model-tiers";
+import { publicResearchAnswer } from "./research-answer";
+import {
+  assertActualSpendWithinBudget,
+  BudgetExceededError,
+  BudgetLimitError,
+  budgetCharge,
+  stopReasonOf,
+} from "./budgets";
+import {
+  DEEP_CALL_TIMEOUT_MS,
+  legacyRunPlan,
+  planFromStoredRun,
+  researchCovers,
+  type RunPlan,
+} from "./model-tiers";
 import { loadStoredRunPlan } from "./run-plan.server";
-import { ResearchFailedError, stepRunCosts, sumCompleteCosts } from "./gateway-response";
+import { promptFingerprint } from "./prompt-fingerprint";
+import { storePromptFingerprint, storeRunPromptFingerprint } from "./prompt-fingerprint.server";
+import { ResearchFailedError, runTotalsFromSteps, stepRunCosts } from "./gateway-response";
+import { deepRunShares, type DeepRunShares } from "./run-continuation";
+import { loadStoppedRunProgress } from "./run-continuation.server";
 import { buildMemoryQueryText, retrieveFundMemory, type FundMemoryStatus } from "./memory";
 import {
   DeepGatewayError,
@@ -95,12 +113,10 @@ import {
   validateSynthesizedFinancialInputs,
   type DeepGatewayCompletion,
 } from "./deep.functions";
+import { loadReusableResearchTracks, saveResearchTracksOnStep } from "./research-tracks.server";
+import { runSpecialistSteps } from "./specialist-steps";
 import type { DeepAnalysisPhase } from "./deep-queue.server";
-import {
-  EVIDENCE_SHEET_BUDGET_USD,
-  EVIDENCE_SHEET_STEP,
-  promptEvidenceSheet,
-} from "./evidence-sheet";
+import { EVIDENCE_SHEET_STEP, promptEvidenceSheet } from "./evidence-sheet";
 import { loadRunEvidenceSheet, runDeepEvidenceSheetStep } from "./evidence-sheet.server";
 import { readCaseOwnMaterial } from "./case-material.server";
 import { withRunLanguage } from "./run-language.server";
@@ -147,6 +163,13 @@ type DeepWorkerContext = {
   specialists: DeepSpecialist[];
   /** The level, model and cap the run was started with, never the fund's current ones. */
   plan: RunPlan;
+  /**
+   * What each part may use. A continuation after a stop at the price limit gives the parts
+   * the stopped run finished nothing, so it never spends more than it reserved.
+   */
+  shares: DeepRunShares;
+  /** The prior run stopped at its price limit: what it finished is read strictly. */
+  stoppedAtLimit: boolean;
   /** Kept on the run, so "blocked" or "failed" is never read as "no similar cases". */
   fundMemoryStatus: FundMemoryStatus;
 };
@@ -244,6 +267,7 @@ async function runDeepAnalysisPhase(
       message,
       cause instanceof DeepGatewayError ? cause.diagnostics : null,
       failedStepChargeUsd(cause, completion),
+      stopReasonOf(cause),
     );
     console.error(`Dyb analyse ${runId} fejlede: ${message}`);
     return "failed";
@@ -273,21 +297,27 @@ async function loadWorkerContext(
   const configVersionId = run["config_version_id"] as string;
   const { data: configRow, error: configError } = await service
     .from("fund_config_versions")
-    .select(
-      `id, fund_id, profile_key, version, funds(name, language),
-      fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur, ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers, screening_instruction),
-      mandate_gates(gate_key, label, description, treatment, sort_order),
-      assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor)`,
-    )
+    .select(CONFIG_SELECT)
     .eq("id", configVersionId)
     .eq("fund_id", fundId)
     .single();
   if (configError || !configRow)
     throw new Error(serverText("analysisServer.deep.lockedProfileMissing"));
   const config = configRow as unknown as ConfigData;
-  const profile = mapProfile(config);
+  // The stage its screening used, as the start did (deep.functions.ts), so the worker runs
+  // the same criteria, gates and specialists as the run was planned with.
+  const runChoice = await loadRunSetupStage(
+    service,
+    fundId,
+    run["previous_run_id"] as string | null,
+  );
+  const profile = mapProfile(config, { runChoice });
 
-  const { set: specialists } = await loadSpecialistSet(service, config.id);
+  const { set: specialists } = await loadSpecialistSet(
+    service,
+    config.id,
+    profile.teamSetup?.stage?.stage ?? null,
+  );
 
   const { data: caseRow, error: caseError } = await service
     .from("cases")
@@ -334,9 +364,9 @@ async function loadWorkerContext(
     : selectPromptEvidence(evidence as Array<Record<string, unknown>>, DEEP_EVIDENCE_MAX);
   const evidenceIds = evidenceRows.map((row) => row["id"] as string);
 
-  const { data: priorFailed } = await service
+  const { data: priorFailed, error: priorFailedError } = await service
     .from("analysis_runs")
-    .select("id")
+    .select("id, ai_tier, cost_cap_dkk, usd_to_dkk, stop_reason")
     .eq("fund_id", fundId)
     .eq("case_id", caseId)
     .eq("previous_run_id", previousRunId)
@@ -350,6 +380,25 @@ async function loadWorkerContext(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  // What the run may use is read from the stopped run; a guess could overspend.
+  if (priorFailedError) throw new Error(serverText("analysisServer.deep.runDataNotLoaded"));
+  const specialistIds = specialists.map((module) => module.id);
+  const stoppedAtLimit = priorFailed?.["stop_reason"] === "price_limit";
+  const shares = deepRunShares(
+    plan,
+    specialistIds,
+    stoppedAtLimit
+      ? await loadStoppedRunProgress(service, priorFailed["id"] as string, {
+          specialistIds,
+          model: plan.model,
+        })
+      : null,
+  );
+  // The start reserved the same parts (`planNewRun`); should they ever differ (a release between
+  // the start and this phase), the run stops at its limit before it pays for what it did not reserve.
+  if (plan.reserve && shares.totalUsd > plan.reserve.usd + 0.000001) {
+    throw new BudgetExceededError(serverText("analysisServer.budget.stepStopped"));
+  }
 
   const fundMemory = await retrieveFundMemory({
     service,
@@ -406,9 +455,21 @@ async function loadWorkerContext(
     identityHints,
     computedFinancials,
     financeScore,
-    priorFailedRunId: (priorFailed?.["id"] as string | undefined) ?? null,
+    // A smaller run's research is not reused for a run that would search more. A run that
+    // stopped at its limit continues on what it finished, also on a higher limit.
+    priorFailedRunId:
+      priorFailed &&
+      (priorFailed["stop_reason"] === "price_limit" ||
+        researchCovers(
+          planFromStoredRun("deep", priorFailed, specialists.length).scope,
+          plan.scope,
+        ))
+        ? (priorFailed["id"] as string)
+        : null,
     specialists,
     plan,
+    shares,
+    stoppedAtLimit,
     fundMemoryStatus: fundMemory.status,
   };
 }
@@ -539,7 +600,7 @@ async function runPublicResearchPhase(context: DeepWorkerContext, phaseStartedAt
   }
 
   const reusable = context.priorFailedRunId
-    ? await loadReusablePublicResearch(service, context.priorFailedRunId)
+    ? await loadReusablePublicResearch(service, context.priorFailedRunId, context.stoppedAtLimit)
     : null;
   // The case's own unread files and more of its website, alongside the research (free).
   const caseMaterial = readCaseOwnMaterial({
@@ -559,7 +620,9 @@ async function runPublicResearchPhase(context: DeepWorkerContext, phaseStartedAt
         website: company.website,
         stage: company.stage,
         // The evidence sheet's share is set aside from the research budget.
-        researchBudgetUsd: context.plan.budget.researchUsd - EVIDENCE_SHEET_BUDGET_USD.deep,
+        // A continuation's finished research gets nothing (the sheet's share is apart).
+        researchBudgetUsd: context.shares.researchUsd,
+        scope: context.plan.scope,
         researchModuleOverrides: await getResearchModuleOverrides(service, config.id),
         fundResearchBrief: buildFundResearchBrief(profile),
         specialistQuestions: specialistResearchQuestions(
@@ -567,6 +630,8 @@ async function runPublicResearchPhase(context: DeepWorkerContext, phaseStartedAt
           buildFundResearchBrief(profile),
           profile.screeningInstruction,
         ),
+        // The setup always comes along: the check of the fund's questions needs it, also when the
+        // planner left the paid plan out (`scope.researchPlan`).
         researchPlan: {
           tier: context.plan.tier,
           setup: {
@@ -582,6 +647,12 @@ async function runPublicResearchPhase(context: DeepWorkerContext, phaseStartedAt
               ? await loadReusableResearchPlan(service, context.priorFailedRunId)
               : null),
           onPlan: (plan) => saveResearchPlanOnStep(service, runId, "public_research", plan),
+        },
+        // Tracks this run (an earlier attempt of the phase) or the failed run before it
+        // finished are taken over unpaid, and new ones are kept at once, also before a stop.
+        researchTracks: {
+          reuse: await loadReusableTracksForRun(service, runId, context.priorFailedRunId),
+          onTracks: (tracks) => saveResearchTracksOnStep(service, runId, "public_research", tracks),
         },
         researchDeadlineAt: researchDeadlineAt("deep", phaseStartedAt),
         identityHints: context.identityHints,
@@ -672,9 +743,21 @@ async function runEvidenceSheetPhase(
     evidenceRows: context.evidenceRows,
     researchOutput: steps.get("public_research")?.output_json,
     priorFailedRunId: context.priorFailedRunId,
+    availableUsd: context.shares.evidenceSheetUsd,
     // Saving the step and the evidence after the call takes a few seconds.
     timeLeftMs: phaseStartedAt + FUNCTION_MAX_DURATION_SECONDS * 1_000 - 30_000 - Date.now(),
   });
+}
+
+/** This run's own kept tracks first (a retry of the phase), else the failed run's. */
+async function loadReusableTracksForRun(
+  service: DeepWorkerContext["service"],
+  runId: string,
+  priorFailedRunId: string | null,
+) {
+  const own = await loadReusableResearchTracks(service, runId, false);
+  if (own.length > 0 || !priorFailedRunId) return own;
+  return loadReusableResearchTracks(service, priorFailedRunId, true);
 }
 
 async function runSpecialistPhase(
@@ -685,26 +768,32 @@ async function runSpecialistPhase(
   if (!refreshed) return false;
   context = refreshed;
   const { service, runId, profile, evidenceIds, specialists } = context;
+  const caseId = context.run["case_id"] as string;
   const promptInput = buildPromptInput(context);
   const reusable = context.priorFailedRunId
     ? await loadReusableSpecialists({
         service,
         failedRunId: context.priorFailedRunId,
         profile,
-        caseId: context.run["case_id"] as string,
+        caseId,
         allowedEvidenceIds: new Set(evidenceIds),
         model: context.plan.model,
         specialists,
+        strict: context.stoppedAtLimit,
       })
     : new Map<string, SpecialistOutput>();
+  const stepUpdate = (stepKey: string, patch: Record<string, unknown>) =>
+    service.from("analysis_run_steps").update(patch).eq("run_id", runId).eq("step_key", stepKey);
 
-  for (const module of specialists) {
-    const current = initialSteps.get(module.id);
-    const packet = reusable.get(module.id);
-    if (current?.status !== "complete" && packet) {
-      await service
-        .from("analysis_run_steps")
-        .update({
+  // F2: the steps' rule (take over, stop at the limit, pay only what is missing) is in
+  // `runSpecialistSteps`, tested with a stub gateway; here it gets the database and the gateway.
+  return runSpecialistSteps<(typeof specialists)[number], SpecialistOutput, DeepGatewayCompletion>({
+    specialists,
+    initialSteps,
+    reusable,
+    store: {
+      takeOver: async (stepKey, packet) => {
+        await stepUpdate(stepKey, {
           status: "complete",
           attempt_count: 0,
           input_tokens: 0,
@@ -715,124 +804,86 @@ async function runSpecialistPhase(
           output_json: packet,
           error_message: null,
           completed_at: new Date().toISOString(),
-        })
-        .eq("run_id", runId)
-        .eq("step_key", module.id);
-    }
-  }
-
-  const steps = await loadSteps(service, runId);
-  const results = await Promise.all(
-    specialists.map(async (module) => {
-      const existing = steps.get(module.id);
-      if (existing?.status === "complete") {
-        const parsed = specialistOutputSchema.parse(existing.output_json);
-        validateSpecialistPacket(
-          parsed,
-          module,
-          profile,
-          context.run["case_id"] as string,
-          new Set(evidenceIds),
-        );
-        return { packet: parsed, completion: null, busy: false, error: null };
-      }
-
-      const claimed = await claimStep(service, runId, module.id);
-      if (!claimed) return { packet: null, completion: null, busy: true, error: null };
-
-      let completion: DeepGatewayCompletion | null = null;
-      try {
-        const prompt = buildSpecialistPrompt(profile, promptInput, module);
-        completion = await callDeepGateway(
-          prompt.system,
-          prompt.user,
-          `pap_specialist_${module.id}`,
-          specialistJsonSchema(profile, module, evidenceIds),
-          outputTokenCap("specialist", context.plan.tier, context.plan.model),
-          context.plan.budget.specialistsUsd / specialists.length,
-          DEEP_CALL_TIMEOUT_MS[context.plan.tier].specialist,
-          "low",
-          context.plan.model,
-          await redactorForFund(context.run["fund_id"] as string, "deep_analysis", context.service),
-        );
-        const parsedPacket = specialistOutputSchema.parse(JSON.parse(completion.content));
-        // A category the specialist skipped becomes an 'unknown' finding, never a failed step.
-        // A card point without an allowed source is dropped, never a failed step.
-        const packet = withSanitizedCardData<SpecialistOutput>(
-          {
-            ...parsedPacket,
-            findings: withCategoryFallbacks(
-              parsedPacket.findings,
-              module.categories,
-              [],
-              requestLanguage(),
-            ).findings,
-          },
-          evidenceIds,
-        );
-        validateSpecialistPacket(
-          packet,
-          module,
-          profile,
-          context.run["case_id"] as string,
-          new Set(evidenceIds),
-        );
-        await service
-          .from("analysis_run_steps")
-          .update({
-            status: "complete",
-            input_tokens: completion.inputTokens,
-            output_tokens: completion.outputTokens,
-            total_tokens: completion.totalTokens,
-            actual_cost: completion.actualCostUsd,
-            charged_cost: budgetCharge(completion.actualCostUsd, completion.estimatedMaximumUsd),
-            output_json: packet,
-            completed_at: new Date().toISOString(),
-          })
-          .eq("run_id", runId)
-          .eq("step_key", module.id);
-        return { packet, completion, busy: false, error: null };
-      } catch (cause) {
+        });
+      },
+      load: () => loadSteps(service, runId),
+      claim: (stepKey) => claimStep(service, runId, stepKey),
+      complete: async (stepKey, packet, completion) => {
+        await stepUpdate(stepKey, {
+          status: "complete",
+          input_tokens: completion.inputTokens,
+          output_tokens: completion.outputTokens,
+          total_tokens: completion.totalTokens,
+          actual_cost: completion.actualCostUsd,
+          charged_cost: budgetCharge(completion.actualCostUsd, completion.estimatedMaximumUsd),
+          output_json: packet,
+          completed_at: new Date().toISOString(),
+        });
+      },
+      fail: async (stepKey, cause, completion) => {
         const message = errorMessage(cause, "Specialistanalysen fejlede.");
-        // A call cut off by the token cap was still paid for: keep its usage on the step.
-        completion = completion ?? failedCallCompletion(cause);
         const chargedUsd = failedStepChargeUsd(cause, completion);
-        await service
-          .from("analysis_run_steps")
-          .update({
-            status: "failed",
-            error_message: message,
-            ...completionUsage(completion),
-            ...(chargedUsd === null ? {} : { charged_cost: chargedUsd }),
-            completed_at: new Date().toISOString(),
-          })
-          .eq("run_id", runId)
-          .eq("step_key", module.id);
-        return { packet: null, completion, busy: false, error: message };
-      }
-    }),
-  );
-
-  // A failure is looked at before "busy": a failed specialist beside one another
-  // delivery still runs would otherwise answer "busy" and leave the run running for ever.
-  const failed = results.find((result) => result.error !== null);
-  if (failed) throw new Error(failed.error ?? serverText("analysisServer.common.specialistFailed"));
-  if (results.some((result) => result.busy)) return false;
-  const charged = results.reduce(
-    (sum, result) =>
-      sum +
-      (result.completion
-        ? budgetCharge(result.completion.actualCostUsd, result.completion.estimatedMaximumUsd)
-        : 0),
-    0,
-  );
-  assertActualSpendWithinBudget(
-    charged,
-    context.plan.budget.specialistsUsd,
-    "Specialistanalyserne",
-    requestLanguage(),
-  );
-  return true;
+        await stepUpdate(stepKey, {
+          status: "failed",
+          error_message: message,
+          ...completionUsage(completion),
+          ...(chargedUsd === null ? {} : { charged_cost: chargedUsd }),
+          completed_at: new Date().toISOString(),
+        });
+        return message;
+      },
+    },
+    stored: (module, output) => {
+      const parsed = specialistOutputSchema.parse(output);
+      validateSpecialistPacket(parsed, module, profile, caseId, new Set(evidenceIds));
+      return parsed;
+    },
+    call: async (module) => {
+      const prompt = buildSpecialistPrompt(profile, promptInput, module);
+      const schema = specialistJsonSchema(profile, module, evidenceIds);
+      // Written before the call, so a failed step keeps it too (it was sent).
+      await storePromptFingerprint(
+        service,
+        { runId, stepKey: module.id },
+        promptFingerprint({ system: prompt.system, user: prompt.user, schema }),
+      );
+      return callDeepGateway(
+        prompt.system,
+        prompt.user,
+        `pap_specialist_${module.id}`,
+        schema,
+        outputTokenCap("specialist", context.plan.tier, context.plan.model),
+        context.shares.specialistUsd(module.id),
+        DEEP_CALL_TIMEOUT_MS[context.plan.tier].specialist,
+        "low",
+        context.plan.model,
+        await redactorForFund(context.run["fund_id"] as string, "deep_analysis", context.service),
+      );
+    },
+    toPacket: (module, completion) => {
+      const parsedPacket = specialistOutputSchema.parse(JSON.parse(completion.content));
+      // A category the specialist skipped becomes an 'unknown' finding, never a failed step.
+      // A card point without an allowed source is dropped, never a failed step.
+      const packet = withSanitizedCardData<SpecialistOutput>(
+        {
+          ...parsedPacket,
+          findings: withCategoryFallbacks(
+            parsedPacket.findings,
+            module.categories,
+            [],
+            requestLanguage(),
+          ).findings,
+        },
+        evidenceIds,
+      );
+      validateSpecialistPacket(packet, module, profile, caseId, new Set(evidenceIds));
+      return packet;
+    },
+    failedCompletion: failedCallCompletion,
+    specialistsUsd: context.shares.specialistsUsd,
+    language: requestLanguage(),
+    fallbackMessage: serverText("analysisServer.common.specialistFailed"),
+  });
 }
 
 function buildPromptInput(context: DeepWorkerContext) {
@@ -922,13 +973,25 @@ async function runSynthesisPhase(
     fundId: context.run["fund_id"] as string,
     caseId: context.run["case_id"] as string,
   });
+  const synthesisSchema = deepJsonSchema(profile, evidenceIds);
+  // Written before the call; the run gets the combined fingerprint once it is done.
+  const synthesisFingerprint = promptFingerprint({
+    system: prompt.system,
+    user: prompt.user,
+    schema: synthesisSchema,
+  });
+  await storePromptFingerprint(
+    context.service,
+    { runId: context.runId, stepKey: SYNTHESIS_STEP },
+    synthesisFingerprint,
+  );
   const completion = await callDeepGateway(
     prompt.system,
     prompt.user,
     "pap_deep_v1",
-    deepJsonSchema(profile, evidenceIds),
+    synthesisSchema,
     outputTokenCap("synthesis", context.plan.tier, context.plan.model),
-    context.plan.budget.synthesisUsd,
+    context.shares.synthesisUsd,
     DEEP_CALL_TIMEOUT_MS[context.plan.tier].synthesis,
     synthesisReasoningEffort(context.plan.model),
     context.plan.model,
@@ -940,7 +1003,7 @@ async function runSynthesisPhase(
   try {
     assertActualSpendWithinBudget(
       chargedSynthesis,
-      context.plan.budget.synthesisUsd,
+      context.shares.synthesisUsd,
       "Komitésyntesen",
       requestLanguage(),
     );
@@ -1030,6 +1093,7 @@ async function runSynthesisPhase(
       })
       .eq("run_id", runId)
       .eq("step_key", SYNTHESIS_STEP);
+    await storeRunPromptFingerprint(service, runId);
 
     await persistDeepAnalysis(context, output, specialistPackets, qualityAudit, storedTeamAnswers);
     await service
@@ -1040,7 +1104,13 @@ async function runSynthesisPhase(
     return completion;
   } catch (cause) {
     if (cause instanceof DeepGatewayError) throw cause;
-    throw new DeepGatewayError(errorMessage(cause, "Komitésyntesen fejlede."), completion);
+    const failure = new DeepGatewayError(
+      errorMessage(cause, "Komitésyntesen fejlede."),
+      completion,
+    );
+    // A stop at the limit stays one through the wrapper.
+    failure.cause = cause;
+    throw failure;
   }
 }
 
@@ -1073,29 +1143,22 @@ async function persistDeepAnalysis(
   });
 
   const steps = await loadSteps(service, runId);
-  const stepRows = [...steps.values()];
-  // Ærligt: null når mindst ét trins forbrug ikke blev rapporteret af Gatewayen --
-  // vises som "ukendt" i UI'en i stedet for et falsk præcist 0,00 kr.
-  const totalCostUsd = sumCompleteCosts(stepRows.map((step) => step.actual_cost));
-  // What the run charged against its budget, booked by the settlement (0114) when the
-  // price is unknown. Only when every step left its price or charge: a step saved before 0116
-  // without a price leaves it unknown, and the run is booked to its reservation as before.
-  const stepCosts = stepRunCosts(stepRows);
-  const chargedUsd = stepCosts.everyStepKnown ? stepCosts.chargedUsd : null;
-  // Kendt delsum bruges kun til selve budgetgennemtvingelsen -- et manglende
-  // enkelt trins forbrug skal ikke stoppe den samlede løbske-forbrug-kontrol.
-  const knownCostUsd = stepRows.reduce((sum, step) => sum + (step.actual_cost ?? 0), 0);
-  const inputTokens = stepRows.reduce((sum, step) => sum + Number(step.input_tokens ?? 0), 0);
-  const outputTokens = stepRows.reduce((sum, step) => sum + Number(step.output_tokens ?? 0), 0);
-  const totalTokens = stepRows.reduce(
-    (sum, step) =>
-      sum +
-      Number(step.total_tokens ?? Number(step.input_tokens ?? 0) + Number(step.output_tokens ?? 0)),
-    0,
-  );
+  // Ærligt: null når mindst ét trins forbrug ikke blev rapporteret af Gatewayen -- vises som
+  // "ukendt" i UI'en i stedet for et falsk præcist 0,00 kr.: the charge is booked by the
+  // settlement (0114) when the price is unknown, only when every step left its price or charge.
+  // The known sum alone is what the runaway-spend check uses (one rule, `runTotalsFromSteps`).
+  const {
+    actualUsd: totalCostUsd,
+    chargedUsd,
+    knownUsd: knownCostUsd,
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  } = runTotalsFromSteps([...steps.values()]);
+  // A continuation may spend only what it reserved.
   assertActualSpendWithinBudget(
     knownCostUsd,
-    context.plan.budget.usd,
+    context.shares.totalUsd,
     "Den dybe analyse",
     requestLanguage(),
   );
@@ -1125,6 +1188,8 @@ async function persistDeepAnalysis(
           financeFormulaVersion: FINANCE_FORMULA_VERSION,
           fundMemory: context.fundMemoryStatus,
           blockers: result.blockers,
+          // The stage whose setup the deep analysis used (its screening's).
+          setupStage: context.profile.teamSetup?.stage ?? null,
           qualityAudit,
           executionMode: "durable-phases-v1",
           costCurrency: "USD",
@@ -1226,11 +1291,8 @@ function publicResearchPacket(value: unknown): PublicResearchOutput {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(serverText("analysisServer.deep.storedResearchInvalid"));
   }
-  const packet = { ...(value as Record<string, unknown>) };
-  delete packet["persistedSources"];
-  delete packet["persistedEvidence"];
-  delete packet["reusedFromRunId"];
-  return packet as PublicResearchOutput;
+  // Only the answer itself; the step's plan, log and follow-up name the models.
+  return publicResearchAnswer(value);
 }
 
 async function releasePhase(
@@ -1264,6 +1326,8 @@ async function failDeepRun(
   diagnostics: DeepGatewayError["diagnostics"] = null,
   /** What the failed step charged against its budget; null leaves the step's own. */
   stepChargeUsd: number | null = null,
+  /** "price_limit" when the run stopped at its limit; its finished steps are kept. */
+  stopReason: "price_limit" | null = null,
 ) {
   if (activeStepKey) {
     await service
@@ -1324,6 +1388,7 @@ async function failDeepRun(
     .update({
       status: "failed",
       error_message: message,
+      stop_reason: stopReason,
       actual_cost: costs.actualUsd,
       input_tokens: input || null,
       output_tokens: output || null,

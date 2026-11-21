@@ -72,22 +72,49 @@ export function estimateRequestMaximumUsd(input: {
   requestBody: unknown;
   maxOutputTokens: number;
 }): RequestBudgetEstimate {
-  const pricing = MODEL_PRICING_USD_PER_MILLION[input.model];
   const measuredInputTokens = gatewayEncoding.encode(JSON.stringify(input.requestBody)).length;
-  const safetyFactor = input.model.startsWith("perplexity/") ? 1.25 : 1.1;
-  const maxInputTokens = Math.ceil(measuredInputTokens * safetyFactor + 128);
-  const maxCostUsd =
-    (maxInputTokens * pricing.input + input.maxOutputTokens * pricing.output) / 1_000_000 +
-    pricing.request;
   return {
-    maxCostUsd: roundUsd(maxCostUsd),
-    maxInputTokens,
+    maxCostUsd: requestMaximumUsd(input.model, measuredInputTokens, input.maxOutputTokens),
+    maxInputTokens: maxInputTokensFor(input.model, measuredInputTokens),
     maxOutputTokens: input.maxOutputTokens,
   };
 }
 
+function maxInputTokensFor(model: PricedModel, measuredInputTokens: number): number {
+  const safetyFactor = model.startsWith("perplexity/") ? 1.25 : 1.1;
+  return Math.ceil(measuredInputTokens * safetyFactor + 128);
+}
+
+/** The most one call can cost at this many measured or assumed input tokens. */
+export function requestMaximumUsd(
+  model: PricedModel,
+  measuredInputTokens: number,
+  maxOutputTokens: number,
+): number {
+  const pricing = MODEL_PRICING_USD_PER_MILLION[model];
+  return roundUsd(
+    (maxInputTokensFor(model, measuredInputTokens) * pricing.input +
+      maxOutputTokens * pricing.output) /
+      1_000_000 +
+      pricing.request,
+  );
+}
+
+/** A run stopped at its price limit: what is finished is kept and reused for free. */
+export class BudgetLimitError extends Error {}
+
 /** A call stopped before it was sent, because its worst case passes its cap. */
-export class BudgetExceededError extends Error {}
+export class BudgetExceededError extends BudgetLimitError {}
+
+/** The reason a failed run is marked with (0124), also through an error that wraps the stop. */
+export function stopReasonOf(cause: unknown): "price_limit" | null {
+  let current = cause;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    if (current instanceof BudgetLimitError) return "price_limit";
+    current = current.cause;
+  }
+  return null;
+}
 
 /**
  * Stops a call whose worst case passes what is left. The step's error (shown in the case's model
@@ -136,7 +163,7 @@ export function assertActualSpendWithinBudget(
     console.warn(
       `[budget] ${label}: booked $${chargedUsd.toFixed(2)} > cap $${budgetUsd.toFixed(2)}`,
     );
-    throw new Error(translate(language, "analysisServer.budget.stepStopped"));
+    throw new BudgetLimitError(translate(language, "analysisServer.budget.stepStopped"));
   }
 }
 

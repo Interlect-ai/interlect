@@ -21,6 +21,7 @@ export const DB_REFUSALS: ReadonlyArray<readonly [message: string, key: MessageK
     "Kun en Admin eller Lead kan redigere fondsopsætningen.",
     "appServer.dbRefusals.adminOrLeadEditsSetup",
   ],
+  ["Din rolle kan ikke udgive fondsopsætningen.", "appServer.dbRefusals.roleCannotPublishSetup"],
   ["Fondsnavn mangler.", "appServer.dbRefusals.teamNameMissing"],
   ["Casen blev ikke fundet i den valgte fond.", "appServer.dbRefusals.caseNotInTeam"],
   [

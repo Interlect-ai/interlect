@@ -8,6 +8,7 @@
  * The tab and the focus page are in the URL (gap/R-5-screening.md, choice 3). Everything is
  * real data: the run, the team's tasks, notes, messages (live) and files.
  */
+import { PriceLimitStopped } from "@/components/cases/PriceLimitStopped";
 import { useEffect, useRef, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -80,6 +81,9 @@ export function ScreeningCaseView({
   focus,
   onFocus,
   onRetry,
+  stoppedAtLimit = false,
+  onContinue,
+  canEditLimits = false,
   retrying = false,
 }: {
   model: CaseViewModel;
@@ -96,6 +100,12 @@ export function ScreeningCaseView({
   onFocus: (focus: ScreeningFocus | null, options?: { replace?: boolean; back?: boolean }) => void;
   /** Starts the screening again (a stalled run, f); the server closes the old run. */
   onRetry?: (() => void) | undefined;
+  /** The latest screening stopped at the team's price limit. */
+  stoppedAtLimit?: boolean | undefined;
+  /** "Fortsæt screeningen"; absent for a member who may not start analyses. */
+  onContinue?: (() => void) | undefined;
+  /** Admin and Lead: "Edit limits" in the stopped state. */
+  canEditLimits?: boolean | undefined;
   /** "Prøv igen" is waiting for the server. */
   retrying?: boolean | undefined;
 }) {
@@ -111,6 +121,20 @@ export function ScreeningCaseView({
         {header}
         {notices}
         <ScreeningProgress companyName={model.companyName} />
+      </Page>
+    );
+  }
+  if (analysis && analysis.status === "failed" && stoppedAtLimit) {
+    return (
+      <Page>
+        {header}
+        {notices}
+        <PriceLimitStopped
+          kind="screening"
+          onContinue={onContinue}
+          continuing={retrying}
+          canEditLimits={canEditLimits}
+        />
       </Page>
     );
   }

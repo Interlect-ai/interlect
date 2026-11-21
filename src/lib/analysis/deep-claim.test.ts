@@ -119,9 +119,13 @@ test("a failed step fails the run, never answered busy and never paid again (T-7
 
 test("the deep worker cannot hang or revive a finished run (T-741 a-d)", () => {
   const worker = readFileSync(new URL("./deep-worker.server.ts", import.meta.url), "utf8");
-  // a: a failed specialist is seen before "busy".
-  const phaseEnd = worker.slice(worker.indexOf("A failure is looked at before"));
-  assert.ok(phaseEnd.indexOf("if (failed) throw") < phaseEnd.indexOf("result.busy"));
+  // a: a failed specialist is seen before "busy" (the steps' loop moved out F2; its behaviour is
+  // tested in specialist-steps.test.ts).
+  const steps = readFileSync(new URL("./specialist-steps.ts", import.meta.url), "utf8");
+  const phaseEnd = steps.slice(steps.indexOf("A failure is looked at before"));
+  assert.ok(phaseEnd.indexOf("if (failed) {") >= 0);
+  assert.ok(phaseEnd.indexOf("if (failed) {") < phaseEnd.indexOf("result.busy"));
+  assert.match(worker, /return runSpecialistSteps</);
   // c: only a queued or running run is marked active; otherwise the delivery is ignored.
   const active = worker.slice(worker.indexOf("async function markRunActive"));
   assert.match(active.slice(0, 900), /\.in\("status", \["queued", "running"\]\)/);

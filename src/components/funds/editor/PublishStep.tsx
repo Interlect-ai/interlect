@@ -183,6 +183,52 @@ function summaryRows(
   ];
 }
 
+/**
+ * What the draft changes compared with the active version, one plain line each (also the set of
+ * specialists, which lives in its own table). Used by "Gennemse og udgiv" and, since
+ * by the "Udgiv" bar and the dots on the places.
+ */
+export function useDraftChanges({
+  fundId,
+  value,
+  active,
+  moduleOverrides,
+  researchModuleOverrides,
+  screeningSetup,
+}: {
+  fundId: string;
+  value: EditorState;
+  active: EditableFundConfig | null;
+  moduleOverrides: EditableFundConfig["moduleOverrides"];
+  researchModuleOverrides: EditableFundConfig["researchModuleOverrides"];
+  screeningSetup: Pick<EditableFundConfig, "screeningInstruction" | "screeningCards">;
+}) {
+  const language = useLanguage();
+  const draftSpecialists = useFundSpecialists(fundId, value.configId).data;
+  const activeSpecialists = useFundSpecialists(fundId, active?.id).data;
+  const specialistChanges =
+    active && draftSpecialists && activeSpecialists && value.configId !== active.id
+      ? specialistSetChanges(activeSpecialists, draftSpecialists, language)
+      : [];
+  const changes = active
+    ? [
+        ...diffFundConfigs(
+          active,
+          {
+            ...value,
+            moduleOverrides,
+            researchModuleOverrides,
+            screeningInstruction: screeningSetup.screeningInstruction,
+            screeningCards: screeningSetup.screeningCards,
+          },
+          language,
+        ),
+        ...specialistChanges,
+      ]
+    : [];
+  return { changes, draftSpecialists, specialistsChanged: specialistChanges.length > 0 };
+}
+
 export function PublishStep({
   fundId,
   value,
@@ -205,27 +251,14 @@ export function PublishStep({
   const localeTag = useLocaleTag();
   const weightTotal =
     Math.round(value.criteria.reduce((sum, criterion) => sum + criterion.weight, 0) * 10) / 10;
-  // The set of specialists lives in its own table; compared here, not in the diff.
-  const draftSpecialists = useFundSpecialists(fundId, value.configId).data;
-  const activeSpecialists = useFundSpecialists(fundId, active?.id).data;
-  const changes = active
-    ? [
-        ...diffFundConfigs(
-          active,
-          {
-            ...value,
-            moduleOverrides,
-            researchModuleOverrides,
-            screeningInstruction: screeningSetup.screeningInstruction,
-            screeningCards: screeningSetup.screeningCards,
-          },
-          language,
-        ),
-        ...(draftSpecialists && activeSpecialists
-          ? specialistSetChanges(activeSpecialists, draftSpecialists, language)
-          : []),
-      ]
-    : [];
+  const { changes, draftSpecialists } = useDraftChanges({
+    fundId,
+    value,
+    active,
+    moduleOverrides,
+    researchModuleOverrides,
+    screeningSetup,
+  });
   return (
     <div className="flex flex-col gap-3.5">
       <div className="overflow-hidden rounded-lg bg-surface shadow-card">

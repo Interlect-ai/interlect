@@ -6,6 +6,7 @@
  * The state lives in `IntakeFlow`, so leaving the waiting page for "Opret en til" does not
  * stop a running creation; the screening itself runs on the server either way.
  */
+import { startWithLimitChoice } from "@/lib/analysis/limit-choice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabase/client";
@@ -140,7 +141,14 @@ export function useIntakeRun() {
         return found.runId;
       },
       startScreening: async (fundId, caseId) => {
-        const started = await screenCase({ data: { caseId, fundId } });
+        // The team asks first ("Spørg mig først"); cancelled = nothing started.
+        const started = await startWithLimitChoice(fundId, "screening", (atLimit) =>
+          screenCase({ data: { caseId, fundId, atLimit } }),
+        );
+        if (!started || started.runId === null) {
+          // Cancel at the limit: the case is made, the screening is not started.
+          throw new SafeStepError(translate(language, "fundSetup.limitChoice.notStarted"));
+        }
         return { runId: started.runId };
       },
     }),

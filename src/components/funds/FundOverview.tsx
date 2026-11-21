@@ -7,8 +7,9 @@
 import { CreditMeter } from "@/components/ai/CreditMeter";
 import { LanguageBox } from "@/components/funds/LanguageBox";
 import { AiLevelBox } from "@/components/funds/AiLevelBox";
+import { AnalysisLimitsBox } from "@/components/funds/AnalysisLimitsBox";
 import { useMemo, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, useReducedMotion } from "motion/react";
 import { ChartPie, CircleCheck, Scale, type LucideIcon } from "lucide-react";
@@ -31,7 +32,12 @@ import { listCases } from "@/lib/cases/cases.functions";
 import { formatScore } from "@/lib/cases/presentation";
 import { geographyText, sectorText, stageText } from "@/lib/funds/basis-labels";
 import { gateInLanguage } from "@/lib/funds/gate-labels";
-import { listFundConfigVersions, type EditableFundConfig } from "@/lib/funds/config.functions";
+import {
+  listFundConfigVersions,
+  restoreFundConfigVersion,
+  type EditableFundConfig,
+} from "@/lib/funds/config.functions";
+import { userMessage } from "@/lib/errors/user-message";
 import type { FundSpecialistsView } from "@/lib/funds/specialists.functions";
 import { STANDARD_SPECIALIST_CARDS, standardSpecialistCardIn } from "@/lib/funds/specialist-cards";
 import type { Language } from "@/lib/i18n/language";
@@ -54,7 +60,7 @@ import { cn } from "@/lib/utils";
 import { strategyTypeLabel, formatEur, ticketText } from "./config-format";
 import type { GuideStepKey } from "./editor/guide-steps";
 
-type AreaKey = "basis" | "thesis" | "weights" | "mandate" | "screening" | "specialists";
+export type AreaKey = "basis" | "thesis" | "weights" | "mandate" | "screening" | "specialists";
 
 type T = ReturnType<typeof useT>;
 
@@ -145,10 +151,13 @@ export function FundOverview({
   fundId,
   active,
   onEdit,
+  areas = AREAS,
 }: {
   fundId: string;
   active: EditableFundConfig;
   onEdit?: ((step: GuideStepKey) => void) | undefined;
+  /** The cards of one place in Teamopsætning; all six by default. */
+  areas?: readonly AreaKey[];
 }) {
   const t = useT();
   const language = useLanguage();
@@ -172,7 +181,7 @@ export function FundOverview({
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
-        {AREAS.map((area, index) => (
+        {areas.map((area, index) => (
           <AreaCard
             key={area}
             index={index}
@@ -213,17 +222,31 @@ export function FundOverview({
           </div>
         )}
       </Collapse>
+    </div>
+  );
+}
 
+/**
+ * (§4.7): language, AI level, analysis limits and the credit meter are about the
+ * team, not the thesis; they moved out of the setup into "Teamindstillinger".
+ */
+export function TeamSettingsContent({ fundId }: { fundId: string }) {
+  return (
+    <div className="flex flex-col gap-3">
       <LanguageBox fundId={fundId} />
-
       <AiLevelBox fundId={fundId} />
-
+      <AnalysisLimitsBox fundId={fundId} />
       <CreditMeter fundId={fundId} />
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3">
-        <EffectCard fundId={fundId} threshold={active.analysisThreshold} />
-        <VersionsCard fundId={fundId} />
-      </div>
+/** "Effekt af den aktive version" and "Versioner", now under "Gennemse og udgiv". */
+export function VersionCards({ fundId, threshold }: { fundId: string; threshold: number }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3">
+      <EffectCard fundId={fundId} threshold={threshold} />
+      <VersionsCard fundId={fundId} />
     </div>
   );
 }
@@ -812,6 +835,19 @@ function VersionsCard({ fundId }: { fundId: string }) {
   });
   const formatDate = (iso: string) =>
     new Intl.DateTimeFormat(localeTag, { dateStyle: "medium" }).format(new Date(iso));
+  // "Gendan" copies an earlier version into a NEW draft; nothing old changes.
+  const queryClient = useQueryClient();
+  const restore = useServerFn(restoreFundConfigVersion);
+  const restoring = useMutation({
+    mutationFn: (configId: string) => restore({ data: { configId } }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["fund-config-versions", fundId] }),
+        queryClient.invalidateQueries({ queryKey: ["fund-config", fundId] }),
+        queryClient.invalidateQueries({ queryKey: ["fund-change-history", fundId] }),
+      ]);
+    },
+  });
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-canvas p-[22px]">
       <span className="text-list font-semibold">{t("fundSetup.overview.versionsTitle")}</span>
@@ -829,16 +865,44 @@ function VersionsCard({ fundId }: { fundId: string }) {
         return (
           <div
             key={version.id}
-            className="grid grid-cols-[36px_minmax(0,1fr)] items-baseline gap-2.5"
+            className={
+              version.canRestore
+                ? "grid grid-cols-[36px_minmax(0,1fr)_auto] items-baseline gap-2.5"
+                : "grid grid-cols-[36px_minmax(0,1fr)] items-baseline gap-2.5"
+            }
           >
             <span className="text-[15px] font-semibold tabular-nums">{row.label}</span>
             <span className="flex flex-col">
               <span className="text-[14px]">{row.title}</span>
               <span className="text-meta text-ink-3">{row.meta}</span>
             </span>
+            {version.canRestore && (
+              <button
+                type="button"
+                disabled={restoring.isPending}
+                onClick={() => restoring.mutate(version.id)}
+                aria-label={t("fundSetup.overview.restoreAria", { version: row.label })}
+                title={t("fundSetup.overview.restoreHint")}
+                className="-my-2 h-8 cursor-pointer rounded-pill border-0 bg-transparent px-3 font-[inherit] text-meta font-medium whitespace-nowrap text-ink-1 outline-none transition-[background-color,transform] hover:bg-sunken focus-visible:ring-2 focus-visible:ring-action active:scale-[.97] disabled:cursor-default disabled:text-ink-3 disabled:hover:bg-transparent"
+              >
+                {restoring.isPending && restoring.variables === version.id
+                  ? t("fundSetup.overview.restoring")
+                  : t("fundSetup.overview.restore")}
+              </button>
+            )}
           </div>
         );
       })}
+      {restoring.isSuccess && (
+        <p className="m-0 text-meta text-ink-2" role="status">
+          {t("fundSetup.overview.restored")}
+        </p>
+      )}
+      {restoring.isError && (
+        <p className="m-0 text-meta text-critical" role="alert">
+          {userMessage(restoring.error, t("fundSetup.overview.restoreFailed"), language)}
+        </p>
+      )}
     </div>
   );
 }

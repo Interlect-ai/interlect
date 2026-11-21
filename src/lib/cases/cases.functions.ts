@@ -14,6 +14,8 @@ import { isSafeStoragePath, isStoragePathIn } from "@/lib/security/storage-path"
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import { requireFundCapability } from "@/lib/auth/access.server";
+import { caseThesis, chosenThesis } from "@/lib/funds/thesis-scope.server";
+import type { ThesisStatus } from "@/lib/funds/theses";
 import { getServiceClient } from "@/lib/supabase/admin.server";
 import { stagePriorScore } from "@/lib/analysis/scoring";
 import { isFundMemoryEnabled } from "@/lib/analysis/gateway-security";
@@ -38,12 +40,20 @@ import {
 import type { CasePhase, CaseStatus } from "@/lib/cases/lifecycle";
 import { addCaseNoteInputSchema, type CaseNote } from "./notes.contracts";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import {
+  readSetupStageChoice,
+  selectSetupForStage,
+  type SetupStageChoice,
+} from "@/lib/analysis/setup-stage";
+import { readEconomyResult, type EconomyResult } from "@/lib/analysis/economy-check";
+import { publicRunError } from "@/lib/errors/run-error";
 import { withDemoView } from "@/lib/display/display-names.server";
 import {
   buildCaseList,
   criterionOrder,
   isCaseListPayload,
   profileRunExecutionStatus,
+  type CaseListProfile,
 } from "@/lib/cases/case-list";
 
 const keyFindingsSchema = z.array(keyFindingSchema);
@@ -78,6 +88,8 @@ const createCaseSchema = z.object({
     .enum(["founder_email", "warm_intro", "meeting_notes", "analyst_note"])
     .default("founder_email"),
   founders: z.array(founderSchema).max(20),
+  /** The thesis the case belongs to; without it, the team's default thesis. */
+  thesisId: z.guid().optional(),
 });
 
 export type CreateCaseInput = z.infer<typeof createCaseSchema>;
@@ -93,6 +105,8 @@ export interface ListCriterionScore {
 
 export interface CaseListItem {
   id: string;
+  /** The thesis the case belongs to; null only for a list from before 0128. */
+  thesisId: string | null;
   /**
    * The shown screening was made with an older setup version than the active one; its
    * version number in olderSetupVersion (null when unknown).
@@ -160,36 +174,63 @@ export interface CaseListItem {
   canRunDeep: boolean;
 }
 
+/**
+ * The team's access and the setup a case page reads: the active version of the case's own
+ * thesis (`caseId`), of a chosen thesis (`thesisId`), or of the team's default thesis.
+ */
 async function resolveFund(
   supabase: Parameters<typeof requireFundCapability>[0],
   userId: string,
   fundId: string,
+  scope: { caseId?: string; thesisId?: string | null | undefined } = {},
 ) {
   // The setup and the access check are asked for at the same time; the setup's error
   // still comes first, as before.
   const [config, accessResult] = await Promise.allSettled([
-    supabase
-      .from("fund_config_versions")
-      .select(CONFIG_PROFILE_COLUMNS)
-      .eq("fund_id", fundId)
-      .eq("status", "active")
-      .single(),
+    (async () => {
+      const thesis = scope.caseId
+        ? await caseThesis(supabase, fundId, scope.caseId)
+        : await chosenThesis(supabase, fundId, scope.thesisId);
+      // A case that is not in the team (or not visible) is "not found", not "no setup".
+      if (!thesis && scope.caseId) {
+        throw new Error(serverText("caseServer.cases.notFoundOrNoAccess"));
+      }
+      if (!thesis) return { data: null, error: null, thesis: null };
+      const result = await supabase
+        .from("fund_config_versions")
+        .select(CONFIG_PROFILE_COLUMNS)
+        .eq("fund_id", fundId)
+        .eq("thesis_id", thesis.id)
+        .eq("status", "active")
+        .single();
+      return { data: result.data, error: result.error, thesis };
+    })(),
     requireFundCapability(supabase, userId, fundId, "view_case"),
   ]);
-  const data = config.status === "fulfilled" ? config.value.data : null;
-  if (config.status === "rejected" || config.value.error || !data) {
+  // The thesis lookup's own message (case not found, thesis not in the team, not loaded) goes
+  // through; only a thesis without a published version is "no published setup".
+  if (config.status === "rejected") throw config.reason;
+  const data = config.value.data;
+  if (config.value.error || !data) {
     throw new Error(serverText("caseServer.cases.noPublishedSetup"));
   }
   if (accessResult.status === "rejected") throw accessResult.reason;
   const access = accessResult.value;
-  return { fundId, ...configProfile(data as Record<string, unknown>), access };
+  const thesis = config.value.thesis!;
+  return {
+    fundId,
+    ...configProfile(data as Record<string, unknown>),
+    access,
+    thesisRef: { id: thesis.id, name: thesis.name, status: thesis.status },
+  };
 }
 
 /** A setup version with what the case pages show from it (its gates, criteria and mandate). */
 const CONFIG_PROFILE_COLUMNS = `id, fund_id, profile_key, version, funds(name),
-      fund_mandates(analysis_threshold, approval_mode, thesis),
-      mandate_gates(gate_key, label, description, treatment, sort_order),
-      assessment_criteria(criterion_key, label, description, score_category, weight, sort_order)`;
+      fund_mandates(analysis_threshold, approval_mode, thesis, stages, setup),
+      mandate_gates(stage, gate_key, label, description, treatment, sort_order),
+      assessment_criteria(stage, criterion_key, label, description, score_category, weight, sort_order),
+      fund_specialists(stage)`;
 
 type RunProfile = ReturnType<typeof configProfile>;
 
@@ -204,19 +245,34 @@ function configProfile(data: Record<string, unknown>) {
     analysis_threshold: number;
     approval_mode: string;
     thesis: string;
+    stages?: string[] | null;
+    setup?: unknown;
   }>;
   const mandate = Array.isArray(mandateRows) ? mandateRows[0] : mandateRows;
-  const gates = [
+  const gateRows = [
     ...((data["mandate_gates"] ?? []) as Array<{
+      stage?: string | null;
       gate_key: string;
       label: string;
       description: string;
       treatment: "hard" | "review";
       sort_order: number;
     }>),
-  ]
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((gate) => ({
+  ].sort((a, b) => a.sort_order - b.sort_order);
+  const criterionRows = [
+    ...((data["assessment_criteria"] ?? []) as Array<{
+      stage?: string | null;
+      criterion_key: string;
+      label: string;
+      description: string | null;
+      score_category: string;
+      weight: number;
+      sort_order: number;
+    }>),
+  ].sort((a, b) => a.sort_order - b.sort_order);
+  const specialistRows = (data["fund_specialists"] ?? []) as Array<{ stage?: string | null }>;
+  const mapGates = (rows: typeof gateRows) =>
+    rows.map((gate) => ({
       key: gate.gate_key,
       label: gate.label,
       description: gate.description,
@@ -225,24 +281,40 @@ function configProfile(data: Record<string, unknown>) {
         ? financeGateTreatment(gate.gate_key)
         : gate.treatment,
     }));
-  const criteria = [
-    ...((data["assessment_criteria"] ?? []) as Array<{
-      criterion_key: string;
-      label: string;
-      description: string | null;
-      score_category: string;
-      weight: number;
-      sort_order: number;
-    }>),
-  ]
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((criterion) => ({
+  const mapCriteria = (rows: typeof criterionRows) =>
+    rows.map((criterion) => ({
       key: criterion.criterion_key,
       label: criterion.label,
       description: criterion.description ?? "",
       category: criterion.score_category,
       weight: Number(criterion.weight),
     }));
+  /**
+   * The gates and criteria a case is read with, as the analysis chose them
+   * (selectSetupForStage): the run's own stage while it is one of the version's, else the case's
+   * stage resolved (unknown = the earliest chosen stage, "stadie antaget"). A version with nothing
+   * per stage has no choice and reads every row, as before.
+   */
+  const forStage = (caseStage: string | null | undefined, runChoice?: SetupStageChoice | null) => {
+    const selected = selectSetupForStage({
+      gates: gateRows,
+      criteria: criterionRows,
+      mandateStages: mandate?.stages ?? [],
+      setup: mandate?.setup,
+      otherRows: specialistRows,
+      caseStage,
+      runChoice,
+    });
+    return {
+      choice: selected.choice,
+      gates: mapGates(selected.gates),
+      criteria: mapCriteria(selected.criteria),
+      threshold: selected.threshold ?? (mandate ? Number(mandate.analysis_threshold) : null),
+    };
+  };
+  // Without a case: the shared reading (every row of a version with nothing per stage).
+  const gates = mapGates(gateRows.filter((gate) => !gate.stage));
+  const criteria = mapCriteria(criterionRows.filter((criterion) => !criterion.stage));
   return {
     configId: data["id"] as string,
     configVersion: Number(data["version"]),
@@ -253,6 +325,7 @@ function configProfile(data: Record<string, unknown>) {
     thesis: mandate?.thesis ?? null,
     gates,
     criteria,
+    forStage,
   };
 }
 
@@ -270,10 +343,38 @@ export interface GateResultView {
 
 /**
  * The run columns the case page reads (its newest runs and a deep run's own screening). No model,
- * prompt version, tokens or price: they never reach the customer's browser.
+ * prompt version, tokens or price: they never reach the customer's browser. No
+ * `error_message` either: the browser's role cannot read it, see `storedRunErrors`.
  */
 const CASE_RUN_COLUMNS =
-  "id, kind, status, config_version_id, previous_run_id, input_evidence_ids, raw_response, validation_public, error_message, created_at, completed_at";
+  "id, kind, status, config_version_id, previous_run_id, input_evidence_ids, raw_response, validation_public, stop_reason, created_at, completed_at";
+
+/**
+ * The stored errors of runs the person may already see. `error_message` can hold the
+ * provider's or the database's own text, so only the server reads it (0130) and only the mapped
+ * sentence (`publicRunError`) leaves. Call it after the user's own read of the runs: the ids come
+ * from that read, and the fund and case filters keep it inside the team. Decoration: a failed read
+ * shows the general sentence.
+ */
+async function storedRunErrors(
+  fundId: string,
+  caseId: string,
+  runIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (runIds.length === 0) return new Map();
+  const { data, error } = await getServiceClient()
+    .from("analysis_runs")
+    .select("id, error_message")
+    .eq("fund_id", fundId)
+    .eq("case_id", caseId)
+    .in("id", [...runIds])
+    .not("error_message", "is", null);
+  if (error) {
+    console.error(`[cases] run errors (case ${caseId})`, error.message);
+    return new Map();
+  }
+  return new Map((data ?? []).map((row) => [row["id"] as string, row["error_message"] as string]));
+}
 
 export interface AnalysisRunView {
   id: string;
@@ -287,6 +388,14 @@ export interface AnalysisRunView {
   setupThreshold: number | null;
   /** The run was made with the active setup version; false offers a rescreening. */
   setupCurrent: boolean;
+  /**
+   * The stage the case was analysed with (Teamopsætning pr. stadie). `assumed` is the mark
+   * "stadie antaget": the case's stage was unknown, so the earliest chosen stage was used. Null
+   * for a version with nothing per stage and for runs from.
+   */
+  setupStage: SetupStageChoice | null;
+  /** The screening's economy points (figures, limits, what is missing); else null. */
+  economy: EconomyResult | null;
   inputEvidenceIds: string[];
   createdAt: string;
   completedAt: string | null;
@@ -407,6 +516,11 @@ export interface CaseIdentity {
 
 export interface CaseDetail {
   id: string;
+  /**
+   * The case's thesis: the page reads its setup through it, and an archived thesis gets a
+   * calm line on top and no new analysis (spec flere-teser-i-et-team §3).
+   */
+  thesisRef: { id: string; name: string; status: ThesisStatus };
   fundId: string;
   companyId: string;
   companyName: string;
@@ -478,6 +592,8 @@ export interface CaseDetail {
     createdAt: string;
     completedAt: string | null;
     errorMessage: string | null;
+    /** The run stopped at the team's price limit; never an amount. */
+    stoppedAtLimit?: boolean;
   }>;
   /** Seneste kørsel uanset type — bevaret for eksisterende visninger. */
   latestAnalysis: AnalysisRunView | null;
@@ -553,7 +669,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
       // The case row is fetched while the fund is resolved; RLS guards it, and the fund's
       // error (no access, no setup) is still the one thrown.
       const [profile, { data: caseRow, error: caseError }] = await Promise.all([
-        resolveFund(context.supabase, context.userId, data.fundId),
+        resolveFund(context.supabase, context.userId, data.fundId, { caseId: data.caseId }),
         context.supabase
           .from("cases")
           .select(
@@ -755,7 +871,18 @@ export const getCaseDetail = createServerFn({ method: "GET" })
         // The run's own setup version names its criteria and gates; the active one stands
         // in only when that version could not be read.
         const runVersionId = row["config_version_id"] as string;
-        const runProfile = profileById.get(runVersionId) ?? profile;
+        const versionProfile = profileById.get(runVersionId) ?? profile;
+        // The run's own stage (validation_public.setupStage) picks the gates, criteria and
+        // threshold it was scored with; the case's stage only when the run has none.
+        const runPublic = (row["validation_public"] ?? null) as {
+          setupStage?: unknown;
+          economy?: unknown;
+        } | null;
+        const runStage = versionProfile.forStage(
+          company?.stage,
+          readSetupStageChoice(runPublic?.setupStage),
+        );
+        const runProfile = { ...versionProfile, ...runStage };
         const [
           scoreResult,
           riskResult,
@@ -763,6 +890,7 @@ export const getCaseDetail = createServerFn({ method: "GET" })
           findingResult,
           calculationResult,
           stepResult,
+          stepErrorResult,
           recalculationResult,
         ] = await Promise.all([
           context.supabase
@@ -793,10 +921,17 @@ export const getCaseDetail = createServerFn({ method: "GET" })
             .order("metric"),
           context.supabase
             .from("analysis_run_steps")
-            .select("step_key, step_order, status, error_message, started_at, completed_at")
+            .select("step_key, step_order, status, started_at, completed_at")
             .eq("run_id", runId)
             .order("step_order")
             .order("created_at"),
+          // The steps' errors only through the server (0130), for a run read above.
+          getServiceClient()
+            .from("analysis_run_steps")
+            .select("step_key, step_order, error_message")
+            .eq("fund_id", data.fundId)
+            .eq("run_id", runId)
+            .not("error_message", "is", null),
           row["kind"] === "screening"
             ? context.supabase
                 .from("case_score_recalculations")
@@ -813,6 +948,15 @@ export const getCaseDetail = createServerFn({ method: "GET" })
         ]);
         // The recalculation only replaces the run's own score; without it the page shows the
         // run's score, so a failed lookup is logged and the page still loads.
+        if (stepErrorResult.error) {
+          console.error(`[cases] step errors (run ${runId})`, stepErrorResult.error.message);
+        }
+        const stepErrors = new Map(
+          (stepErrorResult.error ? [] : (stepErrorResult.data ?? [])).map((stepRow) => [
+            `${String(stepRow["step_key"])}:${String(stepRow["step_order"])}`,
+            stepRow["error_message"] as string,
+          ]),
+        );
         if (recalculationResult.error) {
           console.error(`[cases] recalculation (run ${runId})`, recalculationResult.error.message);
         }
@@ -889,6 +1033,8 @@ export const getCaseDetail = createServerFn({ method: "GET" })
           setupVersion: profileById.has(runVersionId) ? runProfile.configVersion : null,
           setupThreshold: runProfile.threshold,
           setupCurrent: runVersionId === profile.configId,
+          setupStage: runStage.choice,
+          economy: readEconomyResult(runPublic?.economy),
           inputEvidenceIds: (row["input_evidence_ids"] ?? []) as string[],
           createdAt: row["created_at"] as string,
           completedAt: (row["completed_at"] as string | null) ?? null,
@@ -1016,7 +1162,11 @@ export const getCaseDetail = createServerFn({ method: "GET" })
             key: stepRow["step_key"] as string,
             order: Number(stepRow["step_order"]),
             status: stepRow["status"] as string,
-            errorMessage: (stepRow["error_message"] as string | null) ?? null,
+            // Only Interlect's own sentence leaves the server, for every role.
+            errorMessage: publicRunError(
+              stepErrors.get(`${String(stepRow["step_key"])}:${String(stepRow["step_order"])}`),
+              requestLanguage(),
+            ),
             startedAt: (stepRow["started_at"] as string | null) ?? null,
             completedAt: (stepRow["completed_at"] as string | null) ?? null,
           })),
@@ -1105,17 +1255,26 @@ export const getCaseDetail = createServerFn({ method: "GET" })
           : latestRow["kind"] === "deep"
             ? latestDeepAnalysis
             : latestScreening;
+      const runErrors = await storedRunErrors(
+        data.fundId,
+        data.caseId,
+        runRows.map((row) => row["id"] as string),
+      );
       const analysisHistory = runRows.map((row) => ({
         id: row["id"] as string,
         kind: row["kind"] as string,
         status: row["status"] as string,
         createdAt: row["created_at"] as string,
         completedAt: (row["completed_at"] as string | null) ?? null,
-        errorMessage: (row["error_message"] as string | null) ?? null,
+        // Only Interlect's own sentence leaves the server, for every role.
+        errorMessage: publicRunError(runErrors.get(row["id"] as string), requestLanguage()),
+        // "Stoppet på prisgrænsen", shown without an amount.
+        stoppedAtLimit: row["stop_reason"] === "price_limit",
       }));
 
       return {
         id: caseRow["id"] as string,
+        thesisRef: profile.thesisRef,
         fundId: caseRow["fund_id"] as string,
         companyId,
         companyName: company?.name ?? "Ukendt selskab",
@@ -1219,21 +1378,56 @@ export const getCaseDetail = createServerFn({ method: "GET" })
 
 export const listCases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ fundId: fundIdSchema }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        fundId: fundIdSchema,
+        /** One thesis's cases (also an archived one); without it, every active thesis. */
+        thesisId: z.guid().optional(),
+      })
+      .parse(input),
+  )
   .handler(
     withDemoView(async ({ data, context }): Promise<CaseListItem[]> => {
-      const profile = await resolveFund(context.supabase, context.userId, data.fundId);
+      const profile = await resolveFund(context.supabase, context.userId, data.fundId, {
+        thesisId: data.thesisId,
+      });
       // The database builds the list in one call (0112), so 2,000 cases are not 33 MB of
       // analysis output, every id in the address or PostgREST's silent cut at 1,000 rows.
       const { data: payload, error } = await context.supabase.rpc("case_list_payload", {
         _fund_id: data.fundId,
         _config_version_id: profile.configId,
+        _thesis_id: data.thesisId ?? null,
       });
       if (error || !isCaseListPayload(payload)) {
         console.error(`[cases] list (fund ${data.fundId})`, error?.message ?? "unexpected payload");
         throw new Error(serverText("caseServer.common.casesNotLoaded"));
       }
-      return buildCaseList(payload, profile);
+      // Each case is shown with its own thesis's active setup (threshold, criteria, gates).
+      const profiles = new Map<string, CaseListProfile>([[profile.configId, profile]]);
+      const otherConfigIds = [
+        ...new Set(
+          payload.cases
+            .map((row) => row.active_config_id ?? null)
+            .filter((id): id is string => id !== null && id !== profile.configId),
+        ),
+      ];
+      if (otherConfigIds.length) {
+        const others = await context.supabase
+          .from("fund_config_versions")
+          .select(CONFIG_PROFILE_COLUMNS)
+          .eq("fund_id", data.fundId)
+          .in("id", otherConfigIds);
+        if (others.error) {
+          console.error(`[cases] list setups (fund ${data.fundId})`, others.error.message);
+          throw new Error(serverText("caseServer.common.casesNotLoaded"));
+        }
+        for (const row of others.data ?? []) {
+          const other = configProfile(row as Record<string, unknown>);
+          profiles.set(other.configId, other);
+        }
+      }
+      return buildCaseList(payload, profile, profiles);
     }),
   );
 
@@ -1242,12 +1436,17 @@ export const createManualCase = createServerFn({ method: "POST" })
   .validator((input: unknown) => createCaseSchema.parse(input))
   .handler(async ({ data, context }) => {
     await requireFundCapability(context.supabase, context.userId, data.fundId, "create_case");
+    // The case belongs to the chosen thesis (else the team's default); only an active one.
+    const thesis = await chosenThesis(context.supabase, data.fundId, data.thesisId);
+    if (!thesis) throw new Error(serverText("thesisServer.noActiveThesis"));
+    if (thesis.status !== "active") throw new Error(serverText("thesisServer.notSelectable"));
     // P1: Vækst og Buyout kan kun bruges af fonde, der har dem i deres stadieliste.
     if (data.stage === "growth" || data.stage === "buyout") {
       const { data: mandate } = await context.supabase
         .from("fund_config_versions")
         .select("fund_mandates(stages)")
         .eq("fund_id", data.fundId)
+        .eq("thesis_id", thesis.id)
         .eq("status", "active")
         .maybeSingle();
       const raw = mandate?.["fund_mandates"] as unknown;
@@ -1266,6 +1465,7 @@ export const createManualCase = createServerFn({ method: "POST" })
       _geography: data.geography,
       _source_note: data.sourceNote,
       _founders: data.founders,
+      _thesis_id: thesis.id,
     });
     if (error || !caseId) {
       // P0001 = et bevidst `raise exception` fra selve RPC'en (allerede en

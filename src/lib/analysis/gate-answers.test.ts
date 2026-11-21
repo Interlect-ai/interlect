@@ -56,13 +56,15 @@ test("'Opfyldt' resolves the gate and the code score decides", () => {
   assert.deepEqual(gate?.evidenceIds, ["t1"]);
 });
 
-test("'Ikke opfyldt' on a binding gate blocks the case, whatever the score", () => {
+test("'Ikke opfyldt' on a binding gate is shown as a break, whatever the score, and stops nothing (T-1092)", () => {
   const answered = applyGateAnswers(output, [
     { gateKey: "ownership", passed: false, rationale: "Teamets svar: 4 %", evidenceId: null },
   ]);
   const result = scoreScreening(profile, answered, "seed");
   assert.deepEqual(result.failedHardGateKeys, ["ownership"]);
-  assert.equal(result.outcome, "blocked");
+  assert.deepEqual(result.blockers, ["Mandatbrud: ownership"]);
+  assert.notEqual(result.outcome as string, "blocked");
+  assert.equal(result.eligibleForDeepAnalysis, true);
 });
 
 test("an answer to a gate the AI did not assess is added", () => {

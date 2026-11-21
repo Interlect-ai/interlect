@@ -48,10 +48,18 @@ const tables = {
     { id: "co2", fund_id: "f1", name: "Uden Domæne", domain: null, cvr_number: null },
   ],
   cases: [
-    { id: "case1", fund_id: "f1", company_id: "co1" },
-    { id: "case2", fund_id: "f1", company_id: "co2" },
+    { id: "case1", fund_id: "f1", company_id: "co1", thesis_id: "t1" },
+    { id: "case2", fund_id: "f1", company_id: "co2", thesis_id: "t1" },
   ],
 };
+
+test("T-1047: only a case under the same thesis is a duplicate", async () => {
+  const input = { fundId: "f1", companyName: "x", domain: "havbrugnord.dk", cvrNumber: null };
+  const same = await lookupExistingCase(fakeClient(tables), { ...input, thesisId: "t1" });
+  assert.equal(same?.caseId, "case1");
+  const other = await lookupExistingCase(fakeClient(tables), { ...input, thesisId: "t2" });
+  assert.equal(other, null);
+});
 
 test("domænet normaliseres som i RPC'en", () => {
   assert.equal(domainOfWebsite("https://www.HavbrugNord.dk/om"), "havbrugnord.dk");

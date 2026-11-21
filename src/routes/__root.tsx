@@ -19,6 +19,7 @@ import { getPublicAppConfig } from "../lib/supabase/config.functions";
 import { setPublicSupabaseConfig } from "../lib/supabase/client";
 import { InterlectLogo } from "../components/brand/InterlectLogo";
 import { ToastViewport } from "../components/ds/Toast";
+import { LimitChoiceHost } from "../components/analysis/LimitChoiceDialog";
 import { useT } from "../lib/i18n/useT";
 import { translate } from "../lib/i18n/translate";
 
@@ -137,6 +138,7 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
           <ToastViewport />
+          <LimitChoiceHost />
         </FundLanguageProvider>
       </MotionConfig>
       <Toaster

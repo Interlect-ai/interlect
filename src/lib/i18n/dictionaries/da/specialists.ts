@@ -108,6 +108,13 @@ export const specialists = {
         focus1: "Founder-market fit",
         focus2: "Roller og huller",
         focus3: "Tidligere resultater",
+        // What the specialist looks at in each focus area (shown and editable per stage).
+        text1:
+          "Vurdér, om founderne har en reel fordel i at forstå problemet: nærhed til problemet, brancheindsigt og dokumenteret execution.",
+        text2:
+          "Find ud af, hvem der gør hvad, og hvem der mangler. Krydstjek roller og ansættelsesperioder mod registre og uafhængige kilder; navnelighed er ikke identitetsbevis.",
+        text3:
+          "Vurdér, hvad teamet har bygget og leveret før, og om resultaterne kan dokumenteres: exits, kunder, produkter og udgivelser.",
       },
       product_market_gtm: {
         label: "Produkt og marked",
@@ -115,6 +122,11 @@ export const specialists = {
         focus1: "Betalende kunder",
         focus2: "Markedsstørrelse og timing",
         focus3: "Konkurrenter",
+        text1:
+          "Find ud af, hvem der allerede betaler, hvad de betaler, og om kunderne er rigtige og navngivne.",
+        text2:
+          "Opbyg markedets størrelse nedefra, og vurdér, hvorfor netop nu er det rigtige tidspunkt.",
+        text3: "Kortlæg direkte og indirekte konkurrenter, og forklar, hvorfor casen vinder.",
       },
       technology_risk: {
         label: "Teknologi og IP",
@@ -122,6 +134,12 @@ export const specialists = {
         focus1: "Teknisk forspring",
         focus2: "Patenter og IP",
         focus3: "Teknisk risiko",
+        text1:
+          "Vurdér, om teknologien virker, hvor langt den er fra prototype til drift, og om forspringet kan holde.",
+        text2:
+          "Tjek patenter, licenser og om andre kan blokere løsningen. Frihed til at operere skal kunne dokumenteres.",
+        text3:
+          "Find de tekniske risici, der kan vælte casen: afhængigheder, skalering, datakvalitet og sikkerhed.",
       },
       fund_finance_deal: {
         label: "Tese og deal",
@@ -129,6 +147,12 @@ export const specialists = {
         focus1: "Match med tesen",
         focus2: "Regnskaber og runway",
         focus3: "Værdiansættelse og vilkår",
+        text1:
+          "Vurdér, hvor godt casen passer til teamets tese: stadie, geografi, sektor og ticketstørrelse.",
+        text2:
+          "Gennemgå regnskaber, forbrug og runway, og vurdér, om tallene hænger sammen med historien.",
+        text3:
+          "Vurdér værdiansættelse og vilkår mod sammenlignelige handler, og hvad der kan forhandles.",
       },
     },
     /** Field names in the before/after of an AI revision of the fund's own specialist. */
@@ -237,6 +261,22 @@ export const specialists = {
     },
   },
   /** The cards and panels of the specialist step (SpecialistCards). */
+  sheet: {
+    suggestion1: "Læg mere vægt på erfaring i branchen",
+    suggestion2: "Vær strengere med, hvad der tæller som bevis",
+    suggestion3: "Se mere på risikoen ved nøglepersoner",
+    focusToday: "Det fokuserer den på i dag",
+    moreFocus: "+{count} punkter mere",
+    askLabel: "Fortæl Interlect, hvad der skal ændres",
+    proposalTitle: "Vil du ændre til det her?",
+    now: "Nu",
+    becomes: "Bliver",
+    moreChanges: "+{count} ændringer mere",
+    approve: "Godkend",
+    keepWriting: "Skriv videre",
+    showFields: "Se og ret præcis, hvad den fokuserer på",
+    applies: "Gælder nye analyser, når opsætningen er udgivet.",
+  },
   panel: {
     toggleError: "Specialisten kunne ikke ændres.",
     loadError: "Specialisterne kunne ikke hentes.",
@@ -397,6 +437,10 @@ export const specialists = {
     stale: "Tjekket er fra før dine sidste rettelser; det kører igen, når du holder pause.",
     suggestion: "Forslag:",
     advice: "Råd:",
+    saveHelp:
+      "Gemmer teksten i kladden. Den bruges først i screeninger, når I udgiver opsætningen.",
+    checkHelp:
+      "Interlect læser jeres kriterier, regler og instruktion igennem og peger på huller eller modsigelser. Den ændrer intet og bruger kreditter.",
     checkNow: "Tjek screeningen",
     checking: "Tjekker",
     nothingFound: "Interlect fandt intet at rette i screeningen.",

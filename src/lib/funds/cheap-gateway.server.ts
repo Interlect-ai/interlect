@@ -12,12 +12,13 @@ import { getServiceClient } from "@/lib/supabase/admin.server";
 import { outputLanguageDirective } from "@/lib/i18n/ai-language";
 import { loadFundLanguage } from "@/lib/i18n/fund-language.server";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import type { Language } from "@/lib/i18n/language";
 import { gatewayToken, missingGatewayToken } from "@/lib/ai/gateway-token";
 
 /**
  * A small, capped model call for the editing helpers of the fund setup (proposals, the thesis
- * chat). It uses the cheap fixed model unless a helper names a stronger one (the drafts of the
- * fund's own specialists): these are not analyses, so they do not follow the fund's level,
+ * chat) and the committee memo's draft. It uses the cheap fixed model unless a helper names a stronger one (the drafts of the fund's
+ * own specialists): these are not analyses, so they do not follow the fund's level,
  * and each call has its own price cap that is checked before and after the call.
  * The call reserves its maximum in the credit ledger (scope chat), so an empty balance
  * stops it like any other AI call.
@@ -65,7 +66,7 @@ export async function callCheapGateway(input: {
    * Who pays: the call reserves its maximum in the credit ledger for this user under
    * `loop` (e.g. "fund_setup:thesis_chat"), unless the caller has reserved for it already.
    */
-  credits: { userId: string; loop: string } | "reserved_by_caller";
+  credits: { userId: string; loop: string } | "reserved_by_caller" | CallCredits;
   system: string;
   user: string;
   /** A strict JSON schema for structured output; omit for a plain text answer. */
@@ -77,6 +78,10 @@ export async function callCheapGateway(input: {
   timeoutMs?: number;
   /** A stronger model than the cheap one; ZDR rules and price caps apply as always. */
   model?: PricedModel;
+  /** The call's name in the team's AI log; default "fund_setup". */
+  flow?: string;
+  /** The language to write in; default the team's (the committee memo passes it). */
+  language?: Language;
 }): Promise<{ content: string; costUsd: number | null }> {
   const token = gatewayToken();
   if (!token)
@@ -84,7 +89,7 @@ export async function callCheapGateway(input: {
   const model = input.model ?? MODEL;
   // What the helpers write lands in the fund's setup and on its pages, so it is written
   // in the fund's language (the Danish prompts are unchanged for a Danish fund).
-  const language = await loadFundLanguage(getServiceClient(), input.fundId);
+  const language = input.language ?? (await loadFundLanguage(getServiceClient(), input.fundId));
   const system = `${input.system}${outputLanguageDirective(language)}`;
   const requestBody = {
     model,
@@ -114,16 +119,19 @@ export async function callCheapGateway(input: {
   const credits =
     input.credits === "reserved_by_caller"
       ? RESERVED_BY_CALLER
-      : await reserveCallCredits(getServiceClient(), {
-          scope: "chat",
-          fundId: input.fundId,
-          userId: input.credits.userId,
-          maxUsd: estimate.maxCostUsd,
-          loop: input.credits.loop,
-          model,
-        });
+      : "charge" in input.credits
+        ? // The caller's own reservation pays and learns what the call cost.
+          input.credits
+        : await reserveCallCredits(getServiceClient(), {
+            scope: "chat",
+            fundId: input.fundId,
+            userId: input.credits.userId,
+            maxUsd: estimate.maxCostUsd,
+            loop: input.credits.loop,
+            model,
+          });
   try {
-    const redactor = await redactorForFund(input.fundId, "fund_setup");
+    const redactor = await redactorForFund(input.fundId, input.flow ?? "fund_setup");
 
     let status: number | null = null;
     let finishReason: string | undefined;

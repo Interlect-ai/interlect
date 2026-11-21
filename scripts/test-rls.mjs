@@ -180,7 +180,8 @@ const CHECKS = [
     sql: `select r.id from public.analysis_runs r
       join public.analysis_run_steps st on st.run_id = r.id
       where r.id = 'a0000000-0000-4000-8000-0000000000e2'
-        and r.status = 'complete' and st.step_key = 'screening_research' and st.step_order = 1
+        and r.status = 'complete' and r.stop_reason is null
+        and st.step_key = 'screening_research' and st.step_order = 1
         and st.started_at is null and st.completed_at is null`,
     expect: { admin: true, lead: true, member: true, reader: true, other: false },
   },
@@ -233,7 +234,14 @@ const CHECKS = [
         ('analysis_run_steps', 'input_tokens'), ('analysis_run_steps', 'output_tokens'),
         ('analysis_run_steps', 'total_tokens'), ('analysis_run_steps', 'actual_cost'),
         ('analysis_run_steps', 'output_json'), ('analysis_run_steps', 'attempt_count'),
-        ('analysis_run_steps', 'charged_cost')
+        ('analysis_run_steps', 'charged_cost'),
+        -- 0123 (T-1075): the run's limit and rate in kroner are for Admin and Lead via the server.
+        ('analysis_runs', 'cost_cap_dkk'), ('analysis_runs', 'usd_to_dkk'),
+        -- One row per column: a grant on just one of the team's limits must fail on its own.
+        ('funds', 'screening_cap_dkk'), ('funds', 'deep_cap_dkk'), ('funds', 'monthly_cap_dkk'),
+        ('funds', 'analysis_limit_action'),
+        -- T-1070: can hold the provider's or the database's own text; the server maps it.
+        ('analysis_runs', 'error_message'), ('analysis_run_steps', 'error_message')
       ) as internal(table_name, column_name)
       where has_column_privilege('public.' || table_name, column_name, 'select')`,
     expect: { admin: false, lead: false, member: false, reader: false, other: false },
@@ -505,6 +513,55 @@ const CHECKS = [
     name: "Ændre prisloft direkte (kun serveren må)",
     capability: "configure_fund",
     sql: `update public.funds set screening_cap_dkk = 99, deep_cap_dkk = 499
+          where id = '${FUND_A}' returning id`,
+    expect: { admin: false, lead: false, member: false, reader: false, other: false },
+  },
+  // 0123: kroner kun gennem serveren, for Admin og Lead. Direkte læsning afvises for alle.
+  {
+    name: "Læse fondens analysegrænser direkte (kun serveren må)",
+    capability: "configure_fund",
+    sql: `select screening_cap_dkk, deep_cap_dkk, monthly_cap_dkk, analysis_limit_action
+          from public.funds where id = '${FUND_A}'`,
+    expect: { admin: false, lead: false, member: false, reader: false, other: false },
+  },
+  {
+    name: "Læse en kørsels prisloft direkte (kun serveren må)",
+    capability: "configure_fund",
+    sql: `select 1 from public.analysis_runs where fund_id = '${FUND_A}' and cost_cap_dkk is null`,
+    expect: { admin: false, lead: false, member: false, reader: false, other: false },
+  },
+  {
+    name: "Læse en kørsels kurs direkte (kun serveren må, T-1075)",
+    capability: "configure_fund",
+    sql: `select usd_to_dkk from public.analysis_runs where fund_id = '${FUND_A}'`,
+    expect: { admin: false, lead: false, member: false, reader: false, other: false },
+  },
+  {
+    // 0125: the month's used and reserved kroner; only the server calls it (for Admin and Lead).
+    name: "Kalde fund_analysis_month direkte (kun serveren må, T-1075)",
+    capability: "configure_fund",
+    sql: `select * from public.fund_analysis_month('${FUND_A}')`,
+    expect: { admin: false, lead: false, member: false, reader: false, other: false },
+  },
+  {
+    // The positive side of the column grant in 0123: every role still reads what the pages need.
+    name: "Læse fondens tilladte kolonner efter 0123 (T-1075)",
+    capability: "view_case",
+    sql: `select id, name, slug, created_at, updated_at, member_can_decide, member_can_publish,
+            screening_tier, deep_tier, language, demo_view
+          from public.funds where id = '${FUND_A}'`,
+    expect: { admin: true, lead: true, member: true, reader: true, other: false },
+  },
+  {
+    name: "Læse kørslens stopgrund, som casesiden gør (0124, T-1075)",
+    capability: "view_case",
+    sql: `select stop_reason from public.analysis_runs where fund_id = '${FUND_A}'`,
+    expect: { admin: true, lead: true, member: true, reader: true, other: false },
+  },
+  {
+    name: "Ændre analysegrænser direkte (kun serveren må)",
+    capability: "configure_fund",
+    sql: `update public.funds set monthly_cap_dkk = 1, analysis_limit_action = 'ask'
           where id = '${FUND_A}' returning id`,
     expect: { admin: false, lead: false, member: false, reader: false, other: false },
   },
@@ -886,6 +943,75 @@ async function main() {
     if (staleOk) passed += 1;
     else failures.push("transition_case flyttede en case, der ikke stod som forventet.");
 
+    // Migration 0130 cleans an old deep run's research to the answer's own keys (the
+    // statement is read from the migration, so the test runs the shipped SQL), and leaves a
+    // screening's raw_response alone.
+    await client.query("savepoint rls_run_internals");
+    const cleanup = readFileSync(
+      join(ROOT, "db", "migrations", "0130_run_ai_internals_cleanup.sql"),
+      "utf8",
+    ).match(/update public\.analysis_runs[\s\S]*?;/)?.[0];
+    const internalsRuns = await client.query(
+      `insert into public.analysis_runs (fund_id, case_id, config_version_id, kind, status,
+         workflow_version, prompt_template_name, prompt_template_version, requested_by,
+         raw_response)
+       values
+         ($1, $2, 'a0000000-0000-4000-8000-0000000000e1', 'deep', 'complete', 'test', 'test',
+          'test', $3, $4::jsonb),
+         ($1, $2, 'a0000000-0000-4000-8000-0000000000e1', 'screening', 'complete', 'test',
+          'test', 'test', $3, $5::jsonb)
+       returning id, kind`,
+      [
+        FUND_A,
+        IDS.caseA,
+        USERS.lead,
+        JSON.stringify({
+          schemaVersion: "interlect-deep-orchestrated-v1",
+          publicResearch: {
+            schemaVersion: "interlect-public-research-v1",
+            companyName: "Veo",
+            findings: [],
+            gaps: ["g"],
+            identityAmbiguity: null,
+            companyProfile: null,
+            researchPlan: { model: "openai/gpt-5.4-mini" },
+            researchFollowUp: { model: "perplexity/sonar-pro" },
+            researchLog: [{ error: "openai: rate limited" }],
+            questionNeutralizer: { model: "openai/gpt-5.4-mini" },
+          },
+          synthesis: { keep: true },
+        }),
+        JSON.stringify({ gates: [], researchPlan: { model: "kept-in-screening" } }),
+      ],
+    );
+    if (cleanup) await client.query(cleanup);
+    const cleaned = await client.query(
+      "select kind, raw_response from public.analysis_runs where id = any($1::uuid[])",
+      [internalsRuns.rows.map((row) => row.id)],
+    );
+    await client.query("rollback to savepoint rls_run_internals");
+    const deepRow = cleaned.rows.find((row) => row.kind === "deep")?.raw_response;
+    const screeningRow = cleaned.rows.find((row) => row.kind === "screening")?.raw_response;
+    const internalsOk =
+      Boolean(cleanup) &&
+      JSON.stringify(Object.keys(deepRow?.publicResearch ?? {}).sort()) ===
+        JSON.stringify([
+          "companyName",
+          "companyProfile",
+          "findings",
+          "gaps",
+          "identityAmbiguity",
+          "schemaVersion",
+        ]) &&
+      deepRow?.synthesis?.keep === true &&
+      !/openai|perplexity|model/.test(JSON.stringify(deepRow)) &&
+      screeningRow?.researchPlan?.model === "kept-in-screening";
+    console.log(
+      `0130 renser den dybe analyses research til selve svaret ${internalsOk ? "✓" : "!"}`,
+    );
+    if (internalsOk) passed += 1;
+    else failures.push("0130 efterlod modelnavne i raw_response eller rørte en screening.");
+
     // The decision snapshot stores the latest code recalculation of the latest finished
     // screening and that screening's own setup version (0039, harden).
     await client.query("savepoint rls_snapshot");
@@ -975,7 +1101,8 @@ async function main() {
       from unnest(array['case_tasks', 'case_score_recalculations', 'case_messages',
                         'brain_reason_codes', 'case_transition_events', 'brain_case_decisions',
                         'fund_config_proposals', 'brain_historical_decisions', 'brain_threads',
-                        'brain_messages', 'brain_feedback'])
+                        'brain_messages', 'brain_feedback', 'case_memo_inputs',
+                        'case_memo_gap_answers', 'case_memo_versions'])
              as t(name)
       cross join unnest(array['INSERT', 'UPDATE', 'DELETE']) as p(privilege)
       where has_table_privilege('authenticated', 'public.' || t.name, p.privilege)`);

@@ -41,7 +41,12 @@ import type {
   TaskPrefill,
   TaskStatus,
 } from "@/components/ds/task-types";
-import { groupTasksByLink, previewTasks, TASK_FOLD_THRESHOLD } from "@/lib/cases/task-groups";
+import {
+  groupTasksByLink,
+  previewTasks,
+  TASK_FOLD_THRESHOLD,
+  TASK_GROUP_THRESHOLD,
+} from "@/lib/cases/task-groups";
 import { EASE, REDUCED_FADE, SPRING } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -164,8 +169,8 @@ export function TaskList({
   const inOpenList = (task: TaskItem) =>
     task.status === "open" || resolving.has(task.id) || task.id === expandedId;
   const allOpenRows = tasks.filter(inOpenList);
-  // A long list (Pleo's screening has 84 open tasks) shows its most important rows and folds the
-  // rest behind "Vis alle N"; unfolded, it is grouped by the gate or criterion it belongs to.
+  // More than 4 open tasks show the 4 most important and fold the rest behind "Vis N
+  // flere"; unfolded, a long list (Pleo's screening has 84) is grouped by its gate or criterion.
   const longList = allOpenRows.length > TASK_FOLD_THRESHOLD;
   const folded = longList && !showAll;
   const openRows = folded
@@ -175,7 +180,11 @@ export function TaskList({
         (task) => resolving.has(task.id) || task.id === expandedId || task.source === "user",
       )
     : allOpenRows;
-  const groups = longList && showAll ? groupTasksByLink(allOpenRows, language) : null;
+  const hiddenCount = allOpenRows.length - openRows.length;
+  const groups =
+    showAll && allOpenRows.length > TASK_GROUP_THRESHOLD
+      ? groupTasksByLink(allOpenRows, language)
+      : null;
   const solvedRows = tasks.filter((task) => !inOpenList(task));
   const openCount = tasks.filter((task) => task.status === "open").length;
   const doneCount = tasks.length - openCount;
@@ -284,7 +293,7 @@ export function TaskList({
       )}
 
       <div className="flex min-h-11 flex-wrap items-center gap-2.5 pt-1.5">
-        {longList && (
+        {longList && (showAll || hiddenCount > 0) && (
           <button
             type="button"
             onClick={() => setShowAll((current) => !current)}
@@ -293,7 +302,9 @@ export function TaskList({
           >
             {showAll
               ? t("tasks.list.showTop")
-              : t("tasks.list.showAll", { count: allOpenRows.length })}
+              : hiddenCount === 1
+                ? t("tasks.list.showMoreOne")
+                : t("tasks.list.showMore", { count: hiddenCount })}
             <motion.span
               className="inline-flex"
               animate={{ rotate: showAll ? 180 : 0 }}

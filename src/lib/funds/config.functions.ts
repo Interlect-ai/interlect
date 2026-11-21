@@ -20,6 +20,17 @@ import {
   type ScreeningCardId,
 } from "./screening-setup";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import type { MessageKey } from "@/lib/i18n/translate";
+import { chosenThesis } from "@/lib/funds/thesis-scope.server";
+import { isSetupStage, type SetupStage } from "@/lib/analysis/setup-stage";
+import {
+  hasSetup,
+  readStoredSetup,
+  setupInputSchema,
+  setupStageSchema,
+  type SetupInput,
+} from "./setup-input";
+import type { ThesisStatus } from "@/lib/funds/theses";
 
 const fundIdSchema = z.guid();
 export const scoreCategorySchema = z.enum([
@@ -38,6 +49,8 @@ const gateSchema = z.object({
   label: z.string().trim().max(160),
   description: z.string().trim().max(1000),
   treatment: z.enum(["hard", "review"]),
+  /** The stage the rule belongs to; left out (or null) = shared by every stage. */
+  stage: setupStageSchema.nullable().optional(),
 });
 const criterionSchema = z.object({
   key: z.string().trim().min(1).max(80),
@@ -47,6 +60,8 @@ const criterionSchema = z.object({
   weight: z.number().positive().max(100),
   /** Kun financial_strength: om kriteriet scores fra regnskaberne (0028). */
   codeAnchor: z.boolean().optional(),
+  /** The stage the criterion belongs to; left out (or null) = shared by every stage. */
+  stage: setupStageSchema.nullable().optional(),
 });
 
 export interface EditableFundConfig {
@@ -88,6 +103,20 @@ export interface EditableFundConfig {
   screeningInstruction: string;
   /** De ekstra screeningskort, fonden har valgt (de tre faste vises altid). */
   screeningCards: ScreeningCardId[];
+  /**
+   * The version has anything per stage (a row with a stage or a filled `setup`). Such a
+   * version is saved whole (with `setup`); an old version is read and saved exactly as before.
+   */
+  perStage: boolean;
+  /** `fund_mandates.setup` in the editor's shape (`{}` for an old version). */
+  setup: SetupInput;
+  /** The stages' own module texts (`moduleOverrides` holds the shared ones). */
+  stageModuleOverrides: Partial<
+    Record<
+      SetupStage,
+      Record<string, { mandate: string[]; evidenceTests: string[]; riskAreas: string[] }>
+    >
+  >;
 }
 
 type MandateRow = {
@@ -108,6 +137,8 @@ type MandateRow = {
   /** 0078; absent where a query does not select it. */
   screening_instruction?: string | null;
   screening_cards?: string[] | null;
+  /** 0133; absent where a query does not select it. */
+  setup?: unknown;
 };
 
 type ConfigRow = {
@@ -119,6 +150,7 @@ type ConfigRow = {
   funds: { name: string } | { name: string }[];
   fund_mandates: MandateRow | MandateRow[] | null;
   mandate_gates: Array<{
+    stage?: string | null;
     gate_key: string;
     label: string;
     description: string;
@@ -126,6 +158,7 @@ type ConfigRow = {
     sort_order: number;
   }>;
   assessment_criteria: Array<{
+    stage?: string | null;
     criterion_key: string;
     label: string;
     description: string;
@@ -135,6 +168,7 @@ type ConfigRow = {
     code_anchor: boolean | null;
   }>;
   prompt_module_overrides: Array<{
+    stage?: string | null;
     module_id: string;
     mandate: string[];
     evidence_tests: string[];
@@ -152,21 +186,26 @@ const CONFIG_COLUMNS = `
         funds(name),
         fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur,
           ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers,
-          screening_instruction, screening_cards),
-        mandate_gates(gate_key, label, description, treatment, sort_order),
-        assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor),
-        prompt_module_overrides(module_id, mandate, evidence_tests, risk_areas),
+          screening_instruction, screening_cards, setup),
+        mandate_gates(stage, gate_key, label, description, treatment, sort_order),
+        assessment_criteria(stage, criterion_key, label, description, score_category, weight, sort_order, code_anchor),
+        prompt_module_overrides(stage, module_id, mandate, evidence_tests, risk_areas),
         research_module_overrides(mode, module_id, questions)
       `;
 
+/** The setup pages read one thesis: the chosen one, else the team's default thesis. */
+const thesisScopeSchema = z.object({ fundId: fundIdSchema, thesisId: z.guid().optional() });
+
 export const getFundConfigs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ fundId: fundIdSchema }).parse(input))
+  .validator((input: unknown) => thesisScopeSchema.parse(input))
   .handler(
     async ({
       data,
       context,
     }): Promise<{
+      /** The thesis the versions belong to. */
+      thesis: { id: string; name: string; status: ThesisStatus };
       active: EditableFundConfig | null;
       draft: EditableFundConfig | null;
       /** E6: den seneste tidligere publicerede version (til "Ændret siden vN"). */
@@ -175,18 +214,22 @@ export const getFundConfigs = createServerFn({ method: "GET" })
       // The current versions, the previous one and the access are asked for at the same time
       // ("Fortsæt kladde" waited for three round trips in a row).
       const { loadAccessForFund } = await import("@/lib/auth/access.server");
+      const thesis = await chosenThesis(context.supabase, data.fundId, data.thesisId);
+      if (!thesis) throw new Error(serverText("fundServer.config.noSetup"));
       const [{ data: rows, error }, { data: previousRows, error: previousError }, accessResult] =
         await Promise.all([
           context.supabase
             .from("fund_config_versions")
             .select(CONFIG_COLUMNS)
             .eq("fund_id", data.fundId)
+            .eq("thesis_id", thesis.id)
             .in("status", ["active", "draft"])
             .order("version", { ascending: false }),
           context.supabase
             .from("fund_config_versions")
             .select(CONFIG_COLUMNS)
             .eq("fund_id", data.fundId)
+            .eq("thesis_id", thesis.id)
             .eq("status", "superseded")
             .order("version", { ascending: false })
             .limit(1),
@@ -225,6 +268,7 @@ export const getFundConfigs = createServerFn({ method: "GET" })
         redactOverrides(mapConfig(row, edit, canDelete), canEdit);
       const draftRow = configs.find((row) => row.status === "draft");
       return {
+        thesis: { id: thesis.id, name: thesis.name, status: thesis.status },
         active: activeRow ? shown(activeRow, canEdit) : null,
         previous: previousRow ? shown(previousRow, false) : null,
         draft: draftRow ? shown(draftRow, canEdit) : null,
@@ -239,20 +283,47 @@ export interface FundConfigVersionEntry {
   sourceBasis: string;
   activatedAt: string | null;
   createdAt: string;
+  /**
+   * An earlier version can be restored as a new draft (Admin/Lead, the thesis is not
+   * archived, and the thesis has no draft already: a restore never overwrites one).
+   */
+  canRestore: boolean;
 }
 
-/** Hele versionshistorikken for fonden — vises i sidebjælken på /fond. */
+/** Hele versionshistorikken for tesen (den valgte, ellers standardtesen) — vises på /fond. */
 export const listFundConfigVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ fundId: fundIdSchema }).parse(input))
+  .validator((input: unknown) => thesisScopeSchema.parse(input))
   .handler(async ({ data, context }): Promise<FundConfigVersionEntry[]> => {
+    const thesis = await chosenThesis(context.supabase, data.fundId, data.thesisId);
+    if (!thesis) return [];
     const { data: rows, error } = await context.supabase
       .from("fund_config_versions")
       .select("id, version, status, source_basis, activated_at, created_at")
       .eq("fund_id", data.fundId)
+      .eq("thesis_id", thesis.id)
       .order("version", { ascending: false })
       .limit(20);
     if (error) throw new Error(serverText("fundServer.config.versionsNotLoaded"));
+    const hasDraft = (rows ?? []).some((row) => row.status === "draft");
+    // The button is only a shortcut; the database checks the same again (0129).
+    const { loadAccessForFund } = await import("@/lib/auth/access.server");
+    const access =
+      hasDraft || thesis.status === "archived"
+        ? null
+        : await loadAccessForFund(context.supabase, context.userId, data.fundId).catch(
+            (cause: unknown) => {
+              // Only the "Gendan" button is hidden; the list itself still shows.
+              console.warn(
+                "[fund-config] access for restore not loaded",
+                cause instanceof Error ? cause.message : cause,
+              );
+              return null;
+            },
+          );
+    const mayRestore = access
+      ? hasCapability(access.roles, "configure_fund", access.settings)
+      : false;
     return (rows ?? []).map((row) => ({
       id: row.id as string,
       version: Number(row.version),
@@ -260,7 +331,44 @@ export const listFundConfigVersions = createServerFn({ method: "GET" })
       sourceBasis: (row.source_basis as string) ?? "",
       activatedAt: row.activated_at as string | null,
       createdAt: row.created_at as string,
+      canRestore: mayRestore && row.status === "superseded",
     }));
+  });
+
+// i18n-keep: the database's own messages (0129), matched to recognise them; never shown.
+const RESTORE_REFUSALS: Readonly<Record<string, MessageKey>> = {
+  "Versionen blev ikke fundet.": "fundServer.common.versionNotFoundProfile",
+  "Der er allerede en kladde. Udgiv eller slet den, før en ældre version gendannes.":
+    "fundServer.config.restoreDraftExists",
+  "Tesen er arkiveret. Genaktivér den for at redigere.": "fundServer.config.restoreArchived",
+};
+
+/**
+ * (TS-21): "Gendan" an earlier version. It never changes or deletes a version: the
+ * database copies the old version's content into a NEW draft with the next number, so the history
+ * only grows. The draft is published as any other draft.
+ */
+export const restoreFundConfigVersion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ configId: z.guid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const config = await requireConfigAdmin(context.supabase, context.userId, data.configId);
+    const { data: draftId, error } = await context.supabase.rpc("restore_fund_config_version", {
+      _source_config_id: config.id,
+    });
+    if (error || !draftId) {
+      const known = error?.code === "P0001" ? RESTORE_REFUSALS[error.message] : undefined;
+      if (known) throw new Error(serverText(known));
+      if (error?.code === "P0001")
+        throw new Error(
+          fundConfigErrorText(error, serverText("fundServer.config.restoreFailed"), {
+            language: requestLanguage(),
+          }),
+        );
+      console.error("[restore_fund_config_version]", error?.code, error?.message);
+      throw new Error(serverText("fundServer.config.restoreFailed"));
+    }
+    return { draftId: String(draftId) };
   });
 
 export const createFundConfigDraft = createServerFn({ method: "POST" })
@@ -298,6 +406,12 @@ const saveInputSchema = z.object({
   dealbreakers: z.array(z.string().trim().min(1).max(500)),
   gates: z.array(gateSchema),
   criteria: z.array(criterionSchema),
+  /**
+   * The whole setup per stage. Given, the save replaces every rule and criterion (each with
+   * its own stage) and `fund_mandates.setup`; left out (every editor from), only the
+   * shared rules and criteria are replaced and the rows per stage stay (0134).
+   */
+  setup: setupInputSchema.optional(),
 });
 
 export type SaveFundConfigInput = z.infer<typeof saveInputSchema>;
@@ -313,6 +427,9 @@ export const saveFundConfigDraft = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     await requireConfigAdmin(context.supabase, context.userId, data.configId, "draft");
+    // A row per stage belongs to the whole setup: saved alone, the database would refuse it (0134).
+    if (!data.setup && [...data.gates, ...data.criteria].some((item) => item.stage))
+      throw new Error(serverText("fundServer.config.stagesNeedSetup"));
     const { error } = await context.supabase.rpc("save_fund_config_draft", saveDraftRpcArgs(data));
     if (error) {
       if (error.code !== "P0001")
@@ -393,19 +510,7 @@ export async function loadDraftFields(
 ): Promise<DraftFields> {
   const { data: row, error } = await supabase
     .from("fund_config_versions")
-    .select(
-      `
-      id, fund_id, profile_key, version, status,
-      funds(name),
-      fund_mandates(thesis, stages, geographies, sectors, fund_size_eur, ticket_min_eur, ticket_max_eur,
-        ticket_note, analysis_threshold, approval_mode, risk_posture, strategy_type, stage_expectations, dealbreakers,
-        screening_instruction, screening_cards),
-      mandate_gates(gate_key, label, description, treatment, sort_order),
-      assessment_criteria(criterion_key, label, description, score_category, weight, sort_order, code_anchor),
-      prompt_module_overrides(module_id, mandate, evidence_tests, risk_areas),
-      research_module_overrides(mode, module_id, questions)
-    `,
-    )
+    .select(CONFIG_COLUMNS)
     .eq("id", configId)
     .maybeSingle();
   if (error || !row) throw new Error(serverText("fundServer.config.versionNotLoaded"));
@@ -433,6 +538,9 @@ export function toDraftFields(config: EditableFundConfig): DraftFields {
     criteria: config.criteria,
     screeningInstruction: config.screeningInstruction,
     screeningCards: config.screeningCards,
+    // Only a version with anything per stage carries its setup, so an old draft (and the
+    // fingerprints of the proposals made on it) reads exactly as before, and saves as before.
+    ...(config.perStage ? { setup: config.setup } : {}),
   };
 }
 
@@ -477,6 +585,7 @@ function mapConfig(row: ConfigRow, canEdit: boolean, canDelete: boolean): Editab
     stage_expectations: {},
     dealbreakers: [],
   };
+  const setup = readStoredSetup(mandate.setup);
   return {
     id: row.id,
     fundId: row.fund_id,
@@ -507,6 +616,7 @@ function mapConfig(row: ConfigRow, canEdit: boolean, canDelete: boolean): Editab
         label: gate.label,
         description: gate.description,
         treatment: gate.treatment,
+        ...(isSetupStage(gate.stage) ? { stage: gate.stage } : {}),
       })),
     criteria: [...row.assessment_criteria]
       .sort((a, b) => a.sort_order - b.sort_order)
@@ -517,17 +627,20 @@ function mapConfig(row: ConfigRow, canEdit: boolean, canDelete: boolean): Editab
         category: criterion.score_category,
         weight: Number(criterion.weight),
         codeAnchor: criterion.code_anchor !== false,
+        ...(isSetupStage(criterion.stage) ? { stage: criterion.stage } : {}),
       })),
     moduleOverrides: Object.fromEntries(
-      row.prompt_module_overrides.map((override) => [
-        override.module_id,
-        {
-          mandate: override.mandate,
-          evidenceTests: override.evidence_tests,
-          riskAreas: override.risk_areas,
-        },
-      ]),
+      row.prompt_module_overrides
+        .filter((override) => !isSetupStage(override.stage))
+        .map((override) => [override.module_id, overrideTexts(override)]),
     ),
+    stageModuleOverrides: stageOverrides(row.prompt_module_overrides),
+    setup,
+    perStage:
+      hasSetup(setup) ||
+      [...row.mandate_gates, ...row.assessment_criteria, ...row.prompt_module_overrides].some(
+        (item) => isSetupStage(item.stage),
+      ),
     screeningInstruction: readScreeningInstruction(mandate.screening_instruction),
     screeningCards: readScreeningCards(mandate.screening_cards),
     researchModuleOverrides: Object.fromEntries(
@@ -539,6 +652,25 @@ function mapConfig(row: ConfigRow, canEdit: boolean, canDelete: boolean): Editab
       ]),
     ),
   };
+}
+
+function overrideTexts(override: ConfigRow["prompt_module_overrides"][number]) {
+  return {
+    mandate: override.mandate,
+    evidenceTests: override.evidence_tests,
+    riskAreas: override.risk_areas,
+  };
+}
+
+function stageOverrides(
+  rows: ConfigRow["prompt_module_overrides"],
+): EditableFundConfig["stageModuleOverrides"] {
+  const byStage: EditableFundConfig["stageModuleOverrides"] = {};
+  for (const override of rows) {
+    if (!isSetupStage(override.stage)) continue;
+    (byStage[override.stage] ??= {})[override.module_id] = overrideTexts(override);
+  }
+  return byStage;
 }
 
 /**
@@ -665,7 +797,7 @@ async function fillOverrideKeys(rows: ConfigRow[]): Promise<void> {
   const [prompts, research] = await Promise.all([
     service
       .from("prompt_module_overrides")
-      .select("config_version_id, module_id")
+      .select("config_version_id, stage, module_id")
       .in("config_version_id", ids),
     service
       .from("research_module_overrides")
@@ -680,6 +812,7 @@ async function fillOverrideKeys(rows: ConfigRow[]): Promise<void> {
     row.prompt_module_overrides = (prompts.data ?? [])
       .filter((entry) => entry.config_version_id === row.id)
       .map((entry) => ({
+        stage: (entry.stage as string | null) ?? null,
         module_id: entry.module_id as string,
         mandate: [],
         evidence_tests: [],

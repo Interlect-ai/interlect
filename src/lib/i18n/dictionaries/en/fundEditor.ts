@@ -109,6 +109,8 @@ export const fundEditor: Dictionary["fundEditor"] = {
     duplicateCriterion: "The criterion {name} appears twice.",
     duplicateGate: "The mandate rule {name} appears twice.",
     thresholdRange: "The threshold must be between 0 and 100.",
+    teamTextBudget:
+      "The team's text is {used} characters, but at most {limit} can go into the analysis. Make the text shorter.",
   },
   rules: {
     criterionClash: "Two criteria have the same name: {names}. Give them different names.",
@@ -223,9 +225,6 @@ export const fundEditor: Dictionary["fundEditor"] = {
     researchTitle: "Research questions",
     researchDescription:
       "What Interlect looks for in public research before screening and deep analysis.",
-    promptsBefore: "The literal text the models receive can be seen under",
-    promptsLink: "Prompts",
-    promptsAfter: ".",
   },
   mandate: {
     binding: "Binding",
@@ -236,17 +235,17 @@ export const fundEditor: Dictionary["fundEditor"] = {
     lockedReason: "From the CVR annual report; the treatment is fixed",
     theRule: "the rule",
     theMandateRule: "the mandate rule",
-    removeGate: "Remove gate",
-    newGate: "New gate",
+    removeGate: "Remove the rule",
+    newGate: "New rule",
     gateType: "Type of gate",
     cancel: "Cancel",
-    addGate: "Add gate",
-    gateRemoved: "Gate removed",
+    addGate: "Add rule",
+    gateRemoved: "Rule removed",
     empty: "There are no mandate rules yet. Add at least one before the draft can be published.",
     suggestionsTitle: "Suggestions from the basis",
     suggestionsHint:
       "The basis does not stop a case on its own. If you want it enforced, add it as a rule. The rule follows the basis, also when it changes; switch to binding if a breach should always stop the case.",
-    financeTitle: "Finance gates from the annual reports",
+    financeTitle: "Finance rules from the annual reports",
     financeHint:
       "From the CVR annual reports. The treatment is locked: only positive equity is binding. Without an annual report the rule is unknown, not breached.",
     reasonsTitle: "Reasons for decisions",
@@ -342,8 +341,9 @@ export const fundEditor: Dictionary["fundEditor"] = {
     empty: "There are no criteria yet. Add at least one before the draft can be published.",
     add: "Add criterion",
     threshold: "Recommended score for deep analysis",
-    groupsTitle: "The case's 5 overview groups",
-    groupsDescription: "How your criteria come together on the case's front page.",
+    groupsTitle: "The five groups in the committee report",
+    groupsDescription:
+      "Your criteria gathered in five groups. The committee report uses them to explain why the score changed from screening to deep analysis; the score itself is calculated per criterion.",
     noneInGroup: "No criteria yet.",
   },
   publish: {

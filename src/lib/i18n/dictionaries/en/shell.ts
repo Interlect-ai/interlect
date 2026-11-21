@@ -111,6 +111,11 @@ export const shell: Dictionary["shell"] = {
       chat: "Ask",
       brain: "Brain",
     },
+    scopeHints: {
+      analysis: "Screenings and deep analyses",
+      chat: "Questions to Interlect and help with the setup",
+      brain: "In the background: reads files, learns from decisions",
+    },
     topUp: "Top up",
     requestDescription: "Send a request and Interlect will add credits.",
     paymentNotSetUp: "Payment is not set up for your installation yet.",

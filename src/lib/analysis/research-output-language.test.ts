@@ -19,6 +19,4 @@ test("the research writes its statements and gaps in the team's language", () =>
     source,
     /buildResearchMessages\(\s*\{ \.\.\.input, language: requestLanguage\(\) \}/,
   );
-  const method = readFileSync(new URL("./method-detail.functions.ts", import.meta.url), "utf8");
-  assert.match(method, /language: profile\.language \?\? DEFAULT_LANGUAGE/);
 });

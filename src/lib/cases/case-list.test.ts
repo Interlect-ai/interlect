@@ -313,3 +313,66 @@ test("a screening made with an older setup version is shown and marked (T-957)",
   assert.equal(current!.olderSetupVersion, null);
   assert.equal(current!.canRunDeep, true);
 });
+
+test("T-1094: a setup per stage marks each case with its own stage's gates and threshold", () => {
+  const calls: Array<[string | null | undefined, string | null]> = [];
+  const staged: CaseListProfile = {
+    ...profile,
+    forStage: (caseStage, runChoice) => {
+      calls.push([caseStage, runChoice?.stage ?? null]);
+      // The seed stage has its own binding rule "seed_rev"; every other stage reads the shared.
+      return (runChoice?.stage ?? caseStage) === "seed"
+        ? {
+            threshold: 55,
+            gates: [
+              { key: "geo", treatment: "review" },
+              { key: "seed_rev", treatment: "hard" },
+            ],
+            criteria: profile.criteria,
+          }
+        : { threshold: 60, gates: profile.gates, criteria: profile.criteria };
+    },
+  };
+  const [seedCase, laterCase] = buildCaseList(
+    payload({
+      cases: [
+        caseRow({
+          id: "seed",
+          stage: "unknown",
+          screening_run_id: "s1",
+          screening_gates: [
+            { gateKey: "geo", passed: false },
+            { gateKey: "seed_rev", passed: false },
+          ],
+          // The screening assumed seed (the case's stage was unknown).
+          screening_setup_stage: {
+            stage: "seed",
+            caseStage: null,
+            reason: "unknown",
+            assumed: true,
+          },
+        }),
+        caseRow({
+          id: "later",
+          stage: "series_a",
+          screening_run_id: "s2",
+          screening_gates: [{ gateKey: "geo", passed: false }],
+        }),
+      ],
+      runs: [
+        { ...run("s1", "screening", "complete", 70), case_id: "seed" },
+        { ...run("s2", "screening", "complete", 70), case_id: "later" },
+      ],
+    }),
+    staged,
+  );
+  assert.deepEqual(calls, [
+    ["unknown", "seed"],
+    ["series_a", null],
+  ]);
+  assert.equal(seedCase?.threshold, 55);
+  assert.deepEqual(seedCase?.gateMarks, ["review_breach", "hard_breach"]);
+  assert.equal(seedCase?.mandateBreach, true);
+  assert.equal(laterCase?.threshold, 60);
+  assert.deepEqual(laterCase?.gateMarks, ["hard_breach", "unknown"]);
+});

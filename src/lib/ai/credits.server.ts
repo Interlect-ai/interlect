@@ -11,16 +11,29 @@ import { extractGatewayCostUsd } from "../analysis/gateway-response.ts";
 import { AiDataPolicyError } from "./gateway-options.ts";
 import { serverText } from "../i18n/server-text.ts";
 import { translate } from "../i18n/translate.ts";
+import { loadAnalysisMonth, monthLeftDkk } from "./analysis-month.server.ts";
 import { limitAiUse } from "./usage-limits.server.ts";
 
 /** The Danish text; a refusal is sent in the page's language (`serverText`). */
 export const CREDITS_EXHAUSTED_MESSAGE = translate("da", "appServer.credits.exhausted");
 
 /**
+ * The team's monthly limit for analyses refused the reservation (0125). Its own class, so a run the
+ * team lets shrink can be planned again on what is left of the month (`reservePlannedRun`).
+ */
+export class MonthlyLimitError extends Error {
+  constructor(message: string = serverText("appServer.credits.monthlyLimit")) {
+    super(message);
+    this.name = "MonthlyLimitError";
+  }
+}
+
+/**
  * Reserves the run's cap (USD) in the credit ledger and returns the ledger id. The run id is
  * the ledger's ref_id: that is how the database later settles the reservation. Throws
  * CREDITS_EXHAUSTED_MESSAGE when the balance cannot cover the cap (only while the installation
- * enforces credits, ai_settings.credits_enforced).
+ * enforces credits, ai_settings.credits_enforced), and a sentence about the team's monthly limit
+ * when that is what stopped it.
  */
 export async function reserveAnalysisCredits(
   service: SupabaseClient,
@@ -28,6 +41,8 @@ export async function reserveAnalysisCredits(
     fundId: string;
     runId: string;
     capUsd: number;
+    /** The same cap in kroner: what the monthly limit must have room for. */
+    capDkk: number;
     userId: string;
     model: string | null;
     kind: "screening" | "deep_analysis";
@@ -48,6 +63,8 @@ export async function reserveAnalysisCredits(
     throw new Error(serverText("appServer.credits.notReserved"));
   }
   if (data === null || data === undefined) {
+    const left = monthLeftDkk(await loadAnalysisMonth(service, input.fundId));
+    if (left !== null && left < input.capDkk) throw new MonthlyLimitError();
     throw new Error(serverText("appServer.credits.exhausted"));
   }
   const ledgerId = Number(data);

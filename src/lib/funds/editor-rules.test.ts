@@ -101,6 +101,23 @@ const draft = (overrides: Partial<EditableDraft> = {}): EditableDraft => ({
 });
 const visited = new Set<GuideStepKey>(["start", "basis"]);
 
+test('T-1096: "Hvem er I" replaces the risk text, so the risk text is then not required', () => {
+  const without = stepStatus(draft({ riskPosture: "" }), visited);
+  assert.equal(without.valid, false);
+  assert.equal(without.done.thesis, false);
+  const withAbout = stepStatus(
+    draft({ riskPosture: "", setup: { about: "Vi er et lille team af operatører." } }),
+    visited,
+  );
+  assert.equal(withAbout.valid, true);
+  assert.equal(withAbout.done.thesis, true);
+  // Blank text is not an answer.
+  assert.equal(
+    stepStatus(draft({ riskPosture: "", setup: { about: "  " } }), visited).valid,
+    false,
+  );
+});
+
 test("a complete draft is valid and every required step is done", () => {
   const status = stepStatus(draft(), visited);
   assert.equal(status.valid, true);

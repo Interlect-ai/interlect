@@ -1,6 +1,8 @@
 /**
- * Fondsopsætningens faste regler for scoringen: en bindende gate kan ikke opvejes af en
- * høj score, og manglende data er usikkerhed, aldrig 0. Kør: npm test
+ * Fondsopsætningens faste regler for scoringen: manglende data er usikkerhed, aldrig 0.
+ * (beslutningsloggen 15. nov 2026, afløser's "en bindende gate kan ikke opvejes"): et
+ * brud på en bindende regel vises, men stopper intet; et ukendt bindende krav giver "mangler
+ * information". Kør: npm test
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -44,13 +46,37 @@ function output(options: {
   } as unknown as ScreeningOutput;
 }
 
-test("a failed binding gate cannot be bought back by a perfect score", () => {
+test("a failed binding gate is shown but never stops the case (T-1092)", () => {
   const result = scoreScreening(profile, output({ gates: { geo: false, ticket: true } }), "seed");
-  assert.equal(result.overallScore, 100);
-  assert.equal(result.outcome, "blocked");
-  assert.equal(result.eligibleForDeepAnalysis, false);
+  assert.equal(result.overallScore, 100, "the rule alone does not change the score");
+  assert.equal(result.outcome, "awaiting_approval");
+  assert.equal(result.eligibleForDeepAnalysis, true);
   assert.deepEqual(result.failedHardGateKeys, ["geo"]);
-  assert.notEqual(result.recommendation, "go_forward");
+  assert.deepEqual(result.blockers, ["Mandatbrud: geo"]);
+  assert.equal(result.recommendation, "go_forward", "never turned into a rejection");
+});
+
+test("a failed binding gate below the threshold is below the threshold, not blocked", () => {
+  const result = scoreScreening(
+    profile,
+    output({ scores: { team: 30, market: 30 }, gates: { geo: false, ticket: true } }),
+    "seed",
+  );
+  assert.equal(result.outcome, "below_threshold");
+  assert.equal(result.recommendation, "follow");
+  assert.equal(result.eligibleForDeepAnalysis, true);
+});
+
+test("a critical risk is shown but never stops the case (T-1092)", () => {
+  const risky = {
+    ...output({}),
+    risks: [{ riskKey: "fraud", level: "critical", likelihood: 5, impact: 5 }],
+  } as unknown as ScreeningOutput;
+  const result = scoreScreening(profile, risky, "seed");
+  assert.equal(result.highestRisk, "critical");
+  assert.deepEqual(result.blockers, ["Mindst én kritisk risiko"]);
+  assert.equal(result.outcome, "awaiting_approval");
+  assert.equal(result.recommendation, "go_forward");
 });
 
 test("a failed review rule is a question for a human, not a block", () => {
@@ -64,7 +90,8 @@ test("an unknown binding gate holds the case back instead of passing or failing 
   assert.deepEqual(result.failedHardGateKeys, []);
   assert.deepEqual(result.unresolvedGateKeys, ["geo"]);
   assert.equal(result.outcome, "needs_information");
-  assert.equal(result.eligibleForDeepAnalysis, false);
+  assert.equal(result.recommendation, "follow");
+  assert.equal(result.eligibleForDeepAnalysis, true, "a deep analysis is always possible");
 });
 
 test("missing evidence is a marked neutral prior, never a zero", () => {

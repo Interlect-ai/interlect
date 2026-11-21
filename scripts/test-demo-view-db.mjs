@@ -3,7 +3,8 @@
  * Demovisningen: kun det engelske demoteam (slug "interlect-demo") får
  * `funds.demo_view`; nye og andre fonde står fra, og en bruger kan ikke ændre kolonnen, hverken
  * som Admin eller som Partner. Selve migrationen 0108 køres her på to fonde. 0111: et opdigtet navn
- * har én ejer pr. team, og navne for det samme selskab eller den samme person deler det.
+ * har én ejer pr. team, og navne for det samme selskab eller den samme person deler det. 0126
+ * Demoteamet slår demovisningen fra igen, uden at andre fonde eller aliasser røres.
  *
  *   npm run db:local -- fresh && npm run test:demo-view-db
  *
@@ -41,6 +42,9 @@ async function failsWith(client, sql, params = []) {
 
 const flag = async (client, id) =>
   (await client.query("select demo_view from public.funds where id = $1", [id])).rows[0]?.demo_view;
+
+const aliasCount = async (client) =>
+  Number((await client.query("select count(*)::int as n from public.display_aliases")).rows[0].n);
 
 async function main() {
   const client = new pg.Client({ connectionString: LOCAL_URL });
@@ -149,6 +153,25 @@ async function main() {
       "Et andet team kan eje samme alias",
       (await insertAlias(OTHER, "Northwind", "Lindor Security", true)) === null,
     );
+
+    // 0126: demovisningen slås fra igen på det engelske demoteam; intet slettes.
+    await client.query("update public.funds set demo_view = true where id = $1", [OTHER]);
+    const aliasesBefore = await aliasCount(client);
+    const migration0126 = readFileSync(
+      new URL("../db/migrations/0126_demo_view_off_interlect_demo.sql", import.meta.url),
+      "utf8",
+    ).replace(/^(begin|commit);$/gm, "");
+    await client.query(migration0126);
+    record(
+      "Efter 0126: demoteamet har ikke længere demovisning; andre fonde røres ikke",
+      (await flag(client, DEMO)) === false && (await flag(client, OTHER)) === true,
+    );
+    await client.query(migration0126);
+    record(
+      "0126 kan køres igen uden ændring",
+      (await flag(client, DEMO)) === false && (await flag(client, OTHER)) === true,
+    );
+    record("0126 sletter ingen aliasser", (await aliasCount(client)) === aliasesBefore);
   } finally {
     await client.query("rollback").catch(() => {});
     await client.end();

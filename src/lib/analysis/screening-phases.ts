@@ -8,6 +8,8 @@ import { MAX_STEP_ATTEMPTS } from "./deep-claim.ts";
 import { FUNCTION_MAX_DURATION_SECONDS } from "./deep-text-rules.ts";
 import { readStoredEvidenceSheet, type EvidenceSheet } from "./evidence-sheet.ts";
 import { readStoredResearchFollowUp, type ResearchFollowUp } from "./research-followup.ts";
+import { readStoredResearchTracks, type StoredResearchTrack } from "./research-tracks.ts";
+import { readSetupStageChoice, type SetupStageChoice } from "./setup-stage.ts";
 
 /** A delivery after a crash may take over a step that has been "running" longer than this. */
 export const SCREENING_ANALYSIS_STALE_MS = (FUNCTION_MAX_DURATION_SECONDS + 30) * 1_000;
@@ -73,6 +75,8 @@ export interface ResearchHandOff {
   founders: PromptFounder[];
   followUp: ResearchFollowUp | null;
   evidenceSheet: EvidenceSheet | null;
+  /** The stage the research was planned for (null for a version with nothing per stage). */
+  setupStage: SetupStageChoice | null;
 }
 
 const numberOrNull = (value: unknown) => {
@@ -106,5 +110,101 @@ export function readResearchHandOff(
     founders: readPromptFounders(stored["promptFounders"]),
     followUp: readStoredResearchFollowUp(stored["researchFollowUp"]),
     evidenceSheet: readStoredEvidenceSheet(stored["evidenceSheet"]),
+    setupStage: readSetupStageChoice(stored["setupStage"]),
+  };
+}
+
+/** The research of a screening that stopped at its limit, as the next try takes it over. */
+export interface StoppedResearch {
+  output: Record<string, unknown>;
+  evidenceIds: string[];
+}
+
+/** Research this old is searched again: a stopped run is continued soon, or not at all. */
+const STOPPED_RESEARCH_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+type StoppedRun = {
+  status?: unknown;
+  stop_reason?: unknown;
+  config_version_id?: unknown;
+  prompt_template_version?: unknown;
+  input_evidence_ids?: unknown;
+  completed_at?: unknown;
+};
+type StoppedStep = {
+  status?: unknown;
+  output_json?: unknown;
+  prompt_version?: unknown;
+  model_name?: unknown;
+} | null;
+type StoppedCurrent = {
+  configVersionId: string;
+  promptVersion: string;
+  researchVersion: string;
+  researchModel: string;
+  /** Evidence or documents added to the case since the run stopped. */
+  newerMaterial: boolean;
+  now: number;
+};
+
+/** The newest run stopped at its limit, recently, on the same setup, and nothing came since. */
+function stoppedRunCarriesOver(run: StoppedRun, step: StoppedStep, current: StoppedCurrent) {
+  if (run.status !== "failed" || run.stop_reason !== "price_limit") return false;
+  if (run.config_version_id !== current.configVersionId) return false;
+  if (run.prompt_template_version !== current.promptVersion) return false;
+  if (current.newerMaterial) return false;
+  const stoppedAt = Date.parse(String(run.completed_at));
+  if (!Number.isFinite(stoppedAt) || current.now - stoppedAt > STOPPED_RESEARCH_MAX_AGE_MS) {
+    return false;
+  }
+  if (!step) return false;
+  if (step.prompt_version !== current.researchVersion) return false;
+  return step.model_name === current.researchModel;
+}
+
+/**
+ * The research is reused only from the newest run, when that run stopped at its limit, on the same
+ * setup, prompt and research version, and its research was finished and handed over. Nothing may
+ * have come to the case since: the old research never read a deck or a note added after the stop.
+ * Any other failure runs the research again, as before.
+ */
+export function stoppedResearchToReuse(
+  run: StoppedRun,
+  step: StoppedStep,
+  current: StoppedCurrent,
+): StoppedResearch | null {
+  if (!stoppedRunCarriesOver(run, step, current) || step?.status !== "complete") return null;
+  const output = step.output_json as Record<string, unknown> | null;
+  if (!output || numberOrNull(output["researchChargeUsd"]) === null) return null;
+  const evidenceIds = Array.isArray(run.input_evidence_ids)
+    ? (run.input_evidence_ids as string[]).filter(Boolean)
+    : [];
+  return evidenceIds.length > 0 ? { output, evidenceIds } : null;
+}
+
+/**
+ * The run stopped inside its research. The tracks it finished before the stop are taken
+ * over by the next try on the same terms as a finished research, so only the missing ones are paid.
+ */
+export function stoppedTracksToReuse(
+  run: StoppedRun,
+  step: StoppedStep,
+  current: StoppedCurrent,
+): StoredResearchTrack[] {
+  if (!stoppedRunCarriesOver(run, step, current) || step?.status === "complete") return [];
+  const output = step?.output_json as Record<string, unknown> | null | undefined;
+  return readStoredResearchTracks(output?.["researchTracks"]);
+}
+
+/**
+ * The research step as the next try keeps it: it costs nothing there, and a failed deck reading is
+ * counted once, on the run that made the call, so a later research still tries the deck's pages.
+ */
+export function reusedResearchOutput(output: Record<string, unknown>): Record<string, unknown> {
+  const deckOcr = output["deckOcr"] as Record<string, unknown> | null | undefined;
+  return {
+    ...output,
+    researchChargeUsd: 0,
+    ...(deckOcr ? { deckOcr: { ...deckOcr, callFailed: false } } : {}),
   };
 }

@@ -34,6 +34,10 @@ export const fundServer = {
     notEnabled: "AI levels are not enabled in the database yet (migration 0036).",
     notSaved: "The setting could not be saved.",
     capRange: "The cap must be between {min} and {max} DKK.",
+    capTooLow:
+      "The limit must be at least {min} DKK at this level, or the analysis cannot be completed.",
+    overPlatform: "The limit can be at most {max} DKK on this installation.",
+    monthlyRange: "The monthly limit must be between 0 and {max} DKK.",
   },
   assist: {
     notStarted: "The help could not be started. Try again shortly.",
@@ -68,6 +72,12 @@ export const fundServer = {
     noSetup: "The selected team has no setup yet.",
     versionsNotLoaded: "The version history could not be loaded.",
     draftNotCreated: "The draft could not be created. Try again shortly.",
+    restoreDraftExists:
+      "There is already a draft. Publish or delete it before you restore an earlier version.",
+    restoreArchived: "The thesis is archived. Reactivate it before you restore a version.",
+    restoreFailed: "The version could not be restored. Try again shortly.",
+    stagesNeedSetup:
+      "Rules and criteria per stage can only be saved together with the whole setup. Reload the page and try again.",
     draftNotSaved: "The draft could not be saved. Try again shortly.",
     draftNotPublished: "The draft could not be published. Try again shortly.",
     versionNotLoaded: "The setup version could not be loaded.",
@@ -149,6 +159,10 @@ export const fundServer = {
       "Your team has made {count} trial runs of the screening in the last hour. Wait a little before trying again.",
   },
   specialists: {
+    deepPlatformTooLow:
+      "With this many specialists the installation's fixed limit for a deep analysis is too low, so no deep analysis on this thesis can start. Your team cannot raise it; contact Interlect or switch specialists off.",
+    deepLimitTooLow:
+      "With this many specialists your team's limit for a deep analysis is too low, so no deep analysis on this thesis can start. An Admin or Lead can raise the limit under Analysis limits.",
     draftUnusable: "The AI gave a draft that could not be used. Try again shortly.",
     casesNotLoaded: "The cases could not be loaded.",
     notScreened: "The case must be screened before the specialist can be tried on it.",
@@ -177,5 +191,9 @@ export const fundServer = {
   },
   thesisChat: {
     askSomething: "Write a question.",
+    notFound:
+      "Not found: there is not enough to build a suggestion on yet. Write a sentence of your own (at least 20 characters) or fill in an earlier step.",
+    notFoundRejected:
+      "Not found: Interlect could not write a suggestion without guessing figures or filling in a template. Write a little more about exactly what you want help with.",
   },
 } as const;

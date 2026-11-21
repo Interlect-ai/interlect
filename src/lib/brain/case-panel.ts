@@ -40,6 +40,11 @@ export interface PanelPriorCase {
   createdOn: string;
   phase: string;
   status: string;
+  /**
+   * The other thesis's name when this earlier case is the same company under another thesis
+   * (spec flere-teser-i-et-team §4.4: "Samme selskab under …", not an earlier case).
+   */
+  otherThesis?: string;
   decision: PanelDecision | null;
 }
 

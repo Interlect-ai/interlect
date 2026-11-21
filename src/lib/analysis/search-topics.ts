@@ -1,9 +1,10 @@
 /**
- * Neutral search topics (decision D4/D5 of 5-6 Oct 2026). Perplexity has no Zero
- * Data Retention, so while ZDR is enforced the fund's thesis, weights, thresholds, risk posture,
- * gates, ticket and internal notes never go into a web search. The thesis still has to steer the
- * search (D5), so a step with a ZDR model turns the criteria into short, neutral topics ("recurring
- * revenue", "customers in the public sector") that are sent with the company's public identity.
+ * Neutral search topics (decision D4/D5 of 5-6 Oct 2026). Perplexity has no
+ * Zero Data Retention, so the fund's thesis, weights, thresholds, risk posture, gates, ticket and
+ * internal notes never go into a web search, with or without the ZDR flag (fail-closed).
+ * The thesis still has to steer the search (D5), so a step with a ZDR model turns the criteria
+ * into short, neutral topics ("recurring revenue", "customers in the public sector") that are sent
+ * with the company's public identity.
  *
  * Nothing the model writes is trusted: `sanitizeTopics` drops every topic that copies a phrase of
  * the confidential text, carries a number or names what the fund wants or avoids. The fund's own
@@ -177,19 +178,15 @@ export const SEARCH_TOPICS_NOTE =
   "Where requiredResearch mentions fundResearchBrief, use searchTopics instead: facts about these topics are what the fund cares about. Report what the sources show, never guess why a topic is listed.";
 
 /**
- * What a research call sends about the fund. With ZDR enforced the brief is never
- * sent, only the neutral topics; without it the brief goes as before. Pure, so the rule is tested.
+ * What a research call sends about the fund. The brief is never sent to a
+ * public search, whatever AI_GATEWAY_ENFORCE_ZDR says (fail-closed, the product owner/TS-16): only
+ * the neutral topics, or a note that there are none. Pure, so the rule is tested.
  */
-export function fundFieldsForSearch<TBrief>(
-  brief: TBrief | null | undefined,
-  topics: readonly string[] | null | undefined,
-  zdrEnforced: boolean,
-): {
-  fundResearchBrief: TBrief | null;
+export function fundFieldsForSearch(topics: readonly string[] | null | undefined): {
+  fundResearchBrief: null;
   searchTopics?: readonly string[];
-  searchTopicsNote?: string;
+  searchTopicsNote: string;
 } {
-  if (!zdrEnforced) return { fundResearchBrief: brief ?? null };
   return {
     fundResearchBrief: null,
     ...(topics?.length

@@ -114,7 +114,7 @@ export async function installationProblems(client: pg.Client, files: string[]) {
           and not has_table_privilege('service_role', c.oid, 'select')) as service_blind,
       (select array_agg(t) from unnest($2::text[]) t
         where to_regclass('public.' || t) is null
-           or not has_table_privilege('authenticated', ('public.' || t)::regclass, 'select'))
+           or not has_any_column_privilege('authenticated', ('public.' || t)::regclass, 'select'))
         as user_blind
   `,
     [BUCKETS, CORE_USER_TABLES],

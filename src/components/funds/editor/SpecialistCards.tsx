@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUp, Check, Plus, X } from "lucide-react";
+import { ArrowUp, Check, ChevronDown, Plus } from "lucide-react";
 import { AiBeam } from "@/components/ai/AiBeam";
 import { Velaris } from "@/components/ds/Velaris";
 import { SpecialistBot } from "@/components/ai/SpecialistBot";
@@ -25,6 +25,7 @@ import { InterlectMark } from "@/components/brand/InterlectMark";
 import { ComposerStatus } from "@/components/ds/AiComposer";
 import { Button } from "@/components/ds/Button";
 import { Collapse } from "@/components/ds/Collapse";
+import { Sheet } from "@/components/ds/Sheet";
 import { fieldClass } from "@/components/ds/Field";
 import { Reveal } from "@/components/ds/Reveal";
 import { showToast } from "@/components/ds/Toast";
@@ -150,10 +151,6 @@ export function SpecialistCards({
       }),
   });
 
-  useEffect(() => {
-    if (panel) panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [panel]);
-
   const view = query.data;
   // A failed background refetch keeps the cards (and an open panel) as they are.
   if (query.isError && !view) {
@@ -177,6 +174,21 @@ export function SpecialistCards({
   // One write at a time: each answer is the whole set, so two in flight could land out of order.
   const locked = toggle.isPending || panelBusy;
   const activeOwn = view.custom.filter((item) => item.enabled).length;
+  const panelCard = panel?.kind === "standard" ? knownCard(panel.id, language) : undefined;
+  const panelCustom =
+    panel?.kind === "custom" && panel.key !== null
+      ? view.custom.find((item) => item.key === panel.key)
+      : undefined;
+  const sheetTitle =
+    panel?.kind === "standard"
+      ? editable
+        ? t("specialists.panel.tailorTitle", { name: panelCard?.label ?? panel.id })
+        : (panelCard?.label ?? panel.id)
+      : panelCustom
+        ? panelCustom.name
+        : t("specialists.panel.newTitle");
+  const sheetDescription =
+    panel?.kind === "standard" ? (panelCard?.role ?? "") : t("specialists.panel.ownRole");
   const reportUnsaved = (part: string) => (unsaved: boolean) => {
     setPanelUnsaved(unsaved);
     onUnsavedChange?.(part, unsaved);
@@ -245,8 +257,18 @@ export function SpecialistCards({
         )}
       </div>
 
-      <div ref={panelRef} className="scroll-mt-4">
-        <Collapse open={panel !== null}>
+      {/* (the product owner 3./4. nov): Customise and Opret specialist open as a sheet from the
+          right ("Ark: 520 px"), not a fold in the page. */}
+      <Sheet
+        open={panel !== null}
+        onOpenChange={(open) => {
+          if (!open) requestPanel(null);
+        }}
+        title={sheetTitle}
+        description={sheetDescription}
+        className="w-[min(520px,calc(100vw-24px))]"
+      >
+        <div ref={panelRef} className="flex flex-col gap-4">
           {panel?.kind === "standard" && (
             <StandardTilpas
               key={panel.id}
@@ -284,8 +306,8 @@ export function SpecialistCards({
               onUnsavedChange={reportUnsaved("custom")}
             />
           )}
-        </Collapse>
-      </div>
+        </div>
+      </Sheet>
 
       <AlertDialog
         open={confirmPanel !== null}
@@ -417,7 +439,7 @@ function SpecialistCard({
         <button
           type="button"
           onClick={onTilpas}
-          aria-expanded={open}
+          aria-haspopup="dialog"
           disabled={locked}
           className="inline-flex h-8 cursor-pointer items-center gap-[7px] self-start rounded-pill border-0 bg-surface px-3 font-[inherit] text-meta font-medium whitespace-nowrap text-ink-1 shadow-pill transition-transform active:scale-[.96] disabled:cursor-default disabled:opacity-50"
         >
@@ -464,7 +486,7 @@ function NewSpecialistCard({
         <button
           type="button"
           onClick={onOpen}
-          aria-expanded={open}
+          aria-haspopup="dialog"
           disabled={disabled}
           className="mt-auto inline-flex h-8 cursor-pointer items-center gap-[7px] self-start rounded-pill border-0 bg-inverse px-[13px] font-[inherit] text-meta font-medium whitespace-nowrap text-ink-inverse transition-transform active:scale-[.96] disabled:cursor-default disabled:opacity-50"
         >
@@ -480,46 +502,27 @@ function NewSpecialistCard({
 
 function PanelFrame({
   kind,
-  title,
   sub,
-  onClose,
   children,
   aiBusy,
-  busy,
 }: {
   kind: SpecialistKind;
+  /** Kept for the callers; the sheet shows the title and the close button. */
   title: string;
   sub: string;
   onClose: () => void;
   children: ReactNode;
   /** AI is working (the beam). */
   aiBusy: boolean;
-  /** Any call is running: the panel cannot be closed until it answers. */
   busy: boolean;
 }) {
-  const t = useT();
   return (
     <AiBeam active={aiBusy} className="rounded-lg">
-      <section
-        aria-label={title}
-        className="mt-0.5 flex flex-col gap-4 rounded-lg bg-surface p-5 shadow-raised"
-      >
-        <header className="flex items-start gap-3">
-          <SpecialistBot kind={kind} size={36} />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h3 className="m-0 text-section font-semibold">{title}</h3>
-            <p className="m-0 text-meta text-ink-3">{sub}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("specialists.panel.close")}
-            disabled={busy}
-            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-transparent text-ink-3 hover:bg-hover disabled:cursor-default disabled:opacity-40"
-          >
-            <X className="size-4" aria-hidden />
-          </button>
-        </header>
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <SpecialistBot kind={kind} size={44} />
+          <p className="m-0 text-list text-ink-3">{sub}</p>
+        </div>
         {children}
       </section>
     </AiBeam>
@@ -534,6 +537,7 @@ function AskPill({
   placeholder,
   disabled,
   minLength = 3,
+  inputRef,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -541,6 +545,7 @@ function AskPill({
   placeholder: string;
   disabled: boolean;
   minLength?: number;
+  inputRef?: React.Ref<HTMLInputElement>;
 }) {
   const t = useT();
   const ready = !disabled && value.trim().length >= minLength;
@@ -550,6 +555,7 @@ function AskPill({
       <Velaris className="absolute inset-0 -z-10" />
       <InterlectMark size={12} />
       <input
+        ref={inputRef}
         value={value}
         onChange={(event) => onChange(event.target.value.slice(0, 2000))}
         onKeyDown={(event) => {
@@ -768,6 +774,8 @@ function StandardTilpasEditor({
   });
   const [texts, setTexts] = useState(() => toTexts(saved));
   const [ask, setAsk] = useState("");
+  const [showFields, setShowFields] = useState(false);
+  const askRef = useRef<HTMLTextAreaElement>(null);
   const [revision, setRevision] = useState<{
     before: ReturnType<typeof toTexts>;
     diffs: FieldDiff[];
@@ -845,6 +853,10 @@ function StandardTilpasEditor({
   useEffect(() => () => reportBusy.current(false), []);
   const card = standardSpecialistCardIn(module.id, language);
 
+  const color = SPECIALIST_KIND_COLOR[specialistKind(module.id)];
+  // The plain focus in the team's language (the card's), until the team has its own lines
+  // (customised or being edited); never the standard instruction text itself.
+  const focusLines = (override || changed) && current.mandate.length ? current.mandate : card.focus;
   return (
     <PanelFrame
       kind={specialistKind(module.id)}
@@ -854,39 +866,92 @@ function StandardTilpasEditor({
       busy={busy}
       onClose={onClose}
     >
+      <section className="flex flex-col gap-2 rounded-lg bg-canvas p-4">
+        <h3 className="m-0 text-list font-semibold text-ink-2">
+          {t("specialists.sheet.focusToday")}
+        </h3>
+        <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {focusLines.slice(0, 4).map((line, index) => (
+            <li
+              key={`${index}-${line}`}
+              className="flex items-start gap-2.5 text-list leading-[1.45] text-ink-1"
+            >
+              <span
+                aria-hidden
+                className="mt-[7px] size-[6px] shrink-0 rounded-full"
+                style={{ background: color }}
+              />
+              <span>{line}</span>
+            </li>
+          ))}
+          {focusLines.length > 4 && (
+            <li className="pl-[16px] text-meta text-ink-3">
+              {t("specialists.sheet.moreFocus", { count: focusLines.length - 4 })}
+            </li>
+          )}
+        </ul>
+      </section>
+
       {editable && (
-        <AskPill
-          value={ask}
-          onChange={setAsk}
-          onSend={() => proposal.mutate({ instructions: ask.trim(), current })}
-          disabled={busy || problems.length > 0}
-          placeholder={t("specialists.panel.askPlaceholder", { name: card.label })}
-        />
+        <div className="flex flex-col gap-2">
+          <span className="text-list font-semibold text-ink-1">
+            {t("specialists.sheet.askLabel")}
+          </span>
+          <SheetComposer
+            value={ask}
+            onChange={setAsk}
+            onSend={() => proposal.mutate({ instructions: ask.trim(), current })}
+            disabled={busy || problems.length > 0}
+            placeholder={t("specialists.panel.askPlaceholder", { name: card.label })}
+            inputRef={askRef}
+          />
+        </div>
       )}
       {proposal.isPending && (
         <ComposerStatus>{t("specialists.panel.rewriting", { name: card.label })}</ComposerStatus>
       )}
       {revision && !proposal.isPending && (
-        <BeforeAfter
+        <NowBecomes
           diffs={revision.diffs}
+          approving={saveMutation.isPending}
+          canApprove={editable && changed && problems.length === 0 && !busy}
+          onApprove={() => saveMutation.mutate()}
+          onKeepWriting={() => askRef.current?.focus()}
           onUndo={() => {
             setTexts(revision.before);
             setRevision(null);
           }}
         />
       )}
-      <div className="flex flex-col gap-3">
-        {MODULE_FIELDS.map((field) => (
-          <LinesField
-            key={field}
-            label={t(`specialists.cards.module.${field}`)}
-            hint={t("specialists.panel.perLine")}
-            value={texts[field]}
-            onChange={(next) => setTexts((previous) => ({ ...previous, [field]: next }))}
-            disabled={!editable || busy}
-            rows={field === "riskAreas" ? 3 : 4}
+
+      <div className="flex flex-col">
+        <button
+          type="button"
+          aria-expanded={showFields}
+          onClick={() => setShowFields((open) => !open)}
+          className="flex w-fit cursor-pointer items-center gap-1.5 border-0 bg-transparent px-0 py-1 font-[inherit] text-list font-medium text-ink-2 hover:text-ink-1"
+        >
+          <ChevronDown
+            className={cn("size-4 transition-transform duration-200", showFields && "rotate-180")}
+            aria-hidden
           />
-        ))}
+          {t("specialists.sheet.showFields")}
+        </button>
+        <Collapse open={showFields}>
+          <div className="flex flex-col gap-3 pt-2">
+            {MODULE_FIELDS.map((field) => (
+              <LinesField
+                key={field}
+                label={t(`specialists.cards.module.${field}`)}
+                hint={t("specialists.panel.perLine")}
+                value={texts[field]}
+                onChange={(next) => setTexts((previous) => ({ ...previous, [field]: next }))}
+                disabled={!editable || busy}
+                rows={field === "riskAreas" ? 3 : 4}
+              />
+            ))}
+          </div>
+        </Collapse>
       </div>
       {editable && problems.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-1 rounded-md bg-canvas px-4 py-3 text-meta text-ink-2">
@@ -896,37 +961,224 @@ function StandardTilpasEditor({
           ))}
         </ul>
       )}
+      <p className="m-0 text-meta text-ink-3">{t("specialists.sheet.applies")}</p>
       {editable && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => saveMutation.mutate()}
-            disabled={busy || !changed || problems.length > 0}
-            pending={saveMutation.isPending}
-            pendingLabel={t("specialists.panel.saving")}
-          >
-            {t("specialists.panel.saveDraft")}
-          </Button>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
+          {changed && !revision && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => saveMutation.mutate()}
+              disabled={busy || problems.length > 0}
+              pending={saveMutation.isPending}
+              pendingLabel={t("specialists.panel.saving")}
+            >
+              {t("specialists.panel.saveDraft")}
+            </Button>
+          )}
           <Button variant="quiet" size="md" onClick={onClose} disabled={busy}>
-            {t("specialists.panel.cancel")}
+            {changed ? t("specialists.panel.cancel") : t("common.close")}
           </Button>
           {override && (
-            <Button
-              variant="danger"
-              size="md"
-              className="ml-auto"
+            <button
+              type="button"
               onClick={() => resetMutation.mutate()}
               disabled={busy}
-              pending={resetMutation.isPending}
-              pendingLabel={t("specialists.panel.resetting")}
+              className="ml-auto cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-meta font-medium text-ink-3 underline underline-offset-4 hover:text-ink-1 disabled:cursor-default disabled:opacity-50"
             >
-              {t("specialists.panel.reset")}
-            </Button>
+              {resetMutation.isPending
+                ? t("specialists.panel.resetting")
+                : t("specialists.panel.reset")}
+            </button>
           )}
         </div>
       )}
     </PanelFrame>
+  );
+}
+
+const SHEET_SUGGESTIONS: readonly MessageKey[] = [
+  "specialists.sheet.suggestion1",
+  "specialists.sheet.suggestion2",
+  "specialists.sheet.suggestion3",
+];
+
+/**
+ * The sheet's ask box (§3.2, the composer look of Teamopsætning): several lines on the
+ * flowing AI ground, send with Enter (Shift+Enter for a new line), and three suggestions to tap.
+ */
+function SheetComposer({
+  value,
+  onChange,
+  onSend,
+  placeholder,
+  disabled,
+  inputRef,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSend: () => void;
+  placeholder: string;
+  disabled: boolean;
+  inputRef?: React.Ref<HTMLTextAreaElement>;
+}) {
+  const t = useT();
+  const ready = !disabled && value.trim().length >= 3;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="relative isolate overflow-hidden rounded-[24px] p-2.5">
+        <Velaris className="absolute inset-0 -z-10" />
+        <div className="flex flex-col gap-2 rounded-[18px] bg-surface/95 p-3 shadow-card">
+          <div className="flex items-start gap-2.5">
+            <span className="mt-1 shrink-0">
+              <InterlectMark size={13} />
+            </span>
+            <textarea
+              ref={inputRef}
+              value={value}
+              rows={3}
+              onChange={(event) => onChange(event.target.value.slice(0, 2000))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && ready) {
+                  event.preventDefault();
+                  onSend();
+                }
+              }}
+              disabled={disabled}
+              aria-label={placeholder}
+              placeholder={placeholder}
+              className="min-h-[72px] flex-1 resize-none border-0 bg-transparent font-[inherit] text-[15px] leading-[1.5] text-ink-1 outline-none placeholder:text-ink-4"
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={!ready}
+              aria-label={t("specialists.panel.send")}
+              className="grid size-9 cursor-pointer place-items-center rounded-full border-0 bg-inverse text-ink-inverse transition-[opacity,transform] active:scale-90 disabled:cursor-default disabled:bg-sunken disabled:text-ink-3"
+            >
+              <ArrowUp className="size-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {SHEET_SUGGESTIONS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(t(key))}
+            className="h-8 cursor-pointer rounded-pill border-0 bg-canvas px-3 font-[inherit] text-meta text-ink-2 transition-colors hover:bg-hover hover:text-ink-1 disabled:cursor-default disabled:opacity-50"
+          >
+            {t(key)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Vil du ændre til det her?" (D7): what changes as two plain columns, Nu and Bliver, at most three
+ * lines each, "+N flere" for the rest (the full before/after folds out), and Godkend / Skriv
+ * videre / Fortryd. Nothing is struck through.
+ */
+function NowBecomes({
+  diffs,
+  approving,
+  canApprove,
+  onApprove,
+  onKeepWriting,
+  onUndo,
+}: {
+  diffs: FieldDiff[];
+  approving: boolean;
+  canApprove: boolean;
+  onApprove: () => void;
+  onKeepWriting: () => void;
+  onUndo: () => void;
+}) {
+  const t = useT();
+  const [all, setAll] = useState(false);
+  const removed = diffs.flatMap((diff) => diff.rows.filter((row) => row.change === "removed"));
+  const added = diffs.flatMap((diff) => diff.rows.filter((row) => row.change === "added"));
+  const rest = Math.max(0, removed.length - 3) + Math.max(0, added.length - 3);
+  if (diffs.length === 0 || (removed.length === 0 && added.length === 0)) {
+    return (
+      <p className="m-0 rounded-md bg-canvas px-4 py-3 text-list text-ink-3">
+        {t("specialists.panel.nothingChanged")}
+      </p>
+    );
+  }
+  const column = (title: string, rows: typeof added, strong: boolean) => (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-meta font-semibold tracking-[0.04em] text-ink-3 uppercase">
+        {title}
+      </span>
+      {rows.length === 0 ? (
+        <span className="text-list text-ink-3">–</span>
+      ) : (
+        rows.slice(0, 3).map((row, index) => (
+          <span
+            key={`${row.text}-${index}`}
+            className={cn("text-list leading-[1.45]", strong ? "text-ink-1" : "text-ink-2")}
+          >
+            {row.text}
+          </span>
+        ))
+      )}
+    </div>
+  );
+  return (
+    <section
+      aria-label={t("specialists.sheet.proposalTitle")}
+      className="flex flex-col gap-3.5 rounded-lg bg-surface p-4 shadow-[inset_0_0_0_1.5px_var(--ai),var(--shadow-card)]"
+    >
+      <h3 className="m-0 flex items-center gap-2 text-[15px] font-semibold">
+        <InterlectMark size={12} />
+        {t("specialists.sheet.proposalTitle")}
+      </h3>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {column(t("specialists.sheet.now"), removed, false)}
+        <div className="rounded-md bg-ai-wash p-3">
+          {column(t("specialists.sheet.becomes"), added, true)}
+        </div>
+      </div>
+      {rest > 0 && (
+        <button
+          type="button"
+          aria-expanded={all}
+          onClick={() => setAll((open) => !open)}
+          className="w-fit cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-meta font-medium text-ink-2 hover:text-ink-1"
+        >
+          {t("specialists.sheet.moreChanges", { count: rest })}
+        </button>
+      )}
+      <Collapse open={all}>
+        <BeforeAfter diffs={diffs} />
+      </Collapse>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="primary"
+          size="md"
+          onClick={onApprove}
+          disabled={!canApprove}
+          pending={approving}
+          pendingLabel={t("specialists.panel.saving")}
+        >
+          <Check className="size-4" aria-hidden />
+          {t("specialists.sheet.approve")}
+        </Button>
+        <Button variant="secondary" size="md" onClick={onKeepWriting}>
+          {t("specialists.sheet.keepWriting")}
+        </Button>
+        <Button variant="quiet" size="md" onClick={onUndo}>
+          {t("specialists.panel.undo")}
+        </Button>
+      </div>
+    </section>
   );
 }
 

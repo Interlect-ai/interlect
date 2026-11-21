@@ -34,6 +34,17 @@ test("draft and publish lines carry the version when the event has it", () => {
   assert.equal(describeHistoryEvent("fund_config_activated", null), "En ny version er udgivet.");
 });
 
+test("a restore names the old version and the new draft (T-1039)", () => {
+  assert.equal(
+    describeHistoryEvent("fund_config_restored_as_draft", { source_version: 2, version: 5 }),
+    "Version 2 er gendannet som ny kladde v5.",
+  );
+  assert.equal(
+    describeHistoryEvent("fund_config_restored_as_draft", { source_version: 2, version: 5 }, "en"),
+    "Version 2 was restored as new draft v5.",
+  );
+});
+
 test("an AI level change names the level, never a cap in kroner or the raw payload (T-678)", () => {
   const line = describeHistoryEvent("fund_ai_settings_changed", {
     before: {

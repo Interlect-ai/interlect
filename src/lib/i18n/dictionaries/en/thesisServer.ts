@@ -1,0 +1,20 @@
+/** English texts the server sends about theses in a team; same keys as `da/thesisServer.ts`. */
+export const thesisServer = {
+  notLoaded: "The team's theses could not be loaded.",
+  notFound: "The thesis was not found in the team.",
+  caseThesisMissing: "The case's thesis could not be found.",
+  noActiveThesis: "The team has no published thesis yet. Publish a thesis first.",
+  notSelectable: "The thesis cannot be chosen. Choose a published thesis.",
+  archivedNoAnalysis: "The thesis {name} is archived. Reactivate the thesis to run a new analysis.",
+  configureOnly: "Only an Admin or Lead can change theses.",
+  nameLength: "The thesis name must be 2-80 characters.",
+  nameTaken: "A thesis with that name already exists.",
+  lastActive: "A team must have at least one active thesis.",
+  alreadyArchived: "The thesis is already archived.",
+  notArchived: "The thesis is not archived.",
+  renameArchived: "Reactivate the thesis to rename it.",
+  defaultNeedsPublished: "Only a published thesis can be the default.",
+  copyNeedsPublished: "Only a published thesis can be copied.",
+  notCreated: "The thesis could not be created.",
+  notSaved: "The change to the thesis could not be saved.",
+} as const;

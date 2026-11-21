@@ -37,6 +37,11 @@ export interface FunnelFacts {
   reachedDeep: boolean;
   reachedCommittee: boolean;
   reachedInvested: boolean;
+  /**
+   * The case's own thesis's threshold ("Alle teser" counts each case against its thesis);
+   * absent, the shared threshold applies.
+   */
+  threshold?: number;
 }
 
 export interface FunnelStep {
@@ -65,7 +70,7 @@ export function reachedSteps(facts: FunnelFacts, threshold: number): Record<Funn
   return {
     in: true,
     screened,
-    over: facts.screeningScore !== null && facts.screeningScore >= threshold,
+    over: facts.screeningScore !== null && facts.screeningScore >= (facts.threshold ?? threshold),
     deep,
     committee,
     invested,

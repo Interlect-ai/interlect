@@ -1,6 +1,7 @@
 /** Neutral search topics. Kør: npm test */
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import {
   fundFieldsForSearch,
   neutralQuestions,
@@ -9,6 +10,7 @@ import {
   topicsPrompt,
   type TopicsBrief,
 } from "./search-topics.ts";
+import { neutralResearchModules } from "./question-neutralizer.ts";
 
 const brief: TopicsBrief = {
   thesis:
@@ -96,37 +98,115 @@ test("the prompt for the topics step carries the criteria, never the ticket or t
   assert.ok(!prompt.includes("teknologirisiko"));
 });
 
-test("with ZDR on, a search carries topics and never the thesis, weights, risk posture or ticket (T-509)", () => {
-  const full = {
-    ...brief,
-    criteria: [{ label: "Traction", description: "Vægt 40 procent", weight: 40 }],
-  };
-  const sent = JSON.stringify({
-    company: "Eksempel ApS",
-    ...fundFieldsForSearch(full, ["recurring revenue", "kunder i offentlig sektor"], true),
-  });
-  assert.ok(sent.includes("recurring revenue"));
-  for (const secret of [
-    "nordiske B2B-softwareselskaber",
-    "teknologirisiko",
-    "Billetter",
-    "sanktionsliste",
-    "Vægt 40",
-    "domæneerfaring",
-  ]) {
-    assert.ok(!sent.includes(secret), secret);
-  }
-  assert.match(sent, /"fundResearchBrief":null/);
-});
+/** Everything confidential about the fund: thesis, weights, gates, ticket, risk, dealbreakers. */
+const SECRETS = [
+  "nordiske B2B-softwareselskaber",
+  "teknologirisiko",
+  "Billetter",
+  "sanktionsliste",
+  "Ingen sanktioner",
+  "Vægt 40",
+  '"weight"',
+  "domæneerfaring",
+  "dealbreaker",
+  "Ingen kryptovaluta",
+];
 
-test("with ZDR on and no topics nothing about the fund is sent; with ZDR off the brief goes as before", () => {
-  const none = fundFieldsForSearch(brief, [], true);
-  assert.equal(none.fundResearchBrief, null);
-  assert.equal(none.searchTopics, undefined);
-  assert.match(none.searchTopicsNote ?? "", /not available/);
-  assert.equal(fundFieldsForSearch(brief, null, true).searchTopics, undefined);
-  assert.equal(fundFieldsForSearch(brief, ["x"], false).fundResearchBrief, brief);
-  assert.equal("searchTopics" in fundFieldsForSearch(brief, ["x"], false), false);
+/** A brief as the run builds it (buildFundResearchBrief): weights, ticket amounts and gate treatment. */
+const fullBrief = {
+  ...brief,
+  ticket: { minEur: 1_000_000, maxEur: 3_000_000, note: brief.ticket.note },
+  gates: [
+    {
+      key: "sanctions",
+      label: "Ingen sanktioner",
+      description: "Selskabet må ikke være på en sanktionsliste",
+      treatment: "dealbreaker",
+    },
+    {
+      key: "crypto",
+      label: "Ingen kryptovaluta",
+      description: "Ingen kryptovaluta",
+      treatment: "dealbreaker",
+    },
+  ],
+  criteria: [{ key: "traction", label: "Traction", description: "Vægt 40 procent", weight: 40 }],
+};
+
+for (const flag of ["false", "true", undefined]) {
+  test(`T-1021: with AI_GATEWAY_ENFORCE_ZDR=${flag ?? "(unset)"} a search never carries the thesis, weights, gates, ticket, risk posture or dealbreakers`, () => {
+    const before = process.env["AI_GATEWAY_ENFORCE_ZDR"];
+    if (flag === undefined) delete process.env["AI_GATEWAY_ENFORCE_ZDR"];
+    else process.env["AI_GATEWAY_ENFORCE_ZDR"] = flag;
+    try {
+      // The pure part of a run's search, end to end, with the full brief in scope: the team's own
+      // questions go through the code filter, the ZDR step either fails (nothing of the team's is
+      // searched) or keeps them, and the message carries the topics only.
+      const tracks = [{ id: "market_competition", questions: ["Default market question"] }];
+      const teamQuestions = [
+        "Find evidence for: Vi investerer i nordiske B2B-softwareselskaber med tilbagevendende omsætning",
+        "Who are the main competitors?",
+      ];
+      const own = neutralQuestions(teamQuestions, fullBrief).map((question) => ({
+        module: "market_competition",
+        question,
+      }));
+      assert.deepEqual(
+        own.map((item) => item.question),
+        ["Who are the main competitors?"],
+      );
+      for (const neutral of [[], own.map((item) => item.question)]) {
+        const modules = neutralResearchModules({
+          baseModules: tracks,
+          ownQuestions: own,
+          specialistCandidates: [],
+          planCandidates: [],
+          neutral,
+        });
+        for (const topics of [["recurring revenue", "kunder i offentlig sektor"], [], null]) {
+          const sent = JSON.stringify({
+            company: "Eksempel ApS",
+            requiredResearch: modules[0]!.questions,
+            ...fundFieldsForSearch(topics),
+          });
+          for (const secret of SECRETS) assert.ok(!sent.includes(secret), `${secret} in ${sent}`);
+          assert.match(sent, /"fundResearchBrief":null/);
+          if (topics?.length) assert.ok(sent.includes("recurring revenue"));
+          else assert.match(sent, /not available/);
+        }
+      }
+    } finally {
+      if (before === undefined) delete process.env["AI_GATEWAY_ENFORCE_ZDR"];
+      else process.env["AI_GATEWAY_ENFORCE_ZDR"] = before;
+    }
+  });
+}
+
+test("T-1021: the research never decides on the ZDR flag what a public search gets (fail-closed)", () => {
+  const source = readFileSync(new URL("./public-research.ts", import.meta.url), "utf8");
+  // No branch on the flag anywhere in the research: the neutral path is the only path.
+  assert.doesNotMatch(source, /shouldEnforceZdr|AI_GATEWAY_ENFORCE_ZDR/);
+  // The search message gets the topics only, never the brief.
+  const start = source.indexOf("export function buildResearchMessages(");
+  const end = source.indexOf("export class ResearchCallError");
+  assert.ok(start > 0 && end > start);
+  const messages = source.slice(start, end);
+  assert.match(messages, /\.\.\.fundFieldsForSearch\(input\.searchTopics\)/);
+  assert.doesNotMatch(messages, /fundResearchBrief/);
+  // Every track searches the default questions plus what the ZDR step let through.
+  assert.match(source, /const modules: readonly ResearchModule\[\] = neutralResearchModules\(/);
+  // The card question stays on a track the fund rewrote.
+  assert.match(
+    source,
+    /neutralResearchModules\(\{[\s\S]{0,400}\}\)\.map\(\(module\) => \{\s*const cardQuestion = cardDataResearchQuestion\(module\.id\)/,
+  );
+  // Follow-up questions always pass the ZDR step before they are searched.
+  const followUp = source.slice(
+    source.indexOf("let roundQuestions = outcome.reflection.questions"),
+  );
+  assert.ok(
+    followUp.indexOf("neutralizeSearchQuestions(") < followUp.indexOf("callResearchGateway("),
+  );
 });
 
 test("T-704: the stored topics' key follows the setup, not the order of a run", async () => {

@@ -134,6 +134,10 @@ export const caseServer = {
       "Opgaven er fjernet fra listen i mellemtiden (en nyere analyse rejser den ikke længere). Dit svar er ikke gemt. Genindlæs og prøv igen.",
     answerChanged: "Svaret er ændret af en anden i mellemtiden. Genindlæs og prøv igen.",
     answeredByOther: "Opgaven blev besvaret af en anden i mellemtiden.",
+    economyTitle: "Skaf økonomitallene",
+    economyQuestion: "Skaf økonomitallene: {list}.",
+    economyWhy:
+      "Interlect kunne ikke finde disse tal i casens materiale eller i registrene. Casen går videre som normalt.",
     clarify: "Afklar: {text}",
     gateQuestion: "Opfylder casen kravet «{label}»? Afklar det med evidens eller med selskabet.",
     gateUnknown:

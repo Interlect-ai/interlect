@@ -59,7 +59,8 @@ export const tasks: Dictionary["tasks"] = {
     title: "To clarify",
     newTask: "New task",
     showTop: "Show the most important",
-    showAll: "Show all {count}",
+    showMore: "Show {count} more",
+    showMoreOne: "Show 1 more",
     solved: "{count} resolved",
   },
   composer: {

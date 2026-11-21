@@ -134,7 +134,9 @@ export function failedCallChargeUsd(
  * `everyStepKnown` says so (a finished run's charge is only a bound when it is true). Both are
  * null when no step reported anything, which the settlement books as nothing.
  */
-export function stepRunCosts(rows: Array<{ actual_cost: unknown; charged_cost: unknown }>): {
+export function stepRunCosts(
+  rows: ReadonlyArray<{ actual_cost: unknown; charged_cost: unknown }>,
+): {
   actualUsd: number | null;
   chargedUsd: number | null;
   everyStepKnown: boolean;
@@ -153,4 +155,47 @@ export function stepRunCosts(rows: Array<{ actual_cost: unknown; charged_cost: u
     if (price === null && charge !== null && charge > 0) unknownPrice = true;
   }
   return { actualUsd: unknownPrice ? null : known, chargedUsd: charged, everyStepKnown };
+}
+
+/**
+ * A finished run's price, charge and tokens are its steps' sums, so the run and its steps
+ * always agree (the reconciliation, `scripts/analysis-reconcile.ts`, compares them). Before, the
+ * direct runner added up its own calls and left the evidence sheet out. The price is unknown when a
+ * step's is (`sumCompleteCosts`); the charge is only a bound when every step left one.
+ * `knownUsd` (the known prices alone) is what the run's budget check uses.
+ */
+export function runTotalsFromSteps(
+  rows: ReadonlyArray<{
+    actual_cost: unknown;
+    charged_cost: unknown;
+    input_tokens: unknown;
+    output_tokens: unknown;
+    total_tokens: unknown;
+  }>,
+): {
+  actualUsd: number | null;
+  chargedUsd: number | null;
+  knownUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+} {
+  const prices = rows.map((row) => finiteCost(row.actual_cost));
+  const costs = stepRunCosts(rows);
+  const tokens = (value: unknown) => Number(value ?? 0) || 0;
+  return {
+    actualUsd: sumCompleteCosts(prices),
+    chargedUsd: costs.everyStepKnown ? costs.chargedUsd : null,
+    knownUsd: prices.reduce<number>((sum, price) => sum + (price ?? 0), 0),
+    inputTokens: rows.reduce((sum, row) => sum + tokens(row.input_tokens), 0),
+    outputTokens: rows.reduce((sum, row) => sum + tokens(row.output_tokens), 0),
+    totalTokens: rows.reduce(
+      (sum, row) =>
+        sum +
+        (row.total_tokens === null || row.total_tokens === undefined
+          ? tokens(row.input_tokens) + tokens(row.output_tokens)
+          : tokens(row.total_tokens)),
+      0,
+    ),
+  };
 }

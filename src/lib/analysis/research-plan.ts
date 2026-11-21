@@ -11,6 +11,7 @@
  */
 import type { FundProfile } from "@/lib/funds/profiles";
 import { neutralQuestions, type TopicsBrief } from "./search-topics.ts";
+import { cleanTeamText, promptProfile, promptSpecialist } from "./team-text.ts";
 import type { AiRunKind, AiTier } from "./model-tiers.ts";
 import type { PricedModel } from "./budgets.ts";
 
@@ -229,7 +230,16 @@ export function researchPlanPrompt(
   modules: ReadonlyArray<{ id: string; questions: readonly string[] }>,
   outputLanguage: string,
 ): string {
-  const { profile } = setup;
+  // The team's words are cleaned with the same code as in the analysis prompts.
+  const profile = promptProfile(setup.profile);
+  const specialists = setup.specialists?.map((specialist) =>
+    promptSpecialist({
+      ...specialist,
+      mandate: [...specialist.mandate],
+      evidenceTests: [...specialist.evidenceTests],
+      riskAreas: [],
+    }),
+  );
   return JSON.stringify({
     task: "research_plan",
     outputLanguage,
@@ -240,7 +250,8 @@ export function researchPlanPrompt(
       sectors: profile.sectors,
       riskPosture: profile.riskPosture,
       distinctiveLens: profile.distinctiveLens,
-      screeningInstruction: setup.screeningInstruction ?? null,
+      screeningInstruction:
+        setup.screeningInstruction == null ? null : cleanTeamText(setup.screeningInstruction),
       criteria: profile.criteria.map((criterion) => ({
         key: criterion.key,
         label: criterion.label,
@@ -253,9 +264,9 @@ export function researchPlanPrompt(
         description: gate.description,
         treatment: gate.treatment,
       })),
-      ...(setup.specialists?.length
+      ...(specialists?.length
         ? {
-            specialists: setup.specialists.map((specialist) => ({
+            specialists: specialists.map((specialist) => ({
               title: specialist.title,
               mandate: specialist.mandate,
               tests: specialist.evidenceTests,
@@ -284,19 +295,24 @@ export function researchPlanPrompt(
  * the specialists and, once written, the plan's brief and hypotheses (reads them too).
  */
 export function confidentialFundTexts(setup: PlanFundSetup, plan?: ResearchPlan | null): string[] {
-  return [
-    setup.screeningInstruction ?? "",
-    ...(setup.specialists ?? []).flatMap((specialist) => [
-      specialist.title,
-      specialist.purpose ?? "",
-      ...specialist.mandate,
-      ...specialist.evidenceTests,
-    ]),
-    plan?.brief ?? "",
-    ...(plan?.items ?? []).flatMap((item) =>
-      item.hypotheses.flatMap((h) => [h.hypothesis, h.confirms, h.refutes]),
-    ),
-  ].filter((text) => text.trim());
+  return (
+    [
+      setup.screeningInstruction ?? "",
+      ...(setup.specialists ?? []).flatMap((specialist) => [
+        specialist.title,
+        specialist.purpose ?? "",
+        ...specialist.mandate,
+        ...specialist.evidenceTests,
+      ]),
+      plan?.brief ?? "",
+      ...(plan?.items ?? []).flatMap((item) =>
+        item.hypotheses.flatMap((h) => [h.hypothesis, h.confirms, h.refutes]),
+      ),
+    ]
+      // Compared in the same cleaned form the model saw (hidden characters gone).
+      .map(cleanTeamText)
+      .filter((text) => text.trim())
+  );
 }
 
 const clean = (value: unknown, max: number): string =>

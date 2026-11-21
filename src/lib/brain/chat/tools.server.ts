@@ -225,7 +225,7 @@ export function createChatTools(service: SupabaseClient, ctx: ChatToolContext): 
         if (!id) return { error: "No case given." };
         const { data: row, error } = await service
           .from("cases")
-          .select("id, phase, status, created_at, companies(name, sector, stage)")
+          .select("id, thesis_id, phase, status, created_at, companies(name, sector, stage)")
           .eq("fund_id", fundId)
           .eq("id", id)
           .maybeSingle();
@@ -233,7 +233,7 @@ export function createChatTools(service: SupabaseClient, ctx: ChatToolContext): 
         if (!row) return { error: "The case does not exist in this team's data." };
         const company = one(row["companies"] as CompanyRow | CompanyRow[]);
         const name = company?.name ?? translate(language, "brainServer.chat.theCase");
-        const [runs, events, undos, labels] = await Promise.all([
+        const [runs, events, undos, labels, thesis] = await Promise.all([
           service
             .from("analysis_runs")
             .select("kind, completed_at, recommendations(overall_score, recommendation, rationale)")
@@ -262,6 +262,15 @@ export function createChatTools(service: SupabaseClient, ctx: ChatToolContext): 
             .eq("case_id", id)
             .not("undo_of", "is", null),
           reasonLabels(service, fundId),
+          // The thesis the case is judged under (a team can have more than one).
+          row["thesis_id"]
+            ? service
+                .from("fund_theses")
+                .select("name, status")
+                .eq("fund_id", fundId)
+                .eq("id", row["thesis_id"] as string)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
         ]);
         if (runs.error) throw new Error(`get_case runs: ${runs.error.message}`);
         if (events.error) throw new Error(`get_case events: ${events.error.message}`);
@@ -350,6 +359,9 @@ export function createChatTools(service: SupabaseClient, ctx: ChatToolContext): 
           stage: company?.stage ?? null,
           phase: row["phase"],
           status: row["status"],
+          // Only a label: a failed lookup leaves it out instead of failing the answer.
+          thesis: (thesis.data?.["name"] as string | undefined) ?? null,
+          thesisArchived: thesis.data?.["status"] === "archived",
           created: String(row["created_at"]).slice(0, 10),
           screening: analysis("screening"),
           deepAnalysis: analysis("deep"),

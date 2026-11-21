@@ -37,6 +37,13 @@ const SCOPE_LABEL: Record<MeterScope, MessageKey> = {
   brain: "shell.credit.scopes.brain",
 };
 
+/** One grey line under each name, so it is clear what Analyse, Spørg and Brain cover. */
+const SCOPE_HINT: Record<MeterScope, MessageKey> = {
+  analysis: "shell.credit.scopeHints.analysis",
+  chat: "shell.credit.scopeHints.chat",
+  brain: "shell.credit.scopeHints.brain",
+};
+
 export function CreditMeter({ fundId }: { fundId: string }) {
   const t = useT();
   const access = useMyAccess(fundId);
@@ -167,9 +174,12 @@ function Usage({ meter }: { meter: Meter }) {
       {total === 0 ? (
         <p className="m-0 text-list text-ink-3">{t("shell.credit.nothingUsed")}</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
           {METER_SCOPES.map((scope) => (
-            <li key={scope} className="grid grid-cols-[64px_minmax(0,1fr)_88px] items-center gap-3">
+            <li
+              key={scope}
+              className="grid grid-cols-[64px_minmax(0,1fr)_88px] items-center gap-x-3 gap-y-0.5"
+            >
               <span className="text-list text-ink-2">{t(SCOPE_LABEL[scope])}</span>
               <span className="h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
                 <span
@@ -180,6 +190,7 @@ function Usage({ meter }: { meter: Meter }) {
               <span className="text-right text-list tabular-nums">
                 {formatCredit(meter.usage[scope], meter, true, language)}
               </span>
+              <span className="col-span-3 text-meta text-ink-3">{t(SCOPE_HINT[scope])}</span>
             </li>
           ))}
         </ul>

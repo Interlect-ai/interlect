@@ -1,6 +1,6 @@
 /**
  * /intern/komponenter: the shared components in the order of the design-system sheet
- * (Designsystem.dc.html): app shell, colours, typography,
+ * App shell, colours, typography,
  * form and depth, buttons and controls, status and actions, dialogs, fold-outs, the focus
  * page and the shared states. Used to approve side by side with the sheet.
  *

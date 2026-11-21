@@ -20,6 +20,20 @@ export const caseView: Dictionary["caseView"] = {
     retry: "Try again",
     reload: "Reload",
   },
+  priceLimit: {
+    title: "Stopped at the price limit",
+    bodyScreening:
+      "The screening reached your team's limit on the way and stopped cleanly. What was finished is saved.",
+    bodyDeep:
+      "The deep analysis reached your team's limit on the way and stopped cleanly. What was finished is saved.",
+    helpRun: "When you continue, you only pay for what is missing.",
+    helpAskLead: "If it stops again, Admin or Lead can raise the limit in Team setup.",
+    helpRead: "Admin, Lead or a member who may start analyses can continue it.",
+    continueScreening: "Continue the screening",
+    continueDeep: "Continue the analysis",
+    toast: "{what} of {name} stopped at the price limit",
+    toastHint: "What was finished is saved. Continue from the case.",
+  },
   route: {
     askPhase: { screening: "screening", deep: "deep analysis", komite: "committee report" },
     whatDeep: "The deep analysis",
@@ -48,7 +62,7 @@ export const caseView: Dictionary["caseView"] = {
     retryDeep: "Retry deep analysis",
     olderSetupTitle: "Screened against an older version of the thesis",
     olderSetupBody:
-      "The screening was made against {screened}, and the thesis is now {active}. Rescreen the case so the score and recommendation follow the current thesis. This uses your balance.",
+      "The screening was made against {screened}, and the thesis is now {active}. The score belongs to {screened} and cannot be compared directly with scores from {active}. Rescreen the case so the score and recommendation follow the current thesis. This uses your balance.",
     olderSetupUnknown: "an older version",
     rescreen: "Rescreen the case",
     noticeTitle: "The latest analysis run could not be completed",

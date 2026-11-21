@@ -37,6 +37,8 @@ import { mapProfile, type ConfigData } from "@/lib/analysis/screening.functions"
 import { buildSpecialistPrompt } from "@/lib/analysis/specialist-prompts";
 import { CUSTOM_SPECIALIST_KEY, resolveSpecialistSet } from "@/lib/analysis/specialist-set";
 import { loadSpecialistSet } from "@/lib/analysis/specialist-set.server";
+import type { SetupStage } from "@/lib/analysis/setup-stage";
+import { setupStageSchema } from "./setup-input";
 import { specialistOutputSchema, type SpecialistOutput } from "@/lib/analysis/specialist.contracts";
 import type { ScreeningCaseInput } from "@/lib/analysis/prompt";
 import {
@@ -62,6 +64,7 @@ import {
   type SpecialistIssue,
 } from "./specialist-assist";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
+import { cleanTeamData } from "@/lib/analysis/team-text";
 
 /**
  * The AI help for the fund's own specialists: "Beskriv eksperten, I
@@ -84,6 +87,8 @@ const THESIS_MAX_CHARS = 3_000;
 const fundIdSchema = z.guid();
 const configIdSchema = z.guid();
 const keySchema = z.string().regex(CUSTOM_SPECIALIST_KEY);
+/** The stage whose set the assistant works on; left out (or null) = the shared set. */
+const stageSchema = setupStageSchema.nullable().optional();
 
 /** The draft version with its profile and specialists; only for those who may configure it. */
 async function loadAssistContext(
@@ -91,6 +96,7 @@ async function loadAssistContext(
   userId: string,
   fundId: string,
   configId: string,
+  stage: SetupStage | null = null,
 ) {
   await requireFundCapability(supabase, userId, fundId, "configure_fund");
   const { data, error } = await supabase
@@ -104,9 +110,16 @@ async function loadAssistContext(
   if ((data as { status?: string }).status !== "draft") {
     throw new Error(serverText("fundServer.common.draftOnlyEdit"));
   }
-  const profile = mapProfile(data as unknown as ConfigData);
-  const { rows, overrides } = await loadSpecialistSet(supabase, configId);
-  const fund: AssistFundContext = {
+  // The stage's criteria and the stage's own set (else the shared ones), never one stage's
+  // criteria mixed with every stage's specialists (overdragelsen fra session 2, punkt i).
+  const profile = mapProfile(data as unknown as ConfigData, { caseStage: stage });
+  const { rows, overrides } = await loadSpecialistSet(
+    supabase,
+    configId,
+    stage ? (profile.teamSetup?.stage?.stage ?? null) : null,
+  );
+  // The team's words cleaned with the same code as in the analysis prompts.
+  const fund: AssistFundContext = cleanTeamData({
     thesis: profile.thesis.slice(0, THESIS_MAX_CHARS),
     stages: profile.stages,
     sectors: profile.sectors,
@@ -116,7 +129,7 @@ async function loadAssistContext(
       label: criterion.label,
       category: criterion.category,
     })),
-  };
+  });
   return { profile, rows, overrides, fund };
 }
 
@@ -135,6 +148,7 @@ export const draftCustomSpecialist = createServerFn({ method: "POST" })
         key: keySchema.optional(),
         description: z.string().trim().min(10).max(2000),
         current: customSpecialistSchema.optional(),
+        stage: stageSchema,
       })
       .parse(input),
   )
@@ -144,6 +158,7 @@ export const draftCustomSpecialist = createServerFn({ method: "POST" })
       context.userId,
       data.fundId,
       data.configId,
+      data.stage ?? null,
     );
     // The draft's active set without the specialist being revised.
     const set = resolveSpecialistSet(
@@ -203,6 +218,7 @@ export const checkCustomSpecialist = createServerFn({ method: "POST" })
         configId: configIdSchema,
         key: keySchema.optional(),
         specialist: customSpecialistSchema,
+        stage: stageSchema,
       })
       .parse(input),
   )
@@ -212,6 +228,7 @@ export const checkCustomSpecialist = createServerFn({ method: "POST" })
       context.userId,
       data.fundId,
       data.configId,
+      data.stage ?? null,
     );
     const { set, candidate } = resolveWithCandidate(
       assist.rows,
@@ -333,12 +350,19 @@ export const trialRunCustomSpecialist = createServerFn({ method: "POST" })
         caseId: z.guid(),
         key: keySchema.optional(),
         specialist: customSpecialistSchema,
+        stage: stageSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<SpecialistTrialView> => {
     const { fundId, caseId } = data;
-    const assist = await loadAssistContext(context.supabase, context.userId, fundId, data.configId);
+    const assist = await loadAssistContext(
+      context.supabase,
+      context.userId,
+      fundId,
+      data.configId,
+      data.stage ?? null,
+    );
     const { set, candidate } = resolveWithCandidate(
       assist.rows,
       assist.overrides,

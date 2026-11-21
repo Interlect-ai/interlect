@@ -38,6 +38,8 @@ export interface CaseRow {
   sector: string | null;
   /** companies.stage: "seed", "pre_seed", ... or null. */
   stage: string | null;
+  /** The case's thesis; absent in rows built without it. */
+  thesisId?: string;
 }
 
 export interface RunRow {
@@ -83,6 +85,11 @@ export interface BuildInput {
   runningCaseIds: ReadonlySet<string>;
   /** Cases with a finished screening under an OLDER setup version of the fund. */
   olderVersionScreenedIds?: ReadonlySet<string>;
+  /**
+   * Each case's own thesis threshold, when the page shows more than one thesis (spec
+   * flere-teser-i-et-team §4.1); a case without one uses `threshold`.
+   */
+  thresholdByCase?: ReadonlyMap<string, number>;
 }
 
 // -- output -----------------------------------------------------------------------------------
@@ -308,6 +315,7 @@ function compareRefs(a: CaseRef, b: CaseRef): number {
 export function buildOverview(input: BuildInput): OverviewCore {
   const language = input.language ?? DEFAULT_LANGUAGE;
   const { now, period, threshold } = input;
+  const thresholdOf = (caseId: string) => input.thresholdByCase?.get(caseId) ?? threshold;
 
   const runsByCase = new Map<string, RunRow[]>();
   for (const run of input.runs) {
@@ -424,6 +432,7 @@ export function buildOverview(input: BuildInput): OverviewCore {
     reachedDeep: entry.reachedDeep,
     reachedCommittee: entry.reachedCommittee,
     reachedInvested: entry.reachedInvested,
+    threshold: thresholdOf(entry.row.id),
   });
   const funnel = funnelCounts(derived.map(factsOf), threshold, period, now);
   const intake = intakeBars(
@@ -511,7 +520,7 @@ export function buildOverview(input: BuildInput): OverviewCore {
         hasDeep: entry.hasDeep,
         committeeSince: entry.committeeSince,
       },
-      threshold,
+      thresholdOf(entry.row.id),
       now,
     );
     if (!reason) return [];
@@ -574,7 +583,8 @@ export function buildOverview(input: BuildInput): OverviewCore {
     scores: {
       bins,
       count: scoreValues.length,
-      overThreshold: scoreValues.filter((value) => value >= threshold).length,
+      overThreshold: scored.filter((entry) => entry.screeningScore! >= thresholdOf(entry.row.id))
+        .length,
       median: median(scoreValues),
     },
     stages,

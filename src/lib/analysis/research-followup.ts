@@ -19,6 +19,7 @@ import type { AiRunKind, AiTier } from "./model-tiers.ts";
 import type { PricedModel } from "./budgets.ts";
 import { FUNCTION_MAX_DURATION_SECONDS } from "./deep-text-rules.ts";
 import { neutralPlanQuestions, RESEARCH_PLAN_MODELS, type ResearchPlan } from "./research-plan.ts";
+import { cleanTeamText, promptProfile } from "./team-text.ts";
 
 export const RESEARCH_FOLLOWUP_VERSION = "interlect-research-followup-v2-team";
 
@@ -231,21 +232,24 @@ export function reflectionPrompt(input: ReflectionInput): string {
     (input.plan?.items ?? []).map((item) => [`${item.kind}:${item.key}`, item] as const),
   );
   const findings = input.findings.slice(-MAX_FINDINGS_IN_PROMPT[input.kind]);
+  // The team's words are cleaned with the same code as in the analysis prompts.
+  const profile = promptProfile(input.profile);
   return JSON.stringify({
     task: "research_reflection",
     round: input.round,
     lastRound: input.round > input.maxRounds,
     outputLanguage: input.outputLanguage,
     fund: {
-      thesis: input.profile.thesis,
-      screeningInstruction: input.screeningInstruction ?? null,
-      criteria: input.profile.criteria.map((criterion) => ({
+      thesis: profile.thesis,
+      screeningInstruction:
+        input.screeningInstruction == null ? null : cleanTeamText(input.screeningInstruction),
+      criteria: profile.criteria.map((criterion) => ({
         key: criterion.key,
         label: criterion.label,
         description: criterion.description,
         hypotheses: planItems.get(`criterion:${criterion.key}`)?.hypotheses ?? [],
       })),
-      gates: input.profile.gates.map((gate) => ({
+      gates: profile.gates.map((gate) => ({
         key: gate.key,
         label: gate.label,
         description: gate.description,

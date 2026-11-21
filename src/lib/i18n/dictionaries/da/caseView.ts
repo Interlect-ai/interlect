@@ -22,6 +22,20 @@ export const caseView = {
     retry: "Prøv igen",
     reload: "Hent igen",
   },
+  priceLimit: {
+    title: "Stoppet på prisgrænsen",
+    bodyScreening:
+      "Screeningen nåede teamets grænse undervejs og stoppede pænt. Det, der var færdigt, er gemt.",
+    bodyDeep:
+      "Den dybe analyse nåede teamets grænse undervejs og stoppede pænt. Det, der var færdigt, er gemt.",
+    helpRun: "Når I fortsætter, betaler I kun for det, der mangler.",
+    helpAskLead: "Stopper den igen, kan Admin eller Lead hæve grænsen under Teamopsætning.",
+    helpRead: "Admin, Lead eller et medlem, der må starte analyser, kan fortsætte den.",
+    continueScreening: "Fortsæt screeningen",
+    continueDeep: "Fortsæt analysen",
+    toast: "{what} af {name} stoppede på prisgrænsen",
+    toastHint: "Det færdige er gemt. Fortsæt fra casen.",
+  },
   route: {
     askPhase: { screening: "screening", deep: "dyb analyse", komite: "komitérapport" },
     whatDeep: "Den dybe analyse",
@@ -50,7 +64,7 @@ export const caseView = {
     retryDeep: "Prøv dyb analyse igen",
     olderSetupTitle: "Screenet mod en ældre version af tesen",
     olderSetupBody:
-      "Screeningen er lavet mod {screened}, og tesen er nu {active}. Genscreen casen, så scoren og anbefalingen følger den aktuelle tese. Det bruger af jeres saldo.",
+      "Screeningen er lavet mod {screened}, og tesen er nu {active}. Scoren hører til {screened} og kan ikke sammenlignes direkte med scorer fra {active}. Genscreen casen, så scoren og anbefalingen følger den aktuelle tese. Det bruger af jeres saldo.",
     olderSetupUnknown: "en ældre version",
     rescreen: "Genscreen casen",
     noticeTitle: "Seneste analysekørsel kunne ikke gennemføres",

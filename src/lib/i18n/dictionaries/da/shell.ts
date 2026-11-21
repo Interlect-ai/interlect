@@ -112,6 +112,11 @@ export const shell = {
       chat: "Spørg",
       brain: "Brain",
     },
+    scopeHints: {
+      analysis: "Screeninger og dybe analyser",
+      chat: "Spørgsmål til Interlect og hjælp i opsætningen",
+      brain: "I baggrunden: læser filer og lærer af beslutninger",
+    },
     topUp: "Fyld op",
     requestDescription: "Send en anmodning, så lægger Interlect kreditter ind.",
     paymentNotSetUp: "Betaling er ikke sat op for jeres installation endnu.",

@@ -52,7 +52,13 @@ export const STANDARD_SPECIALIST_CARDS: Record<
 export function standardSpecialistCardIn(
   id: SpecialistModuleId,
   language: Language = DEFAULT_LANGUAGE,
-): { label: string; role: string; focus: readonly [string, string, string] } {
+): {
+  label: string;
+  role: string;
+  focus: readonly [string, string, string];
+  /** What the specialist looks at in each focus area, in the same order as `focus`. */
+  text: readonly [string, string, string];
+} {
   const key = (part: string) => `specialists.cards.standard.${id}.${part}` as MessageKey;
   return {
     label: translate(language, key("label")),
@@ -61,6 +67,11 @@ export function standardSpecialistCardIn(
       translate(language, key("focus1")),
       translate(language, key("focus2")),
       translate(language, key("focus3")),
+    ],
+    text: [
+      translate(language, key("text1")),
+      translate(language, key("text2")),
+      translate(language, key("text3")),
     ],
   };
 }

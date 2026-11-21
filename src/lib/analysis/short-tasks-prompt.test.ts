@@ -43,10 +43,15 @@ const caseInput: ScreeningCaseInput = {
 
 test("the screening asks for a curated list with a short title and the question", () => {
   const { system } = buildScreeningPrompt(profile, caseInput);
-  assert.match(system, /nextSteps er listen "Skal afklares": de højst 8 vigtigste/);
+  assert.match(system, /nextSteps er listen "Skal afklares": de højst 4 vigtigste/);
   assert.match(system, /title = et kort navn på opgaven på højst 6 ord på dansk/);
   assert.match(system, /question = selve spørgsmålet eller handlingen i én hel sætning på dansk/);
   assert.match(system, /passed null, skal have præcis én opgave med linkedKind "gate"/);
+  // With only 4 places the gate steps go first, and code makes the ones without a place.
+  assert.match(
+    system,
+    /priority 1, så længe der er plads i listen; dem, der ikke er plads til, laver koden selv/,
+  );
   // Open questions never inside the texts on the surface.
   assert.match(
     system,
@@ -83,7 +88,7 @@ test("both JSON schemas require the question, and the screening requires its lis
     source,
     /required: \["title", "question", "why", "kind", "linkedKind", "linkedKey", "priority"\]/,
   );
-  assert.match(source, /PROMPT_VERSION = "interlect-screening-v13-short-texts"/);
+  assert.match(source, /PROMPT_VERSION = "interlect-screening-v15-four-tasks"/);
   const deep = readFileSync(new URL("./deep.functions.ts", import.meta.url), "utf8");
   assert.match(deep, /nextSteps: nextStepsJsonSchema\(SYNTHESIS_NEXT_STEPS\.maxItems\)/);
   // The base already requires nextSteps; a JSON schema lists each key once.

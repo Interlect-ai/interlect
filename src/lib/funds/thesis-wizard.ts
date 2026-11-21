@@ -15,7 +15,7 @@ import type { FundConfigTemplate, FundTemplateKey } from "./config-templates.ts"
 import type { SpecialistModuleId } from "../analysis/specialist-prompts.ts";
 import { STANDARD_SPECIALIST_CARDS } from "./specialist-cards.ts";
 import { specialistColor } from "../charts/colors.ts";
-import type { THESIS_STEPS } from "./thesis-steps.ts";
+import { TEAM_NAME_KEY, type THESIS_STEPS } from "./thesis-steps.ts";
 import { translate, type MessageKey } from "../i18n/translate.ts";
 import { geographyKeys, stageExpectationKeys } from "./basis-labels.ts";
 import { LANGUAGES, LANGUAGE_TAGS, type Language } from "../i18n/language.ts";
@@ -614,33 +614,96 @@ export function summaryRows(state: WizardState, language: Language = "da"): Summ
 }
 
 /** Det udfyldte pr. trin, som AI-hjælpen får som baggrund (kun tekst, brugeren selv har skrevet). */
+/** The seven starting criteria, untouched, in any language (names, descriptions and weights). */
+export function isStartingCriteria(criteria: readonly WizardCriterion[]): boolean {
+  const every = LANGUAGES.map((language) => defaultCriteria(language));
+  return (
+    criteria.length === DEFAULT_CRITERION_BASE.length &&
+    criteria.every((criterion, index) =>
+      every.some((defaults) => {
+        const d = defaults[index]!;
+        return (
+          d.key === criterion.key &&
+          d.weight === criterion.weight &&
+          d.category === criterion.category &&
+          d.label === criterion.label &&
+          d.description === criterion.description
+        );
+      }),
+    )
+  );
+}
+
+/**
+ * The gates the team has made its own: an edited list without the derived gates left as they were
+ * (in any language), and never the ticket gate while the ticket is the starting 1-5 m kr. (the
+ * mandate step saves the whole list, derived gates included, on the first edit).
+ */
+function ownGates(state: WizardState, ownTicket: boolean): WizardGate[] {
+  if (!state.gates) return [];
+  const derived = LANGUAGES.flatMap((language) => autoGates(state, language));
+  return state.gates.filter(
+    (gate) =>
+      !(gate.key === "ticket_fit" && !ownTicket) &&
+      !derived.some(
+        (d) => d.key === gate.key && d.label === gate.label && d.review === gate.review,
+      ),
+  );
+}
+
+/**
+ * What "Få hjælp af Interlect" sends as context: only what the user has written or chosen
+ * themselves. The values the page fills in to start with (the ticket size 1-5 m kr.,
+ * the balanced risk, the seven starting criteria and their weights, and the gates derived from the
+ * other steps) are left out, so the helper never presents them as the team's own and they never
+ * count as grounding. The name stands under its own key (`team_name`).
+ */
 export function chatContext(state: WizardState): Record<string, string> {
+  const start = initialWizardState();
   const type =
     state.type === null
       ? ""
       : state.type === OTHER_TYPE_INDEX
         ? state.other
         : INVESTOR_TYPES[state.type]!.label;
+  const ownTicket = state.ticketMin !== start.ticketMin || state.ticketMax !== start.ticketMax;
+  const ownCriteria = !isStartingCriteria(state.criteria);
   return {
-    investor_type: [state.name, type].filter((part) => part.trim()).join(", "),
+    [TEAM_NAME_KEY]: state.name.trim(),
+    investor_type: type.trim(),
     frames: [
       shownNames(PHASE_LABEL_KEYS, state.phases, [], "da").join(", "),
       shownNames(GEOGRAPHY_LABEL_KEYS, state.geo, state.geoExtra, "da").join(", "),
       sectorNames(state).join(", "),
-      state.ticketMin || state.ticketMax
+      ownTicket && (state.ticketMin || state.ticketMax)
         ? `ticket ${fmtKr(state.ticketMin)}-${fmtKr(state.ticketMax)} kr.`
         : "",
     ]
       .filter(Boolean)
       .join("; "),
-    thesis: `${state.thesis}${state.thesis.trim() ? " " : ""}Risikovillighed: ${RISK_LABELS[state.risk]}.`,
-    weights: state.criteria
-      .map((criterion) => `${criterion.label} ${criterion.weight} %`)
-      .join(", "),
-    dealbreakers: currentGates(state)
+    thesis: [
+      state.thesis.trim(),
+      state.risk !== start.risk ? `Risikovillighed: ${RISK_LABELS[state.risk]}.` : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    weights: ownCriteria
+      ? state.criteria.map((criterion) => `${criterion.label} ${criterion.weight} %`).join(", ")
+      : "",
+    dealbreakers: ownGates(state, ownTicket)
       .map((gate) => `${gate.label} (${gate.review ? "vurdering" : "bindende"})`)
       .join(", "),
   };
+}
+
+/** The fixed question behind "Giv mig et forslag" (any language), so it never counts as own text. */
+export function isPresetQuestion(question: string): boolean {
+  const wanted = question.replace(/\s+/g, " ").trim().toLowerCase();
+  return LANGUAGES.some((language) =>
+    SUGGESTION_QUESTIONS.some(
+      (key) => translate(language, key).replace(/\s+/g, " ").trim().toLowerCase() === wanted,
+    ),
+  );
 }
 
 /** The fixed gates' descriptions, saved in the setup in the language of the page. */
@@ -756,14 +819,8 @@ export function publishProblems(
     problems.push(translate(language, "thesis.problems.thesis"));
   if (currentGates(state).length === 0) problems.push(translate(language, "thesis.problems.gate"));
   const fields = buildDraftFields(state, template, language);
-  const violations = checkConfigLimits(
-    {
-      criteria: fields.criteria,
-      gates: fields.gates,
-      analysisThreshold: fields.analysisThreshold,
-    },
-    language,
-  );
+  // The whole draft, so the character budget is checked here too, not first at publish.
+  const violations = checkConfigLimits(fields, language);
   if (violations.length) problems.push(limitViolationsMessage(violations));
   if (fields.ticketMinEur !== null && fields.ticketMaxEur !== null) {
     if (fields.ticketMinEur > fields.ticketMaxEur) {

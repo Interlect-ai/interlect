@@ -15,10 +15,16 @@ interface Linked {
   source?: string | undefined;
 }
 
-/** More open tasks than this fold behind "Vis alle N". */
-export const TASK_FOLD_THRESHOLD = 8;
+/**
+ * (TS-12, the product owner 3 Nov: "max. 4"): the box shows at most 4 open tasks of the whole list
+ * (the model's, the gates' and the research's) and folds the rest behind "Vis N flere". Old cases
+ * keep every task; only the first view is shorter.
+ */
+export const TASK_FOLD_THRESHOLD = 4;
 /** How many open tasks show before the fold. */
-export const TASK_PREVIEW_COUNT = 6;
+export const TASK_PREVIEW_COUNT = 4;
+/** Unfolded, a list longer than this is grouped by gate and criterion (batch 3). */
+export const TASK_GROUP_THRESHOLD = 8;
 
 export interface TaskGroup<T> {
   /** "gate:key", "criterion:key" or "general". */
@@ -63,7 +69,7 @@ export function groupTasksByLink<T extends Linked>(
 }
 
 /**
- * The tasks to show before "Vis alle". Short lists show everything; a long list shows the first
+ * The tasks to show before "Vis N flere". Short lists show everything; a long list shows the first
  * PREVIEW_COUNT in priority order plus every task that must stay visible (being answered or just
  * resolved), so a row never vanishes under the user's hands.
  */

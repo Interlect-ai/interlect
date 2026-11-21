@@ -94,6 +94,19 @@ export const companyLabelSchema = z.object({
   country: z.string(),
 });
 
+/**
+ * The AI's reading of one economy point or own question from the material (prompt
+ * `economySection`). Lenient on purpose: `evaluateEconomy` checks keys, values and sources in code.
+ */
+export const economyAnswerSchema = z.object({
+  key: z.string(),
+  value: z.number().nullable(),
+  /** A yes/no question's answer (null otherwise). */
+  yes: z.boolean().nullish(),
+  answer: z.string(),
+  evidenceIds: z.array(z.string()),
+});
+
 export const screeningOutputSchema = z.object({
   schemaVersion: z.enum(["interlect-screening-v1", "pap-screening-v1"]),
   fundProfileId: z.string().min(1),
@@ -113,6 +126,8 @@ export const screeningOutputSchema = z.object({
   /** "Skal afklares": absent in screenings before prompt v12; the older builder runs. */
   nextSteps: z.array(nextStepOutputSchema).optional(),
   companyLabel: companyLabelSchema.nullable().optional(),
+  /** Absent for a version without economy points per stage (every older screening). */
+  economy: z.array(economyAnswerSchema).optional(),
 });
 
 export type CompanyProfile = z.infer<typeof companyProfileSchema>;

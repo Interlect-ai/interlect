@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { auditPayloadWithoutAmounts } from "./audit-payload";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import { roleValues } from "./roles";
@@ -249,7 +250,8 @@ export const listAuditEvents = createServerFn({ method: "GET" })
         entity: row.entity,
         actorType: row.actor_type,
         occurredAt: row.occurred_at,
-        payload: row.payload ?? {},
+        // Kroner are only found under Analysegrænser.
+        payload: auditPayloadWithoutAmounts(row.payload) as JsonObject,
       };
     });
   });

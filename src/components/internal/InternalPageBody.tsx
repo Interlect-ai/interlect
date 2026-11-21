@@ -6,14 +6,13 @@ import type { ReactNode } from "react";
 import { SegmentedControl } from "@/components/ds/SegmentedControl";
 import { Reveal } from "@/components/ds/Reveal";
 
-export type InternalSection = "komponenter" | "grafer" | "orbs" | "velaris" | "prompts";
+export type InternalSection = "komponenter" | "grafer" | "orbs" | "velaris";
 
 const SECTIONS = [
   { value: "komponenter", label: "Komponenter" },
   { value: "grafer", label: "Grafer" },
   { value: "orbs", label: "Orbs" },
   { value: "velaris", label: "Velaris" },
-  { value: "prompts", label: "Prompts" },
 ] as const;
 
 export const INTERNAL_TITLES: Record<
@@ -22,8 +21,7 @@ export const INTERNAL_TITLES: Record<
 > = {
   komponenter: {
     title: "Komponenter",
-    intro:
-      "Alle fælles komponenter i designsystemets rækkefølge. Sammenlign med Interlect Designsystem.dc.html.",
+    intro: "Alle fælles komponenter i designsystemets rækkefølge. Sammenlign med DESIGN.md.",
   },
   grafer: {
     title: "Grafer",
@@ -38,12 +36,6 @@ export const INTERNAL_TITLES: Record<
     title: "Velaris",
     intro:
       "Baggrunden bag AI-flader i mørk tilstand, i fire varianter side om side med tekst ovenpå. Skift til mørk tilstand for at sammenligne; lyst er uændret.",
-  },
-  prompts: {
-    title: "Prompts",
-    intro:
-      "De bogstavelige instruktioner, modellerne modtager for den valgte investeringstese. Kunderne ser dem aldrig.",
-    note: "Intern side kun for Admin. Serveren leverer kun teksterne til en Admin.",
   },
 };
 

@@ -15,6 +15,7 @@ import { redactorForFund } from "@/lib/ai/redact-dictionary.server";
 import { specialistModules, type SpecialistModuleId } from "@/lib/analysis/specialist-prompts";
 import { requestLanguage, serverText } from "@/lib/i18n/server-text";
 import { gatewayToken, missingGatewayToken } from "@/lib/ai/gateway-token";
+import { setupStageSchema } from "./setup-input";
 
 const MODEL = "openai/gpt-5.4-mini" as const;
 const OVERRIDE_BUDGET_USD = 0.1;
@@ -88,10 +89,17 @@ export const loadStandardModuleText = createServerFn({ method: "GET" })
     },
   );
 
+/**
+ * the stage whose own text is meant; left out (or null) = the shared text (every save). A stage
+ * without its own text reads the shared one (setup-stage.ts).
+ */
+const stageField = setupStageSchema.nullable().optional();
+
 const proposeInputSchema = z.object({
   fundId: z.guid(),
   configId: z.guid(),
   moduleId: specialistModuleIdSchema,
+  stage: stageField,
   instructions: z.string().trim().min(1).max(4000),
   /**
    * The text in the editor, so a second request builds on the first answer and on the
@@ -112,12 +120,16 @@ export const proposeModulePromptOverride = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ModuleOverrideProposal> => {
     await requireDraftConfig(context.supabase, context.userId, data.fundId, data.configId);
 
-    const { data: existingOverride } = await context.supabase
+    // The stage's own text, else the shared one (the text the stage runs with today).
+    const { data: rows, error: overrideError } = await context.supabase
       .from("prompt_module_overrides")
-      .select("mandate, evidence_tests, risk_areas")
+      .select("stage, mandate, evidence_tests, risk_areas")
       .eq("config_version_id", data.configId)
-      .eq("module_id", data.moduleId)
-      .maybeSingle();
+      .eq("module_id", data.moduleId);
+    if (overrideError) throw new Error(serverText("fundServer.common.setupNotLoaded"));
+    const existingOverride =
+      (data.stage ? rows?.find((row) => row["stage"] === data.stage) : undefined) ??
+      rows?.find((row) => row["stage"] == null);
 
     const module = specialistModules.find((candidate) => candidate.id === data.moduleId);
     if (!module) throw new Error(serverText("fundServer.common.moduleNotFound"));
@@ -255,6 +267,7 @@ const saveInputSchema = z.object({
   fundId: z.guid(),
   configId: z.guid(),
   moduleId: specialistModuleIdSchema,
+  stage: stageField,
   mandate: z.array(z.string().trim().min(1).max(400)).min(1).max(12),
   evidenceTests: z.array(z.string().trim().min(1).max(400)).min(1).max(12),
   riskAreas: z.array(z.string().trim().min(1).max(120)).min(1).max(12),
@@ -268,6 +281,7 @@ export const saveModulePromptOverride = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("prompt_module_overrides").upsert(
       {
         config_version_id: data.configId,
+        stage: data.stage ?? null,
         module_id: data.moduleId,
         mandate: data.mandate,
         evidence_tests: data.evidenceTests,
@@ -275,7 +289,8 @@ export const saveModulePromptOverride = createServerFn({ method: "POST" })
         updated_by: context.userId,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "config_version_id,module_id" },
+      // The key includes the stage (0133, nulls not distinct).
+      { onConflict: "config_version_id,stage,module_id" },
     );
     if (error) throw new Error(serverText("fundServer.module.notSaved"));
     return { ok: true };
@@ -285,6 +300,7 @@ const resetInputSchema = z.object({
   fundId: z.guid(),
   configId: z.guid(),
   moduleId: specialistModuleIdSchema,
+  stage: stageField,
 });
 
 export const resetModulePromptOverride = createServerFn({ method: "POST" })
@@ -292,11 +308,13 @@ export const resetModulePromptOverride = createServerFn({ method: "POST" })
   .validator((input: unknown) => resetInputSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     await requireDraftConfig(context.supabase, context.userId, data.fundId, data.configId);
-    const { error } = await context.supabase
+    // Only the one text: a stage's "Nulstil" leaves the shared text and the other stages'.
+    const query = context.supabase
       .from("prompt_module_overrides")
       .delete()
       .eq("config_version_id", data.configId)
       .eq("module_id", data.moduleId);
+    const { error } = await (data.stage ? query.eq("stage", data.stage) : query.is("stage", null));
     if (error) throw new Error(serverText("fundServer.module.notReset"));
     return { ok: true };
   });

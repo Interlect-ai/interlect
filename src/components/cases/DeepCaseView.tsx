@@ -13,6 +13,7 @@
  * fund's own criteria grouped by the fund's specialist modules, the team's tasks, notes,
  * messages (live) and files. The queue states (not started, running, failed) are unchanged.
  */
+import { PriceLimitStopped } from "@/components/cases/PriceLimitStopped";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -101,6 +102,9 @@ export function DeepCaseView({
   retryAction,
   onReload,
   onRetry,
+  stoppedAtLimit = false,
+  onContinue,
+  canEditLimits = false,
   retrying = false,
   spor,
   onSpor,
@@ -119,6 +123,12 @@ export function DeepCaseView({
   onReload?: (() => void) | undefined;
   /** Starts the deep analysis again once the server would release the stalled run. */
   onRetry?: (() => void) | undefined;
+  /** The latest deep analysis stopped at the team's price limit. */
+  stoppedAtLimit?: boolean | undefined;
+  /** "Fortsæt analysen"; absent for a member who may not start analyses. */
+  onContinue?: (() => void) | undefined;
+  /** Admin and Lead: "Edit limits" in the stopped state. */
+  canEditLimits?: boolean | undefined;
   retrying?: boolean | undefined;
   /** The analysis tab from `spor=` (undefined: Konklusion). */
   spor: string | undefined;
@@ -155,6 +165,20 @@ export function DeepCaseView({
     );
   }
   // A cancelled run is a stopped run: same retry state as a failed one (never "i gang" forever).
+  if (deep.status === "failed" && stoppedAtLimit) {
+    return (
+      <Page>
+        {header}
+        {notices}
+        <PriceLimitStopped
+          kind="deep"
+          onContinue={onContinue}
+          continuing={retrying}
+          canEditLimits={canEditLimits}
+        />
+      </Page>
+    );
+  }
   if (deep.status === "failed" || deep.status === "cancelled") {
     return (
       <Page>

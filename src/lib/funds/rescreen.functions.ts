@@ -2,11 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/lib/supabase/auth-middleware";
 import { requireFundCapability } from "@/lib/auth/access.server";
-import { getServiceClient } from "@/lib/supabase/admin.server";
-import { AI_BUDGETS } from "@/lib/analysis/budgets";
-import { loadFundRunPlans } from "@/lib/analysis/run-plan.server";
 import { serverText } from "@/lib/i18n/server-text";
 import { withDemoView } from "@/lib/display/display-names.server";
+import { chosenThesis } from "@/lib/funds/thesis-scope.server";
+import { thesisAllowsNewAnalysis } from "@/lib/funds/theses";
 
 export interface RescreenCandidate {
   caseId: string;
@@ -17,11 +16,10 @@ export interface RescreenCandidate {
 }
 
 export interface RescreenCandidates {
+  /** The thesis the offer is for (a new version re-screens only that thesis's cases). */
+  thesisId: string;
   activeVersion: number;
   candidates: RescreenCandidate[];
-  /** Gennemsnitlig faktisk pris pr. screening de seneste 30 dage, i kr. Null uden data. */
-  averageCostDkk: number | null;
-  maxCostDkk: number;
 }
 
 /**
@@ -31,14 +29,27 @@ export interface RescreenCandidates {
  */
 export const listRescreenCandidates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ fundId: z.guid() }).parse(input))
+  .validator((input: unknown) =>
+    z
+      .object({
+        fundId: z.guid(),
+        /** The thesis that got a new version; without it, the team's default thesis. */
+        thesisId: z.guid().optional(),
+      })
+      .parse(input),
+  )
   .handler(
     withDemoView(async ({ data, context }): Promise<RescreenCandidates> => {
       await requireFundCapability(context.supabase, context.userId, data.fundId, "start_analysis");
+      const thesis = await chosenThesis(context.supabase, data.fundId, data.thesisId);
+      // An archived thesis runs no new analysis (spec §3), so it offers no re-screening either.
+      if (!thesis || !thesisAllowsNewAnalysis(thesis.status))
+        throw new Error(serverText("fundServer.rescreen.versionNotLoaded"));
       const { data: active, error: activeError } = await context.supabase
         .from("fund_config_versions")
         .select("id, version")
         .eq("fund_id", data.fundId)
+        .eq("thesis_id", thesis.id)
         .eq("status", "active")
         .single();
       if (activeError || !active)
@@ -50,14 +61,15 @@ export const listRescreenCandidates = createServerFn({ method: "GET" })
             .from("cases")
             .select("id, workspace_status, companies(name)")
             .eq("fund_id", data.fundId)
+            // Only this thesis's cases; other theses' cases are never touched (§4.4).
+            .eq("thesis_id", thesis.id)
             .neq("workspace_status", "archived")
             // Besluttede cases (også Investeret) genscreenes ikke (harden).
             .neq("phase", "decided"),
-          // The price is not readable with the member's own key; only the average leaves.
-          getServiceClient()
+          context.supabase
             .from("analysis_runs")
             .select(
-              "case_id, status, actual_cost, created_at, config_version_id, fund_config_versions(version), recommendations(overall_score)",
+              "case_id, status, config_version_id, fund_config_versions(version), recommendations(overall_score)",
             )
             .eq("fund_id", data.fundId)
             .eq("kind", "screening")
@@ -102,28 +114,10 @@ export const listRescreenCandidates = createServerFn({ method: "GET" })
         });
       }
 
-      const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const recentCosts = (runs ?? [])
-        .filter(
-          (run) =>
-            run["status"] === "complete" &&
-            run["actual_cost"] != null &&
-            Date.parse(run["created_at"] as string) >= since,
-        )
-        .map((run) => Number(run["actual_cost"]))
-        .filter((cost) => Number.isFinite(cost) && cost > 0);
-      const averageUsd = recentCosts.length
-        ? recentCosts.reduce((sum, cost) => sum + cost, 0) / recentCosts.length
-        : null;
-
       return {
+        thesisId: thesis.id,
         activeVersion: active["version"] as number,
         candidates: candidates.sort((a, b) => a.companyName.localeCompare(b.companyName, "da")),
-        averageCostDkk:
-          averageUsd === null
-            ? null
-            : Math.round(averageUsd * AI_BUDGETS.exchangeRateDkkPerUsd * 100) / 100,
-        maxCostDkk: (await loadFundRunPlans(context.supabase, data.fundId)).screening.budget.dkk,
       };
     }),
   );

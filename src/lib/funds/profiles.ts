@@ -1,5 +1,8 @@
 import type { ScoreCategory } from "@/lib/domain/types";
 import type { Language } from "@/lib/i18n/language";
+import type { SetupStageChoice } from "@/lib/analysis/setup-stage";
+import type { FixedRuleEdits } from "@/lib/funds/fixed-rules";
+import type { EconomySetup } from "@/lib/funds/economy-points";
 
 export interface FundProfileSource {
   label: string;
@@ -52,4 +55,24 @@ export interface FundProfile {
   sources: FundProfileSource[];
   version: string;
   researchedAt: string;
+  /**
+   * Teamopsætning pr. stadie (0133). Missing on a version with nothing per stage and an
+   * empty `setup` (every version from): it then reads exactly as before, also in the
+   * prompts. `criteria`, `gates` and `analysisThreshold` above are already the chosen stage's.
+   */
+  teamSetup?: FundTeamSetup;
+}
+
+export interface FundTeamSetup {
+  /** The stage the case is analysed with; null when the version has nothing per stage. */
+  stage: SetupStageChoice | null;
+  /** "Hvem er I, og hvordan tænker I?" (cleaned); replaces the risk lens and the instruction. */
+  about: string;
+  /** The team's edits to the 9 editable fixed rules; what the team changed reaches the AI. */
+  fixedRuleEdits: FixedRuleEdits;
+  /**
+   * The stage's economy points, own questions and what a missing figure gives; null
+   * without a stage (a version whose only new content is "about" or fixed rules).
+   */
+  economy?: EconomySetup | null;
 }

@@ -111,7 +111,11 @@ test("a stored run keeps the level and cap it started with; an old run gets the 
   assert.equal(heavy.tier, "heavy");
   assert.equal(heavy.customCap, true);
   assert.equal(heavy.budget.dkk, 45);
-  assert.deepEqual(planColumns(heavy), { ai_tier: "heavy", cost_cap_dkk: 45 });
+  assert.deepEqual(planColumns(heavy), {
+    ai_tier: "heavy",
+    cost_cap_dkk: 45,
+    usd_to_dkk: 6.46,
+  });
 
   // A stored cap outside the hard limits is never trusted.
   assert.equal(
@@ -130,4 +134,25 @@ test("the bigger models get more time but never more than a 300 s background fun
     assert.ok(DEEP_CALL_TIMEOUT_MS[tier].specialist < 300_000);
     assert.ok(DEEP_CALL_TIMEOUT_MS[tier].synthesis < 300_000);
   }
+});
+
+// (C4-1, C4-2): the bottom follows the case's own specialists, and the message names who
+// can lift it.
+test("T-1071 a limit that fits four specialists is under the bottom with seven", async () => {
+  const { lowestCapDkk } = await import("./model-tiers.ts");
+  const cap = lowestCapDkk("deep", "medium", 4, 6.9);
+  assert.notEqual(buildRunPlan("deep", "medium", cap, 4, 6.9).scope.status, "too_low");
+  assert.equal(buildRunPlan("deep", "medium", cap, 7, 6.9).scope.status, "too_low");
+  assert.ok(lowestCapDkk("deep", "medium", 7, 6.9) > cap);
+});
+
+test("T-1071 under the installation's own limit the team is not told to raise its limit", async () => {
+  const { lowestCapDkk, tooLowCause } = await import("./model-tiers.ts");
+  const floor = lowestCapDkk("deep", "medium", 4, 6.9);
+  assert.equal(tooLowCause("deep", "medium", floor - 1, 4, 6.9), "platform");
+  assert.equal(tooLowCause("deep", "medium", floor, 4, 6.9), "team");
+  assert.equal(tooLowCause("deep", "medium", 500, 7, 6.9), "team");
+  // More specialists raise the bottom past a limit that fitted four.
+  assert.equal(tooLowCause("deep", "medium", floor, 7, 6.9), "platform");
+  assert.equal(tooLowCause("screening", "light", 1, undefined, 6.46), "platform");
 });

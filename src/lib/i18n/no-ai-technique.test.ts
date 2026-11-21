@@ -42,12 +42,10 @@ const FORBIDDEN: RegExp[] = [
 ];
 
 /**
- * Texts customers never see: the internal prompt page (/intern/prompts, Danish only, behind
- * `internalPages`) and messages for whoever runs the installation, not for a customer.
+ * Texts customers never see: messages for whoever runs the installation, not for a customer
+ * (the internal prompt page and its texts are gone).
  */
 const INTERNAL_KEYS: RegExp[] = [
-  /^fundSetup\.chain\./,
-  /^fundEditor\.basic\.prompts/,
   /^auth\..*notConfigured/,
   /^analysisServer\.[^.]+\.vercelGatewayMissing$/,
 ];
