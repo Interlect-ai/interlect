@@ -6,7 +6,7 @@
 
 *Less time on decks. More time with founders.*
 
-[interlect.ai](https://interlect.ai) · [Set it up on your own accounts](SETUP.md) · [Apache-2.0](LICENSE)
+[interlect.ai](https://interlect.ai) · [Try the demo](https://interlect.ai/try) · [Set it up on your own accounts](SETUP.md) · [Apache-2.0](LICENSE)
 
 </div>
 
