@@ -1,0 +1,25 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For security problems, do not open an issue: use "Report a vulnerability" under the Security tab.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Where did it go wrong?
+      description: For example the step in SETUP.md, the command (`npm run setup`), or the page in the app. Paste any error message.
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: Node.js version, operating system, and your Vercel plan if relevant.
